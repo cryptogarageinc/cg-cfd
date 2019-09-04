@@ -1,0 +1,22 @@
+{
+	"namespace": ["cfd","api"],
+	"request": {
+		":class": "CreateSignatureHashRequest",
+		"txHex": "",
+		"txinTxid": "",
+		"txinVout": 0,
+		"txinVout:type": "uint32_t",
+		"scriptHex": "",
+		"pubkeyHex": "",
+		"amount": 0,
+		"amount:type": "int64_t",
+		"hashType": "p2wsh",
+		"sighashType": "all",
+		"sighashType:hint": "all, none, single",
+		"sighashAnyoneCanPay": false
+	},
+	"response": {
+		":class": "CreateSignatureHashResponse",
+		"sighash": ""
+	}
+}

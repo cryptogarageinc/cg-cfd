@@ -1,0 +1,24 @@
+{
+	"namespace": ["cfd","api"],
+	"request": {
+		":class": "UnblindRawTransactionRequest",
+		"txHex": "",
+		"targetOutputIndex": -1,
+		"blindingKeys": [
+			""
+		]
+	},
+	"response": {
+		":class": "UnblindRawTransactionResponse",
+		"hex": "",
+		"outputs": [
+			{
+				":class": "UnblindOutput",
+				"asset": "",
+				"blindFactor": "",
+				"assetBlindFactor": "",
+				"amount": 0
+			}
+		]
+	}
+}

@@ -1,0 +1,33 @@
+{
+	"namespace": ["cfd","api"],
+	"request": {
+		":class": "CreateRawTransactionRequest",
+		"version": 2,
+		"version:type": "uint32_t",
+		"locktime": 0,
+		"locktime:type": "uint32_t",
+		"txins": [
+			{
+				":class": "TxInRequest",
+				"txid": "",
+				"vout": 0,
+				"vout:type": "uint32_t",
+				"data": "",
+				"addrType": "mainnet",
+				"sequence": 4294967295,
+				"sequence:type": "uint32_t"
+			}
+		],
+		"txouts": [
+			{
+				":class": "TxOutRequest",
+				"address": "",
+				"amount": 0
+			}
+		]
+	},
+	"response": {
+		":class": "CreateRawTransactionResponse",
+		"hex": ""
+	}
+}

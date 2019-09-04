@@ -1,0 +1,38 @@
+{
+	"namespace": ["cfd","api"],
+	"request": {
+		":class": "SetRawIssueAssetRequest",
+		"txHex": "",
+		"isRandomize": false,
+		"issuances": [
+			{
+				":class": "IssuanceDataRequest",
+				"txinTxid": "",
+				"txinVout": 0,
+				"txinVout:type": "uint32_t",
+				"assetAmount": 0,
+				"assetAddress": "",
+				"tokenAmount": 0,
+				"tokenAddress": "",
+				"isBlind": true,
+				"contractHash": "",
+				"isRemoveNonce": false
+			}
+		]
+	},
+	"response": {
+		":class": "SetRawIssueAssetResponse",
+		"hex": "",
+		"issuances": [
+			{
+				":class": "IssuanceDataResponse",
+				"txinTxid": "",
+				"txinVout": 0,
+				"txinVout:type": "uint32_t",
+				"asset": "",
+				"entropy": "",
+				"token": ""
+			}
+		]
+	}
+}

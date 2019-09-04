@@ -1,0 +1,25 @@
+{
+	"namespace": ["cfd","api"],
+	"request": {
+		":class": "BlindRawTransactionRequest",
+		"txHex": "",
+		"txins": [
+			{
+				":class": "BlindTxInRequest",
+				"txid": "",
+				"vout": 0,
+				"asset": "",
+				"blindFactor": "",
+				"assetBlindFactor": "",
+				"amount": 0
+			}
+		],
+		"blindPubkeys": [
+			""
+		]
+	},
+	"response": {
+		":class": "BlindRawTransactionResponse",
+		"hex": ""
+	}
+}

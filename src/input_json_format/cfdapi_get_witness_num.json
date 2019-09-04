@@ -1,0 +1,15 @@
+{
+	"namespace": ["cfd","api"],
+	"request": {
+		":class": "GetWitnessStackNumRequest",
+		"txHex": "",
+		"isElements": false,
+		"txinTxid": "",
+		"txinVout": 0,
+		"txinVout:type": "uint32_t"
+	},
+	"response": {
+		":class": "GetWitnessStackNumResponse",
+		"count": 0
+	}
+}

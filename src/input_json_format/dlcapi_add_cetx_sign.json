@@ -1,0 +1,24 @@
+{
+	"namespace": ["dlc","api"],
+	"request": {
+		":class": "AddCETxSignRequest",
+		"txHex": "",
+		"txinTxid": "",
+		"txinVout": 0,
+		"txinVout:type": "uint32_t",
+		"sign": {
+			":class": "CETxSignData",
+			"hex": "",
+			"derEncode": true,
+			"sighashType": "all",
+			"sighashType:hint": "all, none, single",
+			"sighashAnyoneCanPay": false
+		},
+		"delayedUnlocking": false,
+		"redeemScript": ""
+	},
+	"response": {
+		":class": "AddCETxSignResponse",
+		"hex": ""
+	}
+}

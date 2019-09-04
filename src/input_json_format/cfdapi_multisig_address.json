@@ -1,0 +1,22 @@
+{
+	"namespace": ["cfd","api"],
+	"request": {
+		":class": "CreateMultisigRequest",
+		"nrequired": 1,
+		"nrequired:type": "uint8_t",
+		"keys": [
+			""
+		],
+		"network": "mainnet",
+		"addressType": "bech32",
+		"addressType:hint": "legacy, bech32 or p2sh-segwit"
+	},
+	"response": {
+		":class": "CreateMultisigResponse",
+		"address": "",
+		"redeemScript": "",
+		"redeemScript:comment": "(required for P2SH or P2SH-P2WSH) redeem script for unlocking script",
+		"witnessScript": "",
+		"witnessScript:comment": "(required for P2WSH or P2SH-P2WSH) witness script for witness stack"
+	}
+}

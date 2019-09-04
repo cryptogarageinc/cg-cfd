@@ -1,0 +1,14 @@
+{
+	"namespace": ["cfd","api"],
+	"request": {
+		":class": "CreateUnblindedAddressRequest",
+		"scriptHex": "",
+		"pubkeyHex": "",
+		"elementsNetwork": "liquidv1",
+		"elementsNetwork:hint": "liquidv1, regtest"
+	},
+	"response": {
+		":class": "CreateUnblindedAddressResponse",
+		"unblindedAddress": ""
+	}
+}

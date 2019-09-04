@@ -1,0 +1,17 @@
+{
+	"namespace": ["cfd","api"],
+	"request": {
+		":class": "CreateAddressRequest",
+		"scriptHex": "",
+		"pubkeyHex": "",
+		"network": "mainnet",
+		"hashType": "p2wpkh",
+		"hashType:hint": "p2wpkh, p2wsh, p2pkh, p2sh"
+	},
+	"response": {
+		":class": "CreateAddressResponse",
+		"address": "",
+		"lockingScript": "",
+		"lockingScript:comment": "(redeem script or pubkey) locking script"
+	}
+}

@@ -1,0 +1,54 @@
+// Copyright 2019 CryptoGarage
+/**
+ * @file dlc_script.h
+ *
+ * @brief dlc向けScript生成Utilクラス実装
+ */
+#include "cfdcore/cfdcore_exception.h"
+#include "cfdcore/cfdcore_logger.h"
+#include "cfdcore/cfdcore_script.h"
+
+#include "cfd/cfd_script.h"
+#include "cfd/dlc_script.h"
+
+namespace dlc {
+
+using cfd::ScriptUtil;
+using cfdcore::CfdError;
+using cfdcore::CfdException;
+using cfdcore::Pubkey;
+using cfdcore::Script;
+using cfdcore::ScriptBuilder;
+using cfdcore::ScriptOperator;
+using cfdcore::logger::warn;
+
+Script DlcScriptUtil::CreateCETxRedeemScript(
+    const Pubkey& pubkey_a, const Pubkey& message_key, int64_t delay,
+    const Pubkey& pubkey_b) {
+  // 合成Pubkey
+  Pubkey combine_pubkey = Pubkey::CombinePubkey(pubkey_a, message_key);
+
+  // script作成
+  ScriptBuilder builder;
+  //  builder.AppendOperator(ScriptOperator::OP_1);
+  //  builder.AppendOperator(ScriptOperator::OP_EQUAL);
+  builder.AppendOperator(ScriptOperator::OP_IF);
+  builder.AppendData(combine_pubkey);
+  builder.AppendOperator(ScriptOperator::OP_ELSE);
+  builder.AppendData(delay);
+  builder.AppendOperator(ScriptOperator::OP_CHECKSEQUENCEVERIFY);
+  builder.AppendOperator(ScriptOperator::OP_DROP);
+  builder.AppendData(pubkey_b);
+  builder.AppendOperator(ScriptOperator::OP_ENDIF);
+  builder.AppendOperator(ScriptOperator::OP_CHECKSIG);
+  Script script = builder.Build();
+
+  if (!ScriptUtil::IsValidRedeemScript(script)) {
+    warn(CFD_LOG_SOURCE, "CETxLockingScript script size is over.");
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError, "CETxLockingScript size is over.");
+  }
+  return script;
+}
+
+}  // namespace dlc

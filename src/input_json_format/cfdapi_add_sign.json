@@ -1,0 +1,33 @@
+{
+	"namespace": [
+		"cfd",
+		"api"
+	],
+	"request": {
+		":class": "AddSignRequest",
+		"txHex": "",
+		"isElements": false,
+		"txinTxid": "",
+		"txinVout": 0,
+		"txinVout:type": "uint32_t",
+		"isWitness": true,
+		"signParam": [
+			{
+				":class": "SignData",
+				"hex": "",
+				"type": "binary",
+				"type:hint": "binary, sign, pubkey, redeem_script",
+				"derEncode": false,
+				"sighashType": "all",
+				"sighashType:hint": "all, none, single",
+				"sighashAnyoneCanPay": false
+			}
+		],
+		"clearStack": true,
+		"clearStack:comment": "Clear the stack before addSign. If isWitness is false, clearStack is forced to be true."
+	},
+	"response": {
+		":class": "AddSignResponse",
+		"hex": ""
+	}
+}
