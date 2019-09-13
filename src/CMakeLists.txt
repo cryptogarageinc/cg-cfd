@@ -180,7 +180,7 @@ add_custom_target(
 )
 #  COMMAND gcov -f -m *.gcda > console.log
 add_custom_target(
-  lcov_cfd lcov -e cfd1.info "*/cfd/*" -o cfd.info
+  lcov_cfd lcov -e cfd1.info "*/cfd_*" -o cfd_cfd.info && lcov -e cfd1.info "*/cfdapi_*" -o cfd_api.info && lcov -a cfd_cfd.info -a cfd_api.info -o cfd.info
   COMMAND genhtml -s --demangle-cpp -o ${CFD_ROOT_BINARY_DIR}/lcov_cfd_output cfd.info
   DEPENDS lcov_cfd1
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/cfd.dir

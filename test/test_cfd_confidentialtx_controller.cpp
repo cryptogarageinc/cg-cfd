@@ -15,6 +15,8 @@ using cfdcore::Privkey;
 using cfdcore::Txid;
 using cfdcore::UnblindParameter;
 using cfd::ConfidentialTransactionController;
+using cfdcore::BlindFactor;
+using cfdcore::ElementsConfidentialAddress;
 
 TEST(ConfidentialTransactionController, CalculateSimpleFeeTest)
 {
@@ -62,6 +64,35 @@ TEST(ConfidentialTransactionController, SetAssetIssuanceTest1)
     EXPECT_STRNE(tx.GetHex().c_str(), expect_tx.GetHex().c_str());
 }
 
+TEST(ConfidentialTransactionController, SetAssetReissuanceTest1)
+{
+    ConfidentialTransactionController tx_base(
+        "0200000000025e67a3542db02871642bdf0923d33ac5bd1105f3421520297f01617c6323918d0000000000ffffffff5e67a3542db02871642bdf0923d33ac5bd1105f3421520297f01617c6323918d0200000000ffffffff03017981c1f171d7973a1fd922652f559f47d6d1506a4be2394b27a54951957f6c18010000000029b9270003f4f10478f5fae2c77c44fdb2a304109a9ae8ba7cab1c125deba9e618ca737e851976a91484c2ef274919355bb532a5bbdbfa95490c5d749388ac017981c1f171d7973a1fd922652f559f47d6d1506a4be2394b27a54951957f6c1801000000003b97049c03b69e5ef61aef08565404bc3c98d6e4dfd1e02eb94138617d9b3eb12ec790885317a91401e940d9dcd77a5043356941641aa2fd6ec6a68887017981c1f171d7973a1fd922652f559f47d6d1506a4be2394b27a54951957f6c18010000000000002710000000000000");
+    ConfidentialTransactionController expect_tx(
+        "0200000000025e67a3542db02871642bdf0923d33ac5bd1105f3421520297f01617c6323918d0000000000ffffffff5e67a3542db02871642bdf0923d33ac5bd1105f3421520297f01617c6323918d0200008000ffffffffcf9a1b9aeb2de6a7b7c3177433dced0951fd728dffbe8c935ccb80698f2e08c80683fe0819a4f9770c8a7cd5824e82975c825e017aff8ba0d6a5eb4959cf9c6f010000000029b927000004017981c1f171d7973a1fd922652f559f47d6d1506a4be2394b27a54951957f6c18010000000029b9270003f4f10478f5fae2c77c44fdb2a304109a9ae8ba7cab1c125deba9e618ca737e851976a91484c2ef274919355bb532a5bbdbfa95490c5d749388ac017981c1f171d7973a1fd922652f559f47d6d1506a4be2394b27a54951957f6c1801000000003b97049c03b69e5ef61aef08565404bc3c98d6e4dfd1e02eb94138617d9b3eb12ec790885317a91401e940d9dcd77a5043356941641aa2fd6ec6a68887017981c1f171d7973a1fd922652f559f47d6d1506a4be2394b27a54951957f6c18010000000000002710000001cdb0ed311810e61036ac9255674101497850f5eee5e4320be07479c05473cbac010000000029b9270003f234757d0e00e6a7a7a3b4b2b31fb0328d7b9f755cd1093d9f61892fef3116871976a91435ef6d4b59f26089dfe2abca21408e15fee42a3388ac00000000");
+
+    // not blind
+    ConfidentialTransactionController tx(tx_base);
+    Txid txid("8d9123637c61017f29201542f30511bdc53ad32309df2b647128b02d54a3675e");
+    Amount amount = Amount::CreateByCoinAmount(7.0);
+    ElementsConfidentialAddress address("CTEyBCf1WzQDpbv6sXLTnFaknGK2UJMHqjyGJjQGq9NEytBR2JLHR9cHJSk4MbLVcKQYWsWERUEYN6R3");
+    BlindFactor blind_factor("c8082e8f6980cb5c938cbeff8d72fd5109eddc337417c3b7a7e62deb9a1b9acf");
+    BlindFactor entropy("6f9ccf5949eba5d6a08bff7a015e825c97824e82d57c8a0c77f9a41908fe8306");
+
+    IssuanceParameter param;
+    EXPECT_NO_THROW(
+        (param = tx.SetAssetReissuance(txid, 2, amount, address, blind_factor,
+                                     entropy, false, false)));
+    EXPECT_STREQ(tx.GetHex().c_str(), expect_tx.GetHex().c_str());
+
+    // txout randomize
+    tx = tx_base;
+    EXPECT_NO_THROW(
+        (tx.SetAssetReissuance(txid, 2, amount, address, blind_factor,
+                                     entropy, true, false)));
+    EXPECT_STRNE(tx.GetHex().c_str(), expect_tx.GetHex().c_str());
+}
+
 TEST(ConfidentialTransactionController, RandomizeTxOutTest)
 {
     // out: value, fee
@@ -99,6 +130,7 @@ TEST(ConfidentialTransactionController, UnblindTransaction)
     privkeys.push_back(
         Privkey(
             "4caed85937d0270835d8b8cb1a5182dc2280a5857bacac8224b5362eb4170818"));
+    privkeys.push_back(Privkey());
     EXPECT_NO_THROW(unblind_params = txc.UnblindTransaction(privkeys));
     EXPECT_STREQ(
         unblind_params[0].asset.GetHex().c_str(),

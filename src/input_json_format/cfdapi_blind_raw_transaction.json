@@ -16,6 +16,15 @@
 		],
 		"blindPubkeys": [
 			""
+		],
+		"issuances":[
+			{
+				":class": "BlindIssuanceRequest",
+				"txid": "",
+				"vout": 0,
+				"assetBlindingKey":"",
+				"tokenBlindingKey":""
+			}
 		]
 	},
 	"response": {

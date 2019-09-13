@@ -360,19 +360,53 @@ IssuanceParameter ConfidentialTransactionController::SetAssetIssuance(
   return param;
 }
 
+IssuanceParameter ConfidentialTransactionController::SetAssetReissuance(
+    const Txid& txid, uint32_t vout, const Amount& amount,
+    const AbstractElementsAddress& address, const BlindFactor& blind_factor,
+    const BlindFactor& entropy, bool is_randomize, bool is_remove_nonce) {
+  uint32_t txin_index = transaction_.GetTxInIndex(txid, vout);
+  Script locking_script;
+  ByteData asset_nonce;
+  switch (address.GetAddressType()) {
+    case ElementsAddressType::kElementsP2pkhAddress: {
+      ByteData160 pubkey_hash(address.GetHash().GetBytes());
+      locking_script = ScriptUtil::CreateP2pkhLockingScript(pubkey_hash);
+      break;
+    }
+    case ElementsAddressType::kElementsP2shAddress: {
+      ByteData160 script_hash(address.GetHash().GetBytes());
+      locking_script = ScriptUtil::CreateP2shLockingScript(script_hash);
+      break;
+    }
+    default:
+      break;
+  }
+  if ((!is_remove_nonce) && address.IsBlinded()) {
+    ElementsConfidentialAddress confidential_addr(address.GetAddress());
+    asset_nonce = confidential_addr.GetConfidentialKey().GetData();
+  }
+
+  IssuanceParameter param;
+  param = transaction_.SetAssetReissuance(
+      txin_index, amount, locking_script, ConfidentialNonce(asset_nonce),
+      blind_factor, entropy);
+
+  if (is_randomize) {
+    RandomizeTxOut();
+  }
+  return param;
+}
+
 void ConfidentialTransactionController::RandomizeTxOut() {
   transaction_.RandomizeTxOut();
 }
 
 void ConfidentialTransactionController::BlindTransaction(
-    const std::vector<Pubkey>& blind_pubkeys,
-    const std::vector<ConfidentialAssetId>& asset_id_list,
-    const std::vector<BlindFactor>& asset_blind_factor_list,
-    const std::vector<BlindFactor>& value_blind_factor_list,
-    const std::vector<Amount>& input_value_list) {
-  transaction_.BlindTxOut(
-      blind_pubkeys, asset_id_list, asset_blind_factor_list,
-      value_blind_factor_list, input_value_list);
+    const std::vector<BlindParameter>& txin_info_list,
+    const std::vector<IssuanceBlindingKeyPair>& issuance_blinding_keys,
+    const std::vector<Pubkey>& txout_confidential_keys) {
+  transaction_.BlindTransaction(
+      txin_info_list, issuance_blinding_keys, txout_confidential_keys);
 }
 
 UnblindParameter ConfidentialTransactionController::UnblindTxOut(
@@ -384,6 +418,14 @@ std::vector<UnblindParameter>
 ConfidentialTransactionController::UnblindTransaction(  // NOLINT
     const std::vector<Privkey>& blinding_keys) {
   return transaction_.UnblindTxOut(blinding_keys);
+}
+
+std::vector<UnblindParameter>
+ConfidentialTransactionController::UnblindIssuance(
+    uint32_t tx_in_index, const Privkey& asset_blinding_key,
+    const Privkey& token_blinding_key) {
+  return transaction_.UnblindTxIn(
+      tx_in_index, asset_blinding_key, token_blinding_key);
 }
 
 std::string ConfidentialTransactionController::CreateSignatureHash(

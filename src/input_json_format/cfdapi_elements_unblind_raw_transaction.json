@@ -6,6 +6,15 @@
 		"targetOutputIndex": -1,
 		"blindingKeys": [
 			""
+		],
+		"issuances": [
+			{
+				":class": "UnblindIssuance",
+				"txid": "",
+				"vout": 0,
+				"assetBlindingKey":"",
+				"tokenBlindingKey":""
+			}
 		]
 	},
 	"response": {
@@ -18,6 +27,17 @@
 				"blindFactor": "",
 				"assetBlindFactor": "",
 				"amount": 0
+			}
+		],
+		"issuanceOutputs": [
+			{
+				":class": "UnblindIssuanceOutput",
+				"txid": "",
+				"vout": 0,
+				"asset": "",
+				"assetamount": 0,
+				"token": "",
+				"tokenamount": 0
 			}
 		]
 	}
