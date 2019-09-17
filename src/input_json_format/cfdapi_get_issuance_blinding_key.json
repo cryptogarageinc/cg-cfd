@@ -1,0 +1,14 @@
+{
+	"namespace": ["cfd","api"],
+	"request": {
+		":class": "GetIssuanceBlindingKeyRequest",
+		"masterBlindingKey": "",
+		"txid": "",
+		"vout": 0,
+		"vout:type": "uint32_t"
+	},
+	"response": {
+		":class": "GetIssuanceBlindingKeyResponse",
+		"blindingKey": ""
+	}
+}

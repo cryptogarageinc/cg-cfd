@@ -9,7 +9,7 @@
 		],
 		"network": "mainnet",
 		"addressType": "bech32",
-		"addressType:hint": "legacy, bech32 or p2sh-segwit"
+		"addressType:hint": "p2sh, p2wsh or p2sh-p2wsh"
 	},
 	"response": {
 		":class": "CreateMultisigResponse",

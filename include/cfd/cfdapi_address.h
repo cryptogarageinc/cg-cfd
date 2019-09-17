@@ -22,16 +22,6 @@ namespace cfd {
 namespace api {
 
 /**
- * @typedef MultisigAddressType
- * @brief multisig addressのtype定義
- */
-typedef enum {
-  kLegacy = 0,  //!< p2sh
-  kBech32,      //!< bech32 native segwit
-  kP2shSegwit,  //!< segwit wrapped p2sh
-} MultisigAddressType;
-
-/**
  * @brief Address関連の関数群クラス
  */
 class CFD_EXPORT AddressApi {
@@ -61,14 +51,13 @@ class CFD_EXPORT AddressApi {
   static cfdcore::NetType ConvertNetType(const std::string& network_type);
 
   /**
-   * @brief Multisig
-   * addressのタイプ文字列を、MultisigAddressType構造体へ変換する.
-   * @param[in] multisig_address_type Multisig addressのタイプ文字列
-   * @return 引数に対応するMultisigAddressType構造体
-   * @throws CfdException 指定文字列以外が渡された場合
+   * @brief Convert address type from string to AddressType.
+   * @param[in] address_type the address type as a string.
+   * @return the converted AddressType.
+   * @throws CfdException if address_type does not match any known AddressType.
    */
-  static MultisigAddressType ConvertMultisigAddressType(
-      const std::string& multisig_address_type);
+  static cfdcore::AddressType ConvertAddressType(
+      const std::string& address_type);
 
  private:
   AddressApi();

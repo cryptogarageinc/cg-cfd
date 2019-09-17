@@ -7,6 +7,7 @@
 #ifndef CFD_DISABLE_ELEMENTS
 #include <algorithm>
 #include <limits>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -39,8 +40,10 @@ using cfd::ElementsAddressUtil;
 using cfd::api::AddressApi;
 using cfd::api::TransactionApi;
 using cfdcore::AbstractElementsAddress;
+using cfdcore::AddressType;
 using cfdcore::Amount;
 using cfdcore::BlindFactor;
+using cfdcore::BlindParameter;
 using cfdcore::BlockHash;
 using cfdcore::ByteData;
 using cfdcore::ByteData256;
@@ -48,8 +51,10 @@ using cfdcore::CfdError;
 using cfdcore::CfdException;
 using cfdcore::ConfidentialAssetId;
 using cfdcore::ConfidentialTransaction;
+using cfdcore::ConfidentialValue;
 using cfdcore::ElementsConfidentialAddress;
 using cfdcore::ElementsUnblindedAddress;
+using cfdcore::IssuanceBlindingKeyPair;
 using cfdcore::IssuanceParameter;
 using cfdcore::Privkey;
 using cfdcore::Pubkey;
@@ -72,7 +77,7 @@ using cfdcore::logger::warn;
  * @param[in] addr_type アドレス種別
  */
 static void ValidateAddMultisigSignRequestElements(  // linefeed
-    AddMultisigSignRequestStruct req, MultisigAddressType addr_type) {
+    AddMultisigSignRequestStruct req, AddressType addr_type) {
   // check txHex
   if (req.tx_hex.empty()) {
     warn(
@@ -85,7 +90,7 @@ static void ValidateAddMultisigSignRequestElements(  // linefeed
 
   // check require script
   switch (addr_type) {
-    case MultisigAddressType::kLegacy: {
+    case AddressType::kP2shAddress: {
       if (req.redeem_script.empty()) {
         warn(
             CFD_LOG_SOURCE,
@@ -96,11 +101,11 @@ static void ValidateAddMultisigSignRequestElements(  // linefeed
       }
       break;
     }
-    case MultisigAddressType::kBech32: {
+    case AddressType::kP2wshAddress: {
       // TODO(MariSoejima): Elements+Bech32現状対応なし
       throw CfdException(
           CfdError::kCfdOutOfRangeError,
-          "Failed to AddMultisigSign. bech32 is excluded.");
+          "Failed to AddMultisigSign. p2wsh is excluded.");
 
       //      if (req.witness_script.empty()) {
       //        warn(CFD_LOG_SOURCE,
@@ -112,7 +117,7 @@ static void ValidateAddMultisigSignRequestElements(  // linefeed
       //
       break;
     }
-    case MultisigAddressType::kP2shSegwit: {
+    case AddressType::kP2shP2wshAddress: {
       if (req.redeem_script.empty()) {
         warn(
             CFD_LOG_SOURCE,
@@ -130,6 +135,14 @@ static void ValidateAddMultisigSignRequestElements(  // linefeed
             "Invalid hex string. empty witnessScript.");
       }
       break;
+    }
+    default: {
+      warn(
+          CFD_LOG_SOURCE,
+          "Failed to AddSegwitMultisigSignRequest. address type must be one "
+          "of p2sh address.");
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError, "Invalid address type.");
     }
   }
 
@@ -302,8 +315,7 @@ AddMultisigSignResponseStruct ElementsTransactionApi::AddMultisigSign(
     AddMultisigSignResponseStruct response;
     // レスポンスとなるモデルへ変換
     // validate request
-    MultisigAddressType addr_type =
-        AddressApi::ConvertMultisigAddressType(request.txin_type);
+    AddressType addr_type = AddressApi::ConvertAddressType(request.txin_type);
     ValidateAddMultisigSignRequestElements(request, addr_type);
 
     const std::string& hex_string = request.tx_hex;
@@ -311,20 +323,10 @@ AddMultisigSignResponseStruct ElementsTransactionApi::AddMultisigSign(
     ConfidentialTransactionController txc(hex_string);
 
     // extract pubkeys from redeem script
-    Script redeem_script;
-    switch (addr_type) {
-      case MultisigAddressType::kLegacy: {
-        redeem_script = Script(request.redeem_script);
-        break;
-      }
-      case MultisigAddressType::kBech32:
-        // 対象外
-        break;
-      case MultisigAddressType::kP2shSegwit: {
-        redeem_script = Script(request.witness_script);
-        break;
-      }
-    }
+    Script redeem_script = addr_type == AddressType::kP2shAddress
+                               ? Script(request.redeem_script)
+                               : Script(request.witness_script);
+
     std::vector<Pubkey> pubkeys =
         TransactionApi::ExtractPubkeysFromMultisigScript(redeem_script);
     // get signParams from json request
@@ -370,7 +372,7 @@ AddMultisigSignResponseStruct ElementsTransactionApi::AddMultisigSign(
 
     // set signatures to target input
     switch (addr_type) {
-      case MultisigAddressType::kLegacy: {
+      case AddressType::kP2shAddress: {
         // non-segwit
         ScriptBuilder sb;
         sb.AppendOperator(ScriptOperator::OP_0);
@@ -383,10 +385,10 @@ AddMultisigSignResponseStruct ElementsTransactionApi::AddMultisigSign(
             Txid(request.txin_txid), request.txin_vout, sb.Build());
         break;
       }
-      case MultisigAddressType::kBech32:
+      case AddressType::kP2wshAddress:
         // 対象外
         break;
-      case MultisigAddressType::kP2shSegwit: {
+      case AddressType::kP2shP2wshAddress: {
         Txid txid = Txid(request.txin_txid);
         if (request.clear_stack) {
           txc.RemoveWitnessStackAll(txid, request.txin_vout);
@@ -405,9 +407,12 @@ AddMultisigSignResponseStruct ElementsTransactionApi::AddMultisigSign(
         txc.AddWitnessStack(txid, request.txin_vout, witness_stack);
         break;
       }
+      default:
+        // Unreachable, validate method ensures correct address type.
+        break;
     }
 
-    if (addr_type == MultisigAddressType::kP2shSegwit) {
+    if (addr_type == AddressType::kP2shP2wshAddress) {
       // set p2sh redeem script to unlockking script
       Script p2sh_redeem_script(request.redeem_script);
       ScriptBuilder sb;
@@ -558,10 +563,14 @@ BlindRawTransactionResponseStruct ElementsTransactionApi::BlindTransaction(
 
     // fee count
     uint32_t fee_count = 0;
+    uint32_t fee_index = 0;
+    std::set<uint32_t> fee_indexes;
     for (const auto& txout : tx.GetTxOutList()) {
       if (txout.GetLockingScript().IsEmpty()) {
         ++fee_count;
+        fee_indexes.insert(fee_index);
       }
+      ++fee_index;
     }
     if (fee_count == txout_count) {
       warn(CFD_LOG_SOURCE, "Failed to txouts fee only.");
@@ -577,18 +586,32 @@ BlindRawTransactionResponseStruct ElementsTransactionApi::BlindTransaction(
           CfdError::kCfdOutOfRangeError,
           "JSON value error. Pubkey count not enough.");
     }
-
-    std::vector<bool> exist_list(txin_count, false);
-    std::vector<ConfidentialAssetId> asset_id_list(txin_count);
-    std::vector<BlindFactor> asset_blind_factor_list(txin_count);
-    std::vector<BlindFactor> value_blind_factor_list(txin_count);
-    std::vector<Amount> input_value_list(txin_count);
-    std::vector<Pubkey> blind_pubkeys(txout_value_count);
-    uint32_t index;
-    for (index = 0; index < txout_value_count; ++index) {
-      blind_pubkeys[index] = Pubkey(pubkeys[index]);
+    bool is_insert_fee_key = false;
+    if ((!fee_indexes.empty()) && (pubkeys.size() == txout_value_count)) {
+      // insert empty key (for fee)
+      is_insert_fee_key = true;
     }
 
+    std::vector<BlindParameter> params(txin_count);
+    std::vector<bool> exist_list(txin_count, false);
+    std::vector<Pubkey> blind_pubkeys(txout_count);
+    std::vector<IssuanceBlindingKeyPair> key_pairs;
+    uint32_t index;
+
+    // BlindingPubkey
+    uint32_t pubkey_index = 0;
+    for (index = 0; index < txout_count; ++index) {
+      if (is_insert_fee_key && (fee_indexes.count(index) > 0)) {
+        // throuth
+      } else if (pubkeys.size() > pubkey_index) {
+        if (!pubkeys[pubkey_index].empty()) {
+          blind_pubkeys[index] = Pubkey(pubkeys[pubkey_index]);
+        }
+        ++pubkey_index;
+      }
+    }
+
+    // BlindParameter
     uint32_t offset = 0;
     uint32_t count = 0;
     for (const auto& txin : txins) {
@@ -596,10 +619,11 @@ BlindRawTransactionResponseStruct ElementsTransactionApi::BlindTransaction(
         // index指定
         offset = tx.GetTxInIndex(Txid(txin.txid), txin.vout);
         exist_list[offset] = true;
-        asset_id_list[offset] = ConfidentialAssetId(txin.asset);
-        value_blind_factor_list[offset] = BlindFactor(txin.blind_factor);
-        asset_blind_factor_list[offset] = BlindFactor(txin.asset_blind_factor);
-        input_value_list[offset] = Amount::CreateBySatoshiAmount(txin.amount);
+        params[offset].asset = ConfidentialAssetId(txin.asset);
+        params[offset].vbf = BlindFactor(txin.blind_factor);
+        params[offset].abf = BlindFactor(txin.asset_blind_factor);
+        params[offset].value =
+            ConfidentialValue(Amount::CreateBySatoshiAmount(txin.amount));
         ++count;
       }
     }
@@ -611,12 +635,11 @@ BlindRawTransactionResponseStruct ElementsTransactionApi::BlindTransaction(
           for (index = 0; index < txin_count; ++index) {
             if (!exist_list[index]) {
               exist_list[index] = true;
-              asset_id_list[index] = ConfidentialAssetId(txin.asset);
-              value_blind_factor_list[index] = BlindFactor(txin.blind_factor);
-              asset_blind_factor_list[index] =
-                  BlindFactor(txin.asset_blind_factor);
-              input_value_list[index] =
-                  Amount::CreateBySatoshiAmount(txin.amount);
+              params[index].asset = ConfidentialAssetId(txin.asset);
+              params[index].vbf = BlindFactor(txin.blind_factor);
+              params[index].abf = BlindFactor(txin.asset_blind_factor);
+              params[index].value = ConfidentialValue(
+                  Amount::CreateBySatoshiAmount(txin.amount));
               break;
             }
           }
@@ -624,10 +647,26 @@ BlindRawTransactionResponseStruct ElementsTransactionApi::BlindTransaction(
       }
     }
 
-    txc.BlindTransaction(
-        blind_pubkeys, asset_id_list,  // asset
-        asset_blind_factor_list, value_blind_factor_list, input_value_list);
+    // Issuance
+    if (request.issuances.size() > 0) {
+      // txinの個数分確保
+      key_pairs.resize(txin_count);
 
+      for (BlindIssuanceRequestStruct issuance : request.issuances) {
+        uint32_t index = txc.GetTransaction().GetTxInIndex(
+            Txid(issuance.txid), issuance.vout);
+        IssuanceBlindingKeyPair key;
+        if (!issuance.asset_blinding_key.empty()) {
+          key.asset_key = Privkey(issuance.asset_blinding_key);
+        }
+        if (!issuance.token_blinding_key.empty()) {
+          key.token_key = Privkey(issuance.token_blinding_key);
+        }
+        key_pairs[index] = key;
+      }
+    }
+
+    txc.BlindTransaction(params, key_pairs, blind_pubkeys);
     response.hex = txc.GetHex();
     return response;
   };
@@ -642,11 +681,27 @@ BlindRawTransactionResponseStruct ElementsTransactionApi::BlindTransaction(
 UnblindRawTransactionResponseStruct ElementsTransactionApi::UnblindTransaction(
     const UnblindRawTransactionRequestStruct& request) {
   auto call_func = [](const UnblindRawTransactionRequestStruct& request)
-      -> UnblindRawTransactionResponseStruct {  // NOLINT
+      -> UnblindRawTransactionResponseStruct {
     UnblindRawTransactionResponseStruct response;
     ConfidentialTransactionController ctxc(request.tx_hex);
+    const ConfidentialTransaction& tx = ctxc.GetTransaction();
 
     bool unblind_single = false;
+    // fee count
+    uint32_t fee_count = 0;
+    uint32_t fee_index = 0;
+    std::set<uint32_t> fee_indexes;
+    for (const auto& txout : tx.GetTxOutList()) {
+      if (txout.GetLockingScript().IsEmpty()) {
+        ++fee_count;
+        fee_indexes.insert(fee_index);
+      }
+      ++fee_index;
+    }
+    bool is_insert_fee_key = false;
+    uint32_t txout_count = tx.GetTxOutCount();
+    const std::vector<std::string>& blinding_keys = request.blinding_keys;
+
     int64_t target_output_index = request.target_output_index;
     if (target_output_index >= 0) {
       if (target_output_index > std::numeric_limits<uint32_t>::max()) {
@@ -658,7 +713,7 @@ UnblindRawTransactionResponseStruct ElementsTransactionApi::UnblindTransaction(
             "target txout index error. Value out of range.");
       }
 
-      if (request.blinding_keys.size() != 1) {
+      if (blinding_keys.size() != 1) {
         warn(
             CFD_LOG_SOURCE,
             "blindingKeys size is unmatch"
@@ -670,20 +725,33 @@ UnblindRawTransactionResponseStruct ElementsTransactionApi::UnblindTransaction(
       }
       unblind_single = true;
     } else {
-      if (ctxc.GetTransaction().GetTxOutCount() - 1 !=
-          request.blinding_keys.size()) {  // NOLINT
+      uint32_t txout_value_count = txout_count - fee_count;
+      if (txout_value_count > blinding_keys.size()) {
         // TxOutの数とBlindingkeyの数が不一致の場合はエラー
         warn(CFD_LOG_SOURCE, "blindingKeys size is unmatch txout size.");
         throw CfdException(
             CfdError::kCfdIllegalArgumentError,
             "JSON value error. blindingKeys size is unmatch txout size.");
       }
+
+      if ((!fee_indexes.empty()) &&
+          (blinding_keys.size() == txout_value_count)) {
+        // insert empty key (for fee)
+        is_insert_fee_key = true;
+      }
     }
 
-    std::vector<Privkey> privkeys;
-    std::vector<std::string> blinding_keys = request.blinding_keys;
-    for (std::string blinding_key : blinding_keys) {
-      privkeys.push_back(Privkey(blinding_key));
+    std::vector<Privkey> privkeys(txout_count);
+    uint32_t blindingkey_index = 0;
+    for (uint32_t index = 0; index < txout_count; ++index) {
+      if (is_insert_fee_key && (fee_indexes.count(index) > 0)) {
+        // throuth
+      } else if (blinding_keys.size() > blindingkey_index) {
+        if (!blinding_keys[blindingkey_index].empty()) {
+          privkeys[index] = Privkey(blinding_keys[blindingkey_index]);
+        }
+        ++blindingkey_index;
+      }
     }
 
     // TxOutをUnblind
@@ -697,11 +765,50 @@ UnblindRawTransactionResponseStruct ElementsTransactionApi::UnblindTransaction(
     }
     for (UnblindParameter unblind_param : unblind_params) {
       UnblindOutputStruct output;
-      output.asset = unblind_param.asset.GetHex();
-      output.blind_factor = unblind_param.vbf.GetHex();
-      output.asset_blind_factor = unblind_param.abf.GetHex();
-      output.amount = unblind_param.value.GetAmount().GetSatoshiValue();
+      if (!unblind_param.asset.GetHex().empty()) {
+        output.asset = unblind_param.asset.GetHex();
+        output.blind_factor = unblind_param.vbf.GetHex();
+        output.asset_blind_factor = unblind_param.abf.GetHex();
+        output.amount = unblind_param.value.GetAmount().GetSatoshiValue();
+      }
       response.outputs.push_back(output);
+    }
+
+    // TxIn Unblind(Issuanceの場合)
+    if (request.issuances.size() != 0) {
+      for (UnblindIssuanceStruct issuance : request.issuances) {
+        uint32_t txin_index =
+            tx.GetTxInIndex(Txid(issuance.txid), issuance.vout);
+        bool is_find = false;
+        UnblindIssuanceOutputStruct output;
+        Privkey asset_blinding_key;
+        Privkey token_blinding_key;
+        if (!issuance.asset_blinding_key.empty()) {
+          asset_blinding_key = Privkey(issuance.asset_blinding_key);
+          is_find = true;
+        }
+        if (!issuance.token_blinding_key.empty()) {
+          token_blinding_key = Privkey(issuance.token_blinding_key);
+          is_find = true;
+        }
+        if (is_find) {
+          std::vector<UnblindParameter> issuance_outputs =
+              ctxc.UnblindIssuance(
+                  txin_index, asset_blinding_key, token_blinding_key);
+
+          output.txid = issuance.txid;
+          output.vout = issuance.vout;
+          output.asset = issuance_outputs[0].asset.GetHex();
+          output.assetamount =
+              issuance_outputs[0].value.GetAmount().GetSatoshiValue();
+          if (issuance_outputs.size() > 1) {
+            output.token = issuance_outputs[1].asset.GetHex();
+            output.tokenamount =
+                issuance_outputs[1].value.GetAmount().GetSatoshiValue();
+          }
+        }
+        response.issuance_outputs.push_back(output);
+      }
     }
     response.hex = ctxc.GetHex();
     return response;
@@ -754,6 +861,47 @@ SetRawIssueAssetResponseStruct ElementsTransactionApi::SetRawIssueAsset(
   SetRawIssueAssetResponseStruct result;
   result = ExecuteStructApi<
       SetRawIssueAssetRequestStruct, SetRawIssueAssetResponseStruct>(
+      request, call_func, std::string(__FUNCTION__));
+
+  return result;
+}
+
+SetRawReissueAssetResponseStruct ElementsTransactionApi::SetRawReissueAsset(
+    const SetRawReissueAssetRequestStruct& request) {
+  auto call_func = [](const SetRawReissueAssetRequestStruct& request)
+      -> SetRawReissueAssetResponseStruct {  // NOLINT
+    SetRawReissueAssetResponseStruct response;
+    ConfidentialTransactionController ctxc(request.tx_hex);
+
+    for (ReissuanceDataRequestStruct req_issuance : request.issuances) {
+      // Txin1つずつissuanceの設定を行う
+      IssuanceParameter issuance_param = ctxc.SetAssetReissuance(
+          Txid(req_issuance.txin_txid), req_issuance.txin_vout,
+          Amount::CreateBySatoshiAmount(req_issuance.amount),
+          ElementsAddressUtil::GetElementsAddress(req_issuance.address),
+          BlindFactor(req_issuance.asset_blinding_nonce),
+          BlindFactor(req_issuance.asset_entropy), false,
+          req_issuance.is_remove_nonce);
+
+      ReissuanceDataResponseStruct res_issuance;
+      res_issuance.txin_txid = req_issuance.txin_txid;
+      res_issuance.txin_vout = req_issuance.txin_vout;
+      res_issuance.asset = issuance_param.asset.GetHex();
+      res_issuance.entropy = issuance_param.entropy.GetHex();
+      response.issuances.push_back(res_issuance);
+    }
+
+    // すべて設定後にTxoutのRandomize
+    if (request.is_randomize) {
+      ctxc.RandomizeTxOut();
+    }
+    response.hex = ctxc.GetHex();
+    return response;
+  };
+
+  SetRawReissueAssetResponseStruct result;
+  result = ExecuteStructApi<
+      SetRawReissueAssetRequestStruct, SetRawReissueAssetResponseStruct>(
       request, call_func, std::string(__FUNCTION__));
 
   return result;
@@ -832,6 +980,27 @@ ElementsTransactionApi::CreateRawPeginTransaction(  // NOLINT
   result = ExecuteStructApi<
       ElementsCreateRawPeginRequestStruct,
       ElementsCreateRawPeginResponseStruct>(
+      request, call_func, std::string(__FUNCTION__));
+  return result;
+}
+
+GetIssuanceBlindingKeyResponseStruct
+ElementsTransactionApi::GetIssuanceBlindingKey(
+    const GetIssuanceBlindingKeyRequestStruct& request) {
+  auto call_func = [](const GetIssuanceBlindingKeyRequestStruct& request)
+      -> GetIssuanceBlindingKeyResponseStruct {  // NOLINT
+    GetIssuanceBlindingKeyResponseStruct response;
+    Privkey blinding_key = ConfidentialTransaction::GetIssuanceBlindingKey(
+        Privkey(request.master_blinding_key), Txid(request.txid),
+        request.vout);
+    response.blinding_key = blinding_key.GetHex();
+    return response;
+  };
+
+  GetIssuanceBlindingKeyResponseStruct result;
+  result = ExecuteStructApi<
+      GetIssuanceBlindingKeyRequestStruct,
+      GetIssuanceBlindingKeyResponseStruct>(
       request, call_func, std::string(__FUNCTION__));
   return result;
 }

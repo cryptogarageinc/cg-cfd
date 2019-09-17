@@ -30,6 +30,7 @@ namespace cfd {
 using cfdcore::AbstractElementsAddress;
 using cfdcore::Amount;
 using cfdcore::BlindFactor;
+using cfdcore::BlindParameter;
 using cfdcore::BlockHash;
 using cfdcore::ByteData;
 using cfdcore::ByteData256;
@@ -38,6 +39,7 @@ using cfdcore::ConfidentialNonce;
 using cfdcore::ConfidentialTransaction;
 using cfdcore::ConfidentialTxInReference;
 using cfdcore::ConfidentialTxOutReference;
+using cfdcore::IssuanceBlindingKeyPair;
 using cfdcore::IssuanceParameter;
 using cfdcore::Privkey;
 using cfdcore::Pubkey;
@@ -363,6 +365,25 @@ class CFD_EXPORT ConfidentialTransactionController
       const AbstractElementsAddress& token_address, bool is_blind,
       const ByteData256& contract_hash, bool is_randomize = false,
       bool is_remove_nonce = false);
+
+  /**
+   * @brief ReissueAssetの情報を設定する.
+   * @param[in] txid              対象のTxInのtxid
+   * @param[in] vout              対象のTxInのvout
+   * @param[in] amount            reissuance amount
+   * @param[in] address           asset destination address
+   * @param[in] blind_factor      blind factor
+   * @param[in] entropy           asset entropy
+   * @param[in] is_randomize      set txout randomize
+   * @param[in] is_remove_nonce   nonceの強制削除フラグ
+   * @return reissuance entropy and asset parameter.
+   */
+  IssuanceParameter SetAssetReissuance(
+      const Txid& txid, uint32_t vout, const Amount& amount,
+      const AbstractElementsAddress& address, const BlindFactor& blind_factor,
+      const BlindFactor& entropy, bool is_randomize = false,
+      bool is_remove_nonce = false);
+
   /**
    * @brief TxOutの順序をランダム化する.
    * @details ブラインド前のみ実施可能.
@@ -371,18 +392,14 @@ class CFD_EXPORT ConfidentialTransactionController
 
   /**
    * @brief TrasnsactionをBlindする.
-   * @param[in] blind_pubkeys             blinding pubkey list.
-   * @param[in] asset_id_list             txin asset id list.
-   * @param[in] asset_blind_factor_list   asset blind factor list.
-   * @param[in] value_blind_factor_list   value blind factor list.
-   * @param[in] input_value_list          utxo value list.
+   * @param[in] txin_info_list            txin blind info list.
+   * @param[in] issuance_blinding_keys    issue blinding key list.
+   * @param[in] txout_confidential_keys   blinding pubkey list.
    */
   void BlindTransaction(
-      const std::vector<Pubkey>& blind_pubkeys,
-      const std::vector<ConfidentialAssetId>& asset_id_list,
-      const std::vector<BlindFactor>& asset_blind_factor_list,
-      const std::vector<BlindFactor>& value_blind_factor_list,
-      const std::vector<Amount>& input_value_list);
+      const std::vector<BlindParameter>& txin_info_list,
+      const std::vector<IssuanceBlindingKeyPair>& issuance_blinding_keys,
+      const std::vector<Pubkey>& txout_confidential_keys);
 
   /**
    * @brief 指定indexのTxOutをUnblindする.
@@ -394,12 +411,23 @@ class CFD_EXPORT ConfidentialTransactionController
       uint32_t tx_out_index, const Privkey& blinding_key);
 
   /**
-   * @brief TrasnsactionをUnblindする.
+   * @brief TransactionをUnblindする.
    * @param[in] blinding_keys blinding privkey list
    * @return list of structs contain blind factors and amount.
    */
   std::vector<UnblindParameter> UnblindTransaction(
       const std::vector<Privkey>& blinding_keys);
+
+  /**
+   * @brief IssuanceをUnblindする.
+   * @param[in] tx_in_index unblind target index
+   * @param[in] asset_blinding_key asset blinding privkey
+   * @param[in] token_blinding_key token blinding privkey
+   * @return list of structs contain blind factors and amount.
+   */
+  std::vector<UnblindParameter> UnblindIssuance(
+      uint32_t tx_in_index, const Privkey& asset_blinding_key,
+      const Privkey& token_blinding_key);
 
   /**
    * @brief P2PKH形式のTxInのSignatureHashを計算する.

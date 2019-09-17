@@ -27,6 +27,7 @@ namespace api {
 using cfd::AddressUtil;
 using cfd::ScriptUtil;
 using cfdcore::Address;
+using cfdcore::AddressType;
 using cfdcore::CfdError;
 using cfdcore::CfdException;
 using cfdcore::NetType;
@@ -127,18 +128,18 @@ CreateMultisigResponseStruct AddressApi::CreateMultisig(
 
     // Address作成
     Address addr;
-    std::string addr_type = request.address_type;
     NetType net_type = ConvertNetType(request.network);
+    AddressType addr_type = ConvertAddressType(request.address_type);
     Script witness_script;
-    if (addr_type == "legacy") {
+    if (addr_type == AddressType::kP2shAddress) {
       addr = AddressUtil::CreateP2shAddress(redeem_script, net_type);
-    } else if (addr_type == "bech32") {
+    } else if (addr_type == AddressType::kP2wshAddress) {
       // Currently we support only witness version 0.
       witness_script = redeem_script;
       redeem_script = Script();
       addr = AddressUtil::CreateP2wshAddress(
           witness_script, WitnessVersion::kVersion0, net_type);
-    } else if (addr_type == "p2sh-segwit") {
+    } else if (addr_type == AddressType::kP2shP2wshAddress) {
       witness_script = redeem_script;
       redeem_script = ScriptUtil::CreateP2wshLockingScript(witness_script);
       addr = AddressUtil::CreateP2shAddress(redeem_script, net_type);
@@ -150,8 +151,8 @@ CreateMultisigResponseStruct AddressApi::CreateMultisig(
           addr_type);
       throw CfdException(
           CfdError::kCfdIllegalArgumentError,
-          "Invalid addressType. addressType must be \"legacy\" "
-          "or \"bech32\".");  // NOLINT
+          "Invalid address_type. address_type must be \"p2sh\" "
+          "\"p2wsh\" or \"p2sh-p2wsh\".");  // NOLINT
     }
 
     // レスポンスとなるモデルへ変換
@@ -198,27 +199,33 @@ NetType AddressApi::ConvertNetType(const std::string& network_type) {
   return net_type;
 }
 
-MultisigAddressType AddressApi::ConvertMultisigAddressType(
-    const std::string& multisig_address_type) {
-  MultisigAddressType multisig_addr_type;
-  if (multisig_address_type == "legacy") {
-    multisig_addr_type = MultisigAddressType::kLegacy;
-  } else if (multisig_address_type == "bech32") {
-    multisig_addr_type = MultisigAddressType::kBech32;
-  } else if (multisig_address_type == "p2sh-segwit") {
-    multisig_addr_type = MultisigAddressType::kP2shSegwit;
+AddressType AddressApi::ConvertAddressType(const std::string& address_type) {
+  AddressType addr_type;
+  if (address_type == "p2pkh") {
+    addr_type = AddressType::kP2pkhAddress;
+  } else if (address_type == "p2sh") {
+    addr_type = AddressType::kP2shAddress;
+  } else if (address_type == "p2wpkh") {
+    addr_type = AddressType::kP2wpkhAddress;
+  } else if (address_type == "p2wsh") {
+    addr_type = AddressType::kP2wshAddress;
+  } else if (address_type == "p2sh-p2wpkh") {
+    addr_type = AddressType::kP2shP2wpkhAddress;
+  } else if (address_type == "p2sh-p2wsh") {
+    addr_type = AddressType::kP2shP2wshAddress;
   } else {
     warn(
         CFD_LOG_SOURCE,
-        "Failed to ConvertMultisigAddress Type. "
-        "Invalid multisig_address_type passed:  address_type={}",
-        multisig_address_type);
+        "Failed to ConvertAddress Type. "
+        "Invalid address_type passed:  address_type={}",
+        address_type);
     throw CfdException(
         CfdError::kCfdIllegalArgumentError,
-        "Invalid multisig_address_type passed. multisig_address_type must be"
-        " \"legacy\" or \"bech32\" or \"p2sh-segwit\".");
+        "Invalid address_type passed. address_type must be"
+        " \"p2pkh\", \"p2sh\", \"p2wpkh\", \"p2wsh\", \"p2sh-p2wpkh\", or "
+        "\"p2sh-p2wsh\".");
   }
-  return multisig_addr_type;
+  return addr_type;
 }
 
 }  // namespace api

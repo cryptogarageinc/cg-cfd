@@ -137,15 +137,30 @@ struct BlindTxInRequestStruct {
 };
 
 // ------------------------------------------------------------------------
+// BlindIssuanceRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief BlindIssuanceRequestStruct 構造体
+ */
+struct BlindIssuanceRequestStruct {
+  std::string txid = "";                //!< txid  // NOLINT
+  int64_t vout = 0;                     //!< vout  // NOLINT
+  std::string asset_blinding_key = "";  //!< asset_blinding_key  // NOLINT
+  std::string token_blinding_key = "";  //!< token_blinding_key  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
 // BlindRawTransactionRequestStruct
 // ------------------------------------------------------------------------
 /**
  * @brief BlindRawTransactionRequestStruct 構造体
  */
 struct BlindRawTransactionRequestStruct {
-  std::string tx_hex = "";                    //!< tx_hex  // NOLINT
-  std::vector<BlindTxInRequestStruct> txins;  //!< txins  // NOLINT
-  std::vector<std::string> blind_pubkeys;     //!< blind_pubkeys  // NOLINT
+  std::string tx_hex = "";                            //!< tx_hex  // NOLINT
+  std::vector<BlindTxInRequestStruct> txins;          //!< txins  // NOLINT
+  std::vector<std::string> blind_pubkeys;             //!< blind_pubkeys  // NOLINT
+  std::vector<BlindIssuanceRequestStruct> issuances;  //!< issuances  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -614,15 +629,88 @@ struct SetRawIssueAssetResponseStruct {
 };
 
 // ------------------------------------------------------------------------
+// ReissuanceDataRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ReissuanceDataRequestStruct 構造体
+ */
+struct ReissuanceDataRequestStruct {
+  std::string txin_txid = "";             //!< txin_txid  // NOLINT
+  uint32_t txin_vout = 0;                 //!< txin_vout  // NOLINT
+  int64_t amount = 0;                     //!< amount  // NOLINT
+  std::string address = "";               //!< address  // NOLINT
+  std::string asset_blinding_nonce = "";  //!< asset_blinding_nonce  // NOLINT
+  std::string asset_entropy = "";         //!< asset_entropy  // NOLINT
+  bool is_remove_nonce = false;           //!< is_remove_nonce  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// SetRawReissueAssetRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief SetRawReissueAssetRequestStruct 構造体
+ */
+struct SetRawReissueAssetRequestStruct {
+  std::string tx_hex = "";                             //!< tx_hex  // NOLINT
+  bool is_randomize = false;                           //!< is_randomize  // NOLINT
+  std::vector<ReissuanceDataRequestStruct> issuances;  //!< issuances  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ReissuanceDataResponseStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ReissuanceDataResponseStruct 構造体
+ */
+struct ReissuanceDataResponseStruct {
+  std::string txin_txid = "";  //!< txin_txid  // NOLINT
+  uint32_t txin_vout = 0;      //!< txin_vout  // NOLINT
+  std::string asset = "";      //!< asset  // NOLINT
+  std::string entropy = "";    //!< entropy  // NOLINT
+  InnerErrorResponseStruct error;       //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// SetRawReissueAssetResponseStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief SetRawReissueAssetResponseStruct 構造体
+ */
+struct SetRawReissueAssetResponseStruct {
+  std::string hex = "";                                 //!< hex  // NOLINT
+  std::vector<ReissuanceDataResponseStruct> issuances;  //!< issuances  // NOLINT
+  InnerErrorResponseStruct error;       //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// UnblindIssuanceStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief UnblindIssuanceStruct 構造体
+ */
+struct UnblindIssuanceStruct {
+  std::string txid = "";                //!< txid  // NOLINT
+  int64_t vout = 0;                     //!< vout  // NOLINT
+  std::string asset_blinding_key = "";  //!< asset_blinding_key  // NOLINT
+  std::string token_blinding_key = "";  //!< token_blinding_key  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
 // UnblindRawTransactionRequestStruct
 // ------------------------------------------------------------------------
 /**
  * @brief UnblindRawTransactionRequestStruct 構造体
  */
 struct UnblindRawTransactionRequestStruct {
-  std::string tx_hex = "";                 //!< tx_hex  // NOLINT
-  int64_t target_output_index = -1;        //!< target_output_index  // NOLINT
-  std::vector<std::string> blinding_keys;  //!< blinding_keys  // NOLINT
+  std::string tx_hex = "";                       //!< tx_hex  // NOLINT
+  int64_t target_output_index = -1;              //!< target_output_index  // NOLINT
+  std::vector<std::string> blinding_keys;        //!< blinding_keys  // NOLINT
+  std::vector<UnblindIssuanceStruct> issuances;  //!< issuances  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -641,14 +729,56 @@ struct UnblindOutputStruct {
 };
 
 // ------------------------------------------------------------------------
+// UnblindIssuanceOutputStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief UnblindIssuanceOutputStruct 構造体
+ */
+struct UnblindIssuanceOutputStruct {
+  std::string txid = "";    //!< txid  // NOLINT
+  int64_t vout = 0;         //!< vout  // NOLINT
+  std::string asset = "";   //!< asset  // NOLINT
+  int64_t assetamount = 0;  //!< assetamount  // NOLINT
+  std::string token = "";   //!< token  // NOLINT
+  int64_t tokenamount = 0;  //!< tokenamount  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
 // UnblindRawTransactionResponseStruct
 // ------------------------------------------------------------------------
 /**
  * @brief UnblindRawTransactionResponseStruct 構造体
  */
 struct UnblindRawTransactionResponseStruct {
-  std::string hex = "";                      //!< hex  // NOLINT
-  std::vector<UnblindOutputStruct> outputs;  //!< outputs  // NOLINT
+  std::string hex = "";                                       //!< hex  // NOLINT
+  std::vector<UnblindOutputStruct> outputs;                   //!< outputs  // NOLINT
+  std::vector<UnblindIssuanceOutputStruct> issuance_outputs;  //!< issuance_outputs  // NOLINT
+  InnerErrorResponseStruct error;       //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// GetIssuanceBlindingKeyRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief GetIssuanceBlindingKeyRequestStruct 構造体
+ */
+struct GetIssuanceBlindingKeyRequestStruct {
+  std::string master_blinding_key = "";  //!< master_blinding_key  // NOLINT
+  std::string txid = "";                 //!< txid  // NOLINT
+  uint32_t vout = 0;                     //!< vout  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// GetIssuanceBlindingKeyResponseStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief GetIssuanceBlindingKeyResponseStruct 構造体
+ */
+struct GetIssuanceBlindingKeyResponseStruct {
+  std::string blinding_key = "";  //!< blinding_key  // NOLINT
   InnerErrorResponseStruct error;       //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };

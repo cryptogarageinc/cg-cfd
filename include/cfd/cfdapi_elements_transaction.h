@@ -14,12 +14,17 @@
 
 #include "cfd/cfd_common.h"
 #include "cfd/cfdapi_struct.h"
+#include "cfdcore/cfdcore_coin.h"
+#include "cfdcore/cfdcore_key.h"
 
 /**
  * @brief cfdapi名前空間
  */
 namespace cfd {
 namespace api {
+
+using cfdcore::Privkey;
+using cfdcore::Txid;
 
 /**
  * @brief Elements用Transaction関連の関数群クラス
@@ -104,6 +109,14 @@ class CFD_EXPORT ElementsTransactionApi {
       const SetRawIssueAssetRequestStruct& request);
 
   /**
+   * @brief パラメータの情報を元に、RawTransactionにAsset再発行情報を設定する.
+   * @param[in] request 設定対象のTransactionとAsset情報を格納した構造体
+   * @return Transactionのhexデータを格納した構造体
+   */
+  static SetRawReissueAssetResponseStruct SetRawReissueAsset(
+      const SetRawReissueAssetRequestStruct& request);
+
+  /**
    * @brief パラメータの情報を元に、Elements Pegin用のRaw Transactionを作成する.
    * @param[in] request Transactionを構築するパラメータの構造体
    * @return Transactionのhexデータを格納した構造体
@@ -112,8 +125,24 @@ class CFD_EXPORT ElementsTransactionApi {
   CreateRawPeginTransaction(  // NOLINT
       const ElementsCreateRawPeginRequestStruct& request);
 
- private:
-  ElementsTransactionApi();
+  /**
+   * @brief パラメータの情報を元に、Issue用BlindingKeyを作成する.
+   * @param[in] request BlindingKeyを構築するパラメータの構造体
+   * @return BlindingKeyを格納した構造体
+   */
+  static GetIssuanceBlindingKeyResponseStruct GetIssuanceBlindingKey(
+      const GetIssuanceBlindingKeyRequestStruct& request);
+
+  /*
+   * @brief Issue用BlindingKeyを作成する.
+   * @param[in] master_blinding_key master blindingKey
+   * @param[in] txid                issuance utxo txid
+   * @param[in] vout                issuance utxo vout
+   * @return blinding key
+   */
+  // 別クラスに分ける。Struct系のAPIを ～StructApi というクラスにした方が良い
+  // Privkey GetIssuanceBlindingKey(const Privkey& master_blinding_key,
+  //     const Txid& txid, int32_t vout);
 };
 
 }  // namespace api

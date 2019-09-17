@@ -24,9 +24,9 @@
 		"witnessScript": "",
 		"witnessScript:comment": "(required for P2WSH or P2SH-P2WSH) witness script for witness stack",
 		"txinType": "",
-		"txinType:hint": "legacy, bech32 or p2sh-segwit",
+		"txinType:hint": "p2sh, p2wsh or p2sh-p2wsh",
 		"clearStack": true,
-		"clearStack:comment": "Clear the stack before addSign. If txinType is legacy, clearStack is forced to be true."
+		"clearStack:comment": "Clear the stack before addSign. If txinType is p2sh, clearStack is forced to be true."
 	},
 	"response": {
 		":class": "AddMultisigSignResponse",

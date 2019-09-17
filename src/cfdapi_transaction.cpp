@@ -81,7 +81,7 @@ using cfdcore::logger::warn;
  * @param[in] addr_type アドレス種別
  */
 static void ValidateAddMultisigSignRequest(  // linefeed
-    AddMultisigSignRequestStruct req, MultisigAddressType addr_type) {
+    AddMultisigSignRequestStruct req, AddressType addr_type) {
   // check txHex
   if (req.tx_hex.empty()) {
     warn(
@@ -94,7 +94,7 @@ static void ValidateAddMultisigSignRequest(  // linefeed
 
   // check require script
   switch (addr_type) {
-    case MultisigAddressType::kLegacy: {
+    case AddressType::kP2shAddress: {
       if (req.redeem_script.empty()) {
         warn(
             CFD_LOG_SOURCE,
@@ -105,7 +105,7 @@ static void ValidateAddMultisigSignRequest(  // linefeed
       }
       break;
     }
-    case MultisigAddressType::kBech32: {
+    case AddressType::kP2wshAddress: {
       if (req.witness_script.empty()) {
         warn(
             CFD_LOG_SOURCE,
@@ -116,7 +116,7 @@ static void ValidateAddMultisigSignRequest(  // linefeed
       }
       break;
     }
-    case MultisigAddressType::kP2shSegwit: {
+    case AddressType::kP2shP2wshAddress: {
       if (req.redeem_script.empty()) {
         warn(
             CFD_LOG_SOURCE,
@@ -134,6 +134,14 @@ static void ValidateAddMultisigSignRequest(  // linefeed
             "Invalid hex string. empty witnessScript.");
       }
       break;
+    }
+    default: {
+      warn(
+          CFD_LOG_SOURCE,
+          "Failed to AddSegwitMultisigSignRequest. address type must be one "
+          "of p2sh address.");
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError, "Invalid address type.");
     }
   }
 
@@ -601,26 +609,19 @@ AddMultisigSignResponseStruct TransactionApi::AddMultisigSign(
       -> AddMultisigSignResponseStruct {  // NOLINT
     AddMultisigSignResponseStruct response;
     // validate request
-    MultisigAddressType addr_type =
-        AddressApi::ConvertMultisigAddressType(request.txin_type);
+    AddressType addr_type = AddressApi::ConvertAddressType(request.txin_type);
     ValidateAddMultisigSignRequest(request, addr_type);
 
     const std::string& hex_string = request.tx_hex;
     TransactionController txc(hex_string);
 
     // extract pubkeys from redeem script
-    Script redeem_script;
-    switch (addr_type) {
-      case MultisigAddressType::kLegacy: {
-        redeem_script = Script(request.redeem_script);
-        break;
-      }
-      case MultisigAddressType::kBech32:
-      case MultisigAddressType::kP2shSegwit: {
-        redeem_script = Script(request.witness_script);
-        break;
-      }
-    }
+    // ValidateAddMultiSignRequest ensures that we have one of three correct
+    // types.
+    Script redeem_script = addr_type == AddressType::kP2shAddress
+                               ? Script(request.redeem_script)
+                               : Script(request.witness_script);
+
     std::vector<Pubkey> pubkeys =
         ExtractPubkeysFromMultisigScript(redeem_script);
     // get signParams from json request
@@ -666,7 +667,7 @@ AddMultisigSignResponseStruct TransactionApi::AddMultisigSign(
 
     // set signatures to target input
     switch (addr_type) {
-      case MultisigAddressType::kLegacy: {
+      case AddressType::kP2shAddress: {
         // non-segwit
         ScriptBuilder sb;
         sb.AppendOperator(ScriptOperator::OP_0);
@@ -679,8 +680,8 @@ AddMultisigSignResponseStruct TransactionApi::AddMultisigSign(
             Txid(request.txin_txid), request.txin_vout, sb.Build());
         break;
       }
-      case MultisigAddressType::kBech32:
-      case MultisigAddressType::kP2shSegwit: {
+      case AddressType::kP2wshAddress:
+      case AddressType::kP2shP2wshAddress: {
         Txid txid = Txid(request.txin_txid);
         if (request.clear_stack) {
           txc.RemoveWitnessStackAll(txid, request.txin_vout);
@@ -699,9 +700,12 @@ AddMultisigSignResponseStruct TransactionApi::AddMultisigSign(
         txc.AddWitnessStack(txid, request.txin_vout, witness_stack);
         break;
       }
+      default:
+        // unreachable, valid type checked by validate method.
+        break;
     }
 
-    if (addr_type == MultisigAddressType::kP2shSegwit) {
+    if (addr_type == AddressType::kP2shP2wshAddress) {
       // set p2sh redeem script to unlockking script
       Script p2sh_redeem_script(request.redeem_script);
       ScriptBuilder sb;
