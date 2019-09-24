@@ -11,6 +11,7 @@
 
 #include "cfd/cfd_common.h"
 #include "cfdcore/cfdcore_bytedata.h"
+#include "cfdcore/cfdcore_coin.h"
 #include "cfdcore/cfdcore_key.h"
 #include "cfdcore/cfdcore_script.h"
 
@@ -19,6 +20,7 @@
  */
 namespace cfd {
 
+using cfdcore::BlockHash;
 using cfdcore::ByteData;
 using cfdcore::ByteData160;
 using cfdcore::ByteData256;
@@ -139,6 +141,18 @@ class CFD_EXPORT ScriptUtil {
    */
   static Script CreateMultisigRedeemScript(
       uint32_t require_sig_num, const std::vector<Pubkey>& pubkeys);
+
+  /**
+   * @brief Pegoutのlocking scriptを作成する.
+   * @param[in] genesisblock_hash mainchainのgenesisblock hash
+   * @param[in] script_pubkey 送り先のscript pubkey
+   * @param[in] btc_pubkey_bytes DerivePubTweak関数で作られたpubkey情報
+   * @param[in] whitelist_proof whitelistの証明
+   * @return Scriptインスタンス
+   */
+  static Script CreatePegoutLogkingScript(
+      const BlockHash& genesisblock_hash, const Script& script_pubkey,
+      const Pubkey& btc_pubkey_bytes, const ByteData& whitelist_proof);
 
  private:
   ScriptUtil();

@@ -6,17 +6,24 @@
 #include "cfdcore/cfdcore_key.h"
 #include "cfd/cfd_common.h"
 #include "cfd/cfd_elements_transaction.h"
+#include "cfdcore/cfdcore_address.h"
 
 using cfdcore::Amount;
+using cfdcore::ByteData;
 using cfdcore::ByteData256;
 using cfdcore::IssuanceParameter;
 using cfdcore::ElementsUnblindedAddress;
+using cfdcore::Pubkey;
 using cfdcore::Privkey;
 using cfdcore::Txid;
 using cfdcore::UnblindParameter;
 using cfd::ConfidentialTransactionController;
 using cfdcore::BlindFactor;
 using cfdcore::ElementsConfidentialAddress;
+using cfdcore::ConfidentialAssetId;
+using cfdcore::BlockHash;
+using cfdcore::Address;
+using cfdcore::NetType;
 
 TEST(ConfidentialTransactionController, CalculateSimpleFeeTest)
 {
@@ -140,4 +147,54 @@ TEST(ConfidentialTransactionController, UnblindTransaction)
         unblind_params[1].asset.GetHex().c_str(),
         "186c7f955149a5274b39e24b6a50d1d6479f552f6522d91f3a97d771f1c18179");
     EXPECT_EQ(unblind_params[1].value.GetAmount().GetSatoshiValue(), 99944120);
+}
+
+TEST(ConfidentialTransactionController, AddPegoutTxOut)
+{
+    ConfidentialTransactionController txc(2, 0);
+    txc.AddTxIn(Txid("4aa201f333e80b8f62ba5b593edb47b4730212e2917b21279f389ba1c14588a3"), 0, 4294967293);
+    txc.AddTxOut(
+        ElementsUnblindedAddress("XBMr6srTXmWuHifFd8gs54xYfiCBsvrksA"),
+        Amount::CreateBySatoshiAmount(209998999992700),
+        ConfidentialAssetId("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"),
+        false);
+    txc.AddPegoutTxOut(
+        Amount::CreateBySatoshiAmount(1000000000),
+        ConfidentialAssetId("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"),
+        BlockHash("0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"),
+        Address("2N8UxQ5u9YXYFn6Ukj5KGXCMDUZTixKTXHo"),
+        NetType::kRegtest,
+        Pubkey("0214156e4ae9168289b4d0c034da94025121d33ad8643663454885032d77640e3d"),
+        Privkey::FromWif("cVPA9nh4bHhKXinBCLkJJTD3UgfiizWRykXfFegwZzKMNYAKG9RL", NetType::kRegtest),
+        "sh(wpkh(tpubDASgDECJvTMzUgS7GkSCxQAAWPveW7BeTPSvbi1wpUe1Mq1v743FRw1i7vTavjAb3D3Y8geCTYw2ezgiVS7SFXDXS6NpZmvr6XPjPvg632y/0/*))",
+        0,
+        ByteData("030e07d4f657c0c169e04fac5d5a8096adb099874834be59ad1e681e22d952ccda0214156e4ae9168289b4d0c034da94025121d33ad8643663454885032d77640e3d"));
+    txc.AddTxOutFee(
+        Amount::CreateBySatoshiAmount(7300),
+        ConfidentialAssetId("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"));
+
+    EXPECT_STREQ(txc.GetHex().c_str(), "020000000001a38845c1a19b389f27217b91e2120273b447db3e595bba628f0be833f301a24a0000000000fdffffff030125b251070e29ca19043cf33ccd7324e2ddab03ecc4ae0b5e77c4fc0e5cf6c95a010000befe33cc397c0017a914001d6db698e75a5a8af771730c4ab258af30546b870125b251070e29ca19043cf33ccd7324e2ddab03ecc4ae0b5e77c4fc0e5cf6c95a01000000003b9aca00009e6a2006226e46111a0b59caaf126043eb5bbf28c34f3a5e332a1fc7b2b73cf188910f17a914a722b257cabc3b8e7d46f8fb293f893f368219da872103700dcb030588ed828d85f645b48971de0d31e8c0244da46710d18681627f5a4a4101044e949dcf8ac2daac82a3e4999ee28e2711661793570c4daab34cd38d76a425d6bfe102f3fea8be12109925fad32c78b65afea4de1d17a826e7375d0e2d00660125b251070e29ca19043cf33ccd7324e2ddab03ecc4ae0b5e77c4fc0e5cf6c95a010000000000001c84000000000000");
+
+}
+
+TEST(ConfidentialTransactionController, AddPegoutTxOut2)
+{
+    ConfidentialTransactionController txc(2, 0);
+    txc.AddTxIn(Txid("4aa201f333e80b8f62ba5b593edb47b4730212e2917b21279f389ba1c14588a3"), 0, 4294967293);
+    txc.AddTxOut(
+        ElementsUnblindedAddress("XBMr6srTXmWuHifFd8gs54xYfiCBsvrksA"),
+        Amount::CreateBySatoshiAmount(209998999992700),
+        ConfidentialAssetId("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"),
+        false);
+    txc.AddPegoutTxOut(
+        Amount::CreateBySatoshiAmount(1000000000),
+        ConfidentialAssetId("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"),
+        BlockHash("0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"),
+        Address("2N8UxQ5u9YXYFn6Ukj5KGXCMDUZTixKTXHo"));
+    txc.AddTxOutFee(
+        Amount::CreateBySatoshiAmount(7300),
+        ConfidentialAssetId("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"));
+
+    EXPECT_STREQ(txc.GetHex().c_str(), "020000000001a38845c1a19b389f27217b91e2120273b447db3e595bba628f0be833f301a24a0000000000fdffffff030125b251070e29ca19043cf33ccd7324e2ddab03ecc4ae0b5e77c4fc0e5cf6c95a010000befe33cc397c0017a914001d6db698e75a5a8af771730c4ab258af30546b870125b251070e29ca19043cf33ccd7324e2ddab03ecc4ae0b5e77c4fc0e5cf6c95a01000000003b9aca00003a6a2006226e46111a0b59caaf126043eb5bbf28c34f3a5e332a1fc7b2b73cf188910f17a914a722b257cabc3b8e7d46f8fb293f893f368219da870125b251070e29ca19043cf33ccd7324e2ddab03ecc4ae0b5e77c4fc0e5cf6c95a010000000000001c84000000000000");
+
 }

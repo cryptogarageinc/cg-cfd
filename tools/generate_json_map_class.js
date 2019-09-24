@@ -6,10 +6,16 @@ const path = require('path');
 // json data class
 // ----------------------------------------------------------------------------
 class JsonMappingData {
-  constructor(name, type, init_value, class_name, is_output_struct = true){
+  constructor(name, type, init_value, class_name, is_output_struct = true) {
     this.name = name
-    this.method_name = name.charAt(0).toUpperCase() + name.slice(1);
-    this.variable_name = name.split(/(?=[A-Z])/).join('_').toLowerCase();
+    this.method_name = (() => {
+      const replaced_method_name = this.name.replace(/-/gi, "_")
+      return replaced_method_name.charAt(0).toUpperCase() + replaced_method_name.slice(1)
+    })()
+    this.variable_name = (() => {
+      const replaced_variable_name = this.name.replace(/-/gi, "_")
+      return replaced_variable_name.split(/(?=[A-Z])/).join('_').toLowerCase()
+    })()
     this.setType(type)
     this.init_value = init_value
     this.class_name = class_name
@@ -62,7 +68,7 @@ class JsonMappingData {
 // json data class
 // ----------------------------------------------------------------------------
 class JsonData {
-  constructor(json_data, request_data, response_data){
+  constructor(json_data, request_data, response_data) {
     this.json_data = json_data
     this.request_data = request_data
     this.response_data = response_data
@@ -120,7 +126,7 @@ const analyzeJson = (jsonObj, objName = '') => {
       }
       else {
         if ((typeof obj_values[0] == 'string') || (typeof obj_values[0] == 'number')
-           || (typeof obj_values[0] == 'boolean')) {
+          || (typeof obj_values[0] == 'boolean')) {
           // 文字列or数値系の配列
           result = new JsonMappingData(objName, `JsonValueVector<${past_type}>`, '', '')
         }
@@ -317,8 +323,8 @@ void ${map_data.type}::CollectFieldName() {
 
         for (const child_key in map_data.child_list) {
           const child_data = map_data.child_list[child_key]
-// start
-const add_json_mapper_comment = `\
+          // start
+          const add_json_mapper_comment = `\
   func_table = {
     ${map_data.type}::Get${child_data.method_name}String,
     ${map_data.type}::Set${child_data.method_name}String,
@@ -327,7 +333,7 @@ const add_json_mapper_comment = `\
   json_mapper.emplace("${child_data.name}", func_table);
   item_list.push_back("${child_data.name}");\
 `
-// end
+          // end
           result.push(add_json_mapper_comment)
         }
         result.push('}')
@@ -408,11 +414,11 @@ class ${export_define}${map_data.type}
    */
   static void CollectFieldName();
 `
-//  ${map_data.type} & operator=(const ${map_data.type} & obj) & {
-//    std::string serializeString = obj.Serialize();
-//    Deserialize(serializeString);
-//    return *this;
-//  }
+  //  ${map_data.type} & operator=(const ${map_data.type} & obj) & {
+  //    std::string serializeString = obj.Serialize();
+  //    Deserialize(serializeString);
+  //    return *this;
+  //  }
   return class_header
 }
 
@@ -641,7 +647,6 @@ const generateHeader = (filename, dirname, req, res, json_setting, append_header
   const def_name = path.toUpperCase();
   const include_header = (json_setting.common_header) ? `#include "${json_setting.common_header}"\n` : '';
   const include_header2 = (append_header_name.length > 0) ? `#include "${append_header_name}"\n` : '';
-  
 
   // header
   const header_file_header = `// Copyright 2019 CryptoGarage
@@ -966,24 +971,24 @@ const generateStructHeader = (dirname, filename, json_list) => {
   let last_namespace = ''
   for (const json_data_index in json_list) {
     if (('priority' in json_list[json_data_index].json_data) &&
-        (json_list[json_data_index].json_data['priority'] == 'high')) {
+      (json_list[json_data_index].json_data['priority'] == 'high')) {
       let req = json_list[json_data_index].request_data
       let res = json_list[json_data_index].response_data
       generateStructItemData(result, req, res,
-          json_list[json_data_index].json_data, last_namespace, false)
+        json_list[json_data_index].json_data, last_namespace, false)
       last_namespace = json_list[json_data_index].json_data.namespace
     }
   }
 
   for (const json_data_index in json_list) {
     if (('priority' in json_list[json_data_index].json_data) &&
-        (json_list[json_data_index].json_data['priority'] == 'high')) {
+      (json_list[json_data_index].json_data['priority'] == 'high')) {
       // do nothing
     } else {
       let req = json_list[json_data_index].request_data
       let res = json_list[json_data_index].response_data
       generateStructItemData(result, req, res,
-          json_list[json_data_index].json_data, last_namespace, true)
+        json_list[json_data_index].json_data, last_namespace, true)
       let json_data = json_list[json_data_index].json_data
       last_namespace = json_list[json_data_index].json_data.namespace
     }
@@ -1020,7 +1025,7 @@ if (fs.existsSync(outJsonFolderPath) && fs.statSync(outJsonFolderPath).isDirecto
 
 fs.readdir(folderPath, (err, files) => {
   if (err) throw err;
-  files.filter(function(file){
+  files.filter(function (file) {
     // filter
     return fs.statSync(`${folderPath}${file}`).isFile() && /.*\.json$/.test(file);
   }).forEach(function (file) {

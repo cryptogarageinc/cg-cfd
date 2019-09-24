@@ -3,7 +3,7 @@ project(external_download NONE)
 # cfd-core
 set(TEMPLATE_PROJECT_NAME           cfd-core)
 set(TEMPLATE_PROJECT_GIT_REPOSITORY https://github.com/cryptogarageinc/cfd-core.git)
-set(TEMPLATE_PROJECT_GIT_TAG        v0.0.1)
+set(TEMPLATE_PROJECT_GIT_TAG        v0.0.2)
 set(PROJECT_EXTERNAL  "${CMAKE_SOURCE_DIR}/external/${TEMPLATE_PROJECT_NAME}/external")
 set(DIR_PATH "${CFD_ROOT_BINARY_DIR}/${TEMPLATE_PROJECT_NAME}")
 set(DL_PATH "${CFD_ROOT_BINARY_DIR}/external/${TEMPLATE_PROJECT_NAME}/download")

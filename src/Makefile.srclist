@@ -14,6 +14,7 @@ CFD_SOURCES = \
   cfd_transaction.cpp \
   cfd_address.cpp \
   cfdapi_transaction.cpp \
+  cfdapi_transaction_base.cpp \
   cfdapi_address.cpp \
   cfdapi_key.cpp \
   cfdapi_sighash.cpp \

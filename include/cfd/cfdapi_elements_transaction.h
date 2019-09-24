@@ -126,6 +126,14 @@ class CFD_EXPORT ElementsTransactionApi {
       const ElementsCreateRawPeginRequestStruct& request);
 
   /**
+   * @brief パラメータの情報を元に、Elements Pegout用のRaw Transactionを作成する.
+   * @param[in] request Transactionを構築するパラメータの構造体
+   * @return Transactionのhexデータを格納した構造体
+   */
+  static ElementsCreateRawPegoutResponseStruct CreateRawPegoutTransaction(
+      const ElementsCreateRawPegoutRequestStruct& request);
+
+  /**
    * @brief パラメータの情報を元に、Issue用BlindingKeyを作成する.
    * @param[in] request BlindingKeyを構築するパラメータの構造体
    * @return BlindingKeyを格納した構造体

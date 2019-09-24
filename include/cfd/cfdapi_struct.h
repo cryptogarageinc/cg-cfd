@@ -455,6 +455,94 @@ struct ElementsCreateRawPeginResponseStruct {
 };
 
 // ------------------------------------------------------------------------
+// ElementsPegoutTxInStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsPegoutTxInStruct 構造体
+ */
+struct ElementsPegoutTxInStruct {
+  std::string txid = "";           //!< txid  // NOLINT
+  uint32_t vout = 0;               //!< vout  // NOLINT
+  uint32_t sequence = 4294967295;  //!< sequence  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsPegoutTxOutStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsPegoutTxOutStruct 構造体
+ */
+struct ElementsPegoutTxOutStruct {
+  std::string address = "";      //!< address  // NOLINT
+  int64_t amount = 0;            //!< amount  // NOLINT
+  std::string asset = "";        //!< asset  // NOLINT
+  bool is_remove_nonce = false;  //!< is_remove_nonce  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsPegoutStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsPegoutStruct 構造体
+ */
+struct ElementsPegoutStruct {
+  int64_t amount = 0;                             //!< amount  // NOLINT
+  std::string asset = "";                         //!< asset  // NOLINT
+  std::string network = "mainnet";                //!< network  // NOLINT
+  std::string mainchain_genesis_block_hash = "";  //!< mainchain_genesis_block_hash  // NOLINT
+  std::string btc_address = "";                   //!< btc_address  // NOLINT
+  std::string online_pubkey = "";                 //!< online_pubkey  // NOLINT
+  std::string master_online_key = "";             //!< master_online_key  // NOLINT
+  std::string bitcoin_descriptor = "";            //!< bitcoin_descriptor  // NOLINT
+  int64_t bip32_counter = 0;                      //!< bip32_counter  // NOLINT
+  std::string whitelist = "";                     //!< whitelist  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsPegoutTxOutFeeStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsPegoutTxOutFeeStruct 構造体
+ */
+struct ElementsPegoutTxOutFeeStruct {
+  int64_t amount = 0;      //!< amount  // NOLINT
+  std::string asset = "";  //!< asset  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsCreateRawPegoutRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsCreateRawPegoutRequestStruct 構造体
+ */
+struct ElementsCreateRawPegoutRequestStruct {
+  uint32_t version = 2;                           //!< version  // NOLINT
+  uint32_t locktime = 0;                          //!< locktime  // NOLINT
+  std::vector<ElementsPegoutTxInStruct> txins;    //!< txins  // NOLINT
+  std::vector<ElementsPegoutTxOutStruct> txouts;  //!< txouts  // NOLINT
+  ElementsPegoutStruct pegout;                    //!< pegout  // NOLINT
+  ElementsPegoutTxOutFeeStruct fee;               //!< fee  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsCreateRawPegoutResponseStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsCreateRawPegoutResponseStruct 構造体
+ */
+struct ElementsCreateRawPegoutResponseStruct {
+  std::string hex = "";          //!< hex  // NOLINT
+  std::string btc_address = "";  //!< btc_address  // NOLINT
+  InnerErrorResponseStruct error;       //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
 // ElementsTxInRequestStruct
 // ------------------------------------------------------------------------
 /**

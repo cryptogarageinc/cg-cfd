@@ -13,6 +13,7 @@
 
 #include "cfd/cfd_fee.h"
 #include "cfd/cfd_script.h"
+#include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_amount.h"
 #include "cfdcore/cfdcore_coin.h"
 #include "cfdcore/cfdcore_elements_address.h"
@@ -24,6 +25,7 @@
 
 namespace cfd {
 
+using cfdcore::AddressType;
 using cfdcore::Amount;
 using cfdcore::ByteData256;
 using cfdcore::CfdError;
@@ -32,6 +34,7 @@ using cfdcore::ConfidentialNonce;
 using cfdcore::ElementsAddressType;
 using cfdcore::ElementsConfidentialAddress;
 using cfdcore::IssuanceParameter;
+using cfdcore::PegoutKeyData;
 using cfdcore::ScriptBuilder;
 using cfdcore::logger::warn;
 
@@ -142,6 +145,55 @@ const ConfidentialTxOutReference ConfidentialTransactionController::AddTxOut(
     const ConfidentialAssetId& asset, const ConfidentialNonce& nonce) {
   uint32_t index = transaction_.AddTxOut(value, asset, locking_script, nonce);
   return transaction_.GetTxOut(index);
+}
+
+const ConfidentialTxOutReference
+ConfidentialTransactionController::AddPegoutTxOut(
+    const Amount& value, const ConfidentialAssetId& asset,
+    const BlockHash& genesisblock_hash, const Address& btc_address,
+    NetType net_type, const Pubkey& online_pubkey,
+    const Privkey& master_online_key, const std::string& btc_descriptor,
+    uint32_t bip32_counter, const ByteData& whitelist) {
+  // AddressTypeの種別ごとに、locking_scriptを作成
+  Script script;
+  const AddressType addr_type = btc_address.GetAddressType();
+  const ByteData hash_data = btc_address.GetHash();
+  switch (addr_type) {
+    case AddressType::kP2pkhAddress: {
+      ByteData160 pubkey_hash(hash_data.GetBytes());
+      script = ScriptUtil::CreateP2pkhLockingScript(pubkey_hash);
+      break;
+    }
+    case AddressType::kP2shAddress: {
+      ByteData160 script_hash(hash_data.GetBytes());
+      script = ScriptUtil::CreateP2shLockingScript(script_hash);
+      break;
+    }
+    case AddressType::kP2wpkhAddress: {
+      ByteData160 pubkey_hash(hash_data.GetBytes());
+      script = ScriptUtil::CreateP2wpkhLockingScript(pubkey_hash);
+      break;
+    }
+    case AddressType::kP2wshAddress: {
+      ByteData256 script_hash(hash_data.GetBytes());
+      script = ScriptUtil::CreateP2wshLockingScript(script_hash);
+      break;
+    }
+  }
+
+  PegoutKeyData key_data;
+  if (online_pubkey.IsValid() && !master_online_key.IsInvalid()) {
+    // pubkeys・whitelistproofを算出
+    key_data = ConfidentialTransaction::GetPegoutPubkeyData(
+        online_pubkey, master_online_key, btc_descriptor, bip32_counter,
+        whitelist, net_type);
+  }
+
+  Script locking_script = ScriptUtil::CreatePegoutLogkingScript(
+      genesisblock_hash, script, key_data.btc_pubkey_bytes,
+      key_data.whitelist_proof);
+
+  return AddTxOut(locking_script, value, asset);
 }
 
 const ConfidentialTxOutReference

@@ -26,10 +26,12 @@
 #include "cfdcore/cfdcore_util.h"
 
 #include "cfd/cfd_elements_address.h"
+#include "cfd/cfd_script.h"
 #include "cfd/cfdapi_address.h"
 #include "cfd/cfdapi_elements_transaction.h"
 #include "cfd/cfdapi_struct.h"
 #include "cfd/cfdapi_transaction.h"
+#include "cfd/cfdapi_transaction_base.h"
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
@@ -37,6 +39,7 @@ namespace api {
 
 using cfd::ConfidentialTransactionController;
 using cfd::ElementsAddressUtil;
+using cfd::ScriptUtil;
 using cfd::api::AddressApi;
 using cfd::api::TransactionApi;
 using cfdcore::AbstractElementsAddress;
@@ -54,6 +57,8 @@ using cfdcore::ConfidentialTransaction;
 using cfdcore::ConfidentialValue;
 using cfdcore::ElementsConfidentialAddress;
 using cfdcore::ElementsUnblindedAddress;
+using cfdcore::ExtKey;
+using cfdcore::HashUtil;
 using cfdcore::IssuanceBlindingKeyPair;
 using cfdcore::IssuanceParameter;
 using cfdcore::Privkey;
@@ -65,108 +70,28 @@ using cfdcore::SigHashType;
 using cfdcore::Transaction;
 using cfdcore::Txid;
 using cfdcore::UnblindParameter;
+using cfdcore::WitnessVersion;
 using cfdcore::logger::info;
 using cfdcore::logger::warn;
 
 // -----------------------------------------------------------------------------
 // ファイル内関数
 // -----------------------------------------------------------------------------
+
 /**
- * @brief Elements用AddMultisigSignのリクエスト情報チェックを行います。
- * @param[in] req       リクエスト情報
- * @param[in] addr_type アドレス種別
+ * @brief Create a ConfidentialTransactionController object.
+ *
+ * @param[in] hex of the transaction for which to create the controller object
+ * @return a ConfidentialTransactionController instance
  */
-static void ValidateAddMultisigSignRequestElements(  // linefeed
-    AddMultisigSignRequestStruct req, AddressType addr_type) {
-  // check txHex
-  if (req.tx_hex.empty()) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to AddSegwitMultisigSignRequest. Transaction hex empty.");
-    throw CfdException(
-        CfdError::kCfdIllegalArgumentError,
-        "Invalid hex string. empty txHex.");
-  }
-
-  // check require script
-  switch (addr_type) {
-    case AddressType::kP2shAddress: {
-      if (req.redeem_script.empty()) {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to AddSegwitMultisigSignRequest. redeem script empty.");
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "Invalid hex string. empty redeemScript.");
-      }
-      break;
-    }
-    case AddressType::kP2wshAddress: {
-      // TODO(MariSoejima): Elements+Bech32現状対応なし
-      throw CfdException(
-          CfdError::kCfdOutOfRangeError,
-          "Failed to AddMultisigSign. p2wsh is excluded.");
-
-      //      if (req.witness_script.empty()) {
-      //        warn(CFD_LOG_SOURCE,
-      //             "Failed to AddSegwitMultisigSignRequest. witness script
-      //             empty.");
-      //        throw CfdException(CfdError::kCfdIllegalArgumentError,
-      //                           "Invalid hex string. empty witnessScript.");
-      //      }
-      //
-      break;
-    }
-    case AddressType::kP2shP2wshAddress: {
-      if (req.redeem_script.empty()) {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to AddSegwitMultisigSignRequest. redeem script empty.");
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "Invalid hex string. empty redeemScript.");
-      }
-      if (req.witness_script.empty()) {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to AddSegwitMultisigSignRequest. witness script empty.");
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "Invalid hex string. empty witnessScript.");
-      }
-      break;
-    }
-    default: {
-      warn(
-          CFD_LOG_SOURCE,
-          "Failed to AddSegwitMultisigSignRequest. address type must be one "
-          "of p2sh address.");
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError, "Invalid address type.");
-    }
-  }
-
-  // check signData (not empty)
-  if (req.sign_params.empty()) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to AddSegwitMultisigSignRequest. sign parameters empty.");
-    throw CfdException(
-        CfdError::kCfdIllegalArgumentError,
-        "Invalid array length. empty signParams.");
-  }
-
-  // check signData (too much data)
-  if (req.sign_params.size() > 15) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to AddSegwitMultisigSignRequest. sign array length over.");
-    throw CfdException(
-        CfdError::kCfdOutOfRangeError,
-        "Value out of range. sign array length over.");
-  }
+static ConfidentialTransactionController CreateController(
+    const std::string& hex) {
+  return ConfidentialTransactionController(hex);
 }
 
+// -----------------------------------------------------------------------------
+// ElementsTransactionApiクラス
+// -----------------------------------------------------------------------------
 ElementsCreateRawTransactionResponseStruct
 ElementsTransactionApi::CreateRawTransaction(  // NOLINT
     const ElementsCreateRawTransactionRequestStruct& request) {
@@ -230,23 +155,8 @@ GetWitnessStackNumResponseStruct ElementsTransactionApi::GetWitnessStackNum(
     const GetWitnessStackNumRequestStruct& request) {
   auto call_func = [](const GetWitnessStackNumRequestStruct& request)
       -> GetWitnessStackNumResponseStruct {  // NOLINT
-    GetWitnessStackNumResponseStruct response;
-    const std::string& hex_string = request.tx_hex;
-    if (hex_string.empty()) {
-      warn(CFD_LOG_SOURCE, "Failed to GetWitnessStackNum. hex empty.");
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Invalid hex string. empty data.");
-    }
-
-    // TransactionController作成
-    ConfidentialTransactionController txc(hex_string);
-
-    uint32_t count =
-        txc.GetWitnessStackNum(Txid(request.txin_txid), request.txin_vout);
-
-    response.count = count;
-    return response;
+    return TransactionApiBase::GetWitnessStackNum<
+        ConfidentialTransactionController>(request, CreateController);
   };
 
   GetWitnessStackNumResponseStruct result;
@@ -260,46 +170,8 @@ AddSignResponseStruct ElementsTransactionApi::AddSign(
     const AddSignRequestStruct& request) {
   auto call_func =
       [](const AddSignRequestStruct& request) -> AddSignResponseStruct {
-    AddSignResponseStruct response;
-    const std::string& hex_string = request.tx_hex;
-    if (hex_string.empty()) {
-      warn(CFD_LOG_SOURCE, "Failed to AddSignRequest. hex empty.");
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Invalid hex string. empty data.");
-    }
-
-    // TransactionController作成
-    ConfidentialTransactionController txc(hex_string);
-
-    if (request.is_witness) {
-      // Witnessの追加
-      Txid txid = Txid(request.txin_txid);
-      if (request.clear_stack) {
-        txc.RemoveWitnessStackAll(txid, request.txin_vout);
-      }
-      std::vector<ByteData> witness_datas;
-      for (const SignDataStruct& stack_req : request.sign_param) {
-        ByteData byte_data = TransactionApi::ConvertSignDataToSignature(
-            stack_req.hex, (stack_req.type == "sign"), stack_req.der_encode,
-            stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
-        witness_datas.push_back(byte_data);
-      }
-      txc.AddWitnessStack(txid, request.txin_vout, witness_datas);
-    } else {
-      std::vector<ByteData> unlock_script;
-      for (const SignDataStruct& stack_req : request.sign_param) {
-        ByteData byte_data = TransactionApi::ConvertSignDataToSignature(
-            stack_req.hex, (stack_req.type == "sign"), stack_req.der_encode,
-            stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
-        unlock_script.push_back(byte_data);
-      }
-      txc.SetUnlockingScript(
-          Txid(request.txin_txid), request.txin_vout, unlock_script);
-    }
-
-    response.hex = txc.GetHex();
-    return response;
+    return TransactionApiBase::AddSign<ConfidentialTransactionController>(
+        request, CreateController);
   };
 
   AddSignResponseStruct result;
@@ -315,114 +187,14 @@ AddMultisigSignResponseStruct ElementsTransactionApi::AddMultisigSign(
     AddMultisigSignResponseStruct response;
     // レスポンスとなるモデルへ変換
     // validate request
-    AddressType addr_type = AddressApi::ConvertAddressType(request.txin_type);
-    ValidateAddMultisigSignRequestElements(request, addr_type);
-
-    const std::string& hex_string = request.tx_hex;
-    warn(CFD_LOG_SOURCE, "hex:{}", hex_string);
-    ConfidentialTransactionController txc(hex_string);
-
-    // extract pubkeys from redeem script
-    Script redeem_script = addr_type == AddressType::kP2shAddress
-                               ? Script(request.redeem_script)
-                               : Script(request.witness_script);
-
-    std::vector<Pubkey> pubkeys =
-        TransactionApi::ExtractPubkeysFromMultisigScript(redeem_script);
-    // get signParams from json request
-    std::vector<MultisigSignDataStruct> sign_params = request.sign_params;
-
-    // set signParam to signature_data (only contains relatedPubkey);
-    std::vector<ByteData> signature_data;
-    for (const Pubkey& pubkey : pubkeys) {
-      for (auto itr = sign_params.begin(); itr != sign_params.end();) {
-        MultisigSignDataStruct sign_param = *itr;
-        if (sign_param.related_pubkey != pubkey.GetHex()) {
-          ++itr;
-          continue;
-        }
-
-        itr = sign_params.erase(itr);
-        ByteData byte_data = TransactionApi::ConvertSignDataToSignature(
-            sign_param.hex, true, sign_param.der_encode,
-            sign_param.sighash_type, sign_param.sighash_anyone_can_pay);
-        signature_data.push_back(byte_data);
-      }
+    if (request.txin_type == "p2wsh") {
+      throw CfdException(
+          CfdError::kCfdOutOfRangeError,
+          "Failed to AddMultisigSign. p2wsh is excluded.");
     }
 
-    // set the others to signature data
-    for (MultisigSignDataStruct sign_param : sign_params) {
-      // related pubkey not found in script
-      if (!sign_param.related_pubkey.empty()) {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to AddMultisigSign. Missing related pubkey"
-            " in script.: relatedPubkey={}, script={}",
-            sign_param.related_pubkey, redeem_script.GetHex());
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "Missing related pubkey in script."
-            " Check your signature and pubkey pair.");
-      }
-      ByteData byte_data = TransactionApi::ConvertSignDataToSignature(
-          sign_param.hex, true, sign_param.der_encode, sign_param.sighash_type,
-          sign_param.sighash_anyone_can_pay);
-      signature_data.push_back(byte_data);
-    }
-
-    // set signatures to target input
-    switch (addr_type) {
-      case AddressType::kP2shAddress: {
-        // non-segwit
-        ScriptBuilder sb;
-        sb.AppendOperator(ScriptOperator::OP_0);
-        for (const ByteData& signature : signature_data) {
-          sb.AppendData(signature);
-        }
-        sb.AppendData(redeem_script);
-
-        txc.SetUnlockingScript(
-            Txid(request.txin_txid), request.txin_vout, sb.Build());
-        break;
-      }
-      case AddressType::kP2wshAddress:
-        // 対象外
-        break;
-      case AddressType::kP2shP2wshAddress: {
-        Txid txid = Txid(request.txin_txid);
-        if (request.clear_stack) {
-          txc.RemoveWitnessStackAll(txid, request.txin_vout);
-        }
-        // set empty data
-        std::vector<ByteData> witness_stack;
-        // push empty byte
-        witness_stack.push_back(ByteData());
-        // create stack
-        std::copy(
-            signature_data.begin(), signature_data.end(),
-            std::back_inserter(witness_stack));
-        witness_stack.push_back(redeem_script.GetData());
-
-        // set witness stack
-        txc.AddWitnessStack(txid, request.txin_vout, witness_stack);
-        break;
-      }
-      default:
-        // Unreachable, validate method ensures correct address type.
-        break;
-    }
-
-    if (addr_type == AddressType::kP2shP2wshAddress) {
-      // set p2sh redeem script to unlockking script
-      Script p2sh_redeem_script(request.redeem_script);
-      ScriptBuilder sb;
-      sb.AppendData(p2sh_redeem_script);
-      txc.SetUnlockingScript(
-          Txid(request.txin_txid), request.txin_vout, sb.Build());
-    }
-
-    response.hex = txc.GetHex();
-    return response;
+    return TransactionApiBase::AddMultisigSign<
+        ConfidentialTransactionController>(request, CreateController);
   };
 
   AddMultisigSignResponseStruct result;
@@ -436,29 +208,8 @@ UpdateWitnessStackResponseStruct ElementsTransactionApi::UpdateWitnessStack(
     const UpdateWitnessStackRequestStruct& request) {
   auto call_func = [](const UpdateWitnessStackRequestStruct& request)
       -> UpdateWitnessStackResponseStruct {  // NOLINT
-    UpdateWitnessStackResponseStruct response;
-    const std::string& hex_string = request.tx_hex;
-    if (hex_string.empty()) {
-      warn(CFD_LOG_SOURCE, "Failed to UpdateWitnessStack. hex empty.");
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Invalid hex string. empty data.");
-    }
-
-    // TransactionController作成
-    ConfidentialTransactionController txc(hex_string);
-
-    // Witnessの更新
-    const WitnessStackDataStruct& stack_req = request.witness_stack;
-    ByteData byte_data = TransactionApi::ConvertSignDataToSignature(
-        stack_req.hex, (stack_req.type == "sign"), stack_req.der_encode,
-        stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
-    txc.SetWitnessStack(
-        Txid(request.txin_txid), request.txin_vout,
-        static_cast<uint32_t>(stack_req.index), byte_data);
-
-    response.hex = txc.GetHex();
-    return response;
+    return TransactionApiBase::UpdateWitnessStack<
+        ConfidentialTransactionController>(request, CreateController);
   };
 
   UpdateWitnessStackResponseStruct result;
@@ -483,7 +234,7 @@ ElementsTransactionApi::CreateSignatureHash(  // NOLINT
     const Txid& txid = Txid(request.txin_txid);
     uint32_t vout = request.txin_vout;
     ConfidentialTransactionController txc(request.tx_hex);
-    SigHashType sighashtype = TransactionApi::ConvertSigHashType(
+    SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
         request.sighash_type, request.sighash_anyone_can_pay);
 
     if ((hashtype_str == "p2pkh") || (hashtype_str == "p2wpkh")) {
@@ -653,7 +404,7 @@ BlindRawTransactionResponseStruct ElementsTransactionApi::BlindTransaction(
       key_pairs.resize(txin_count);
 
       for (BlindIssuanceRequestStruct issuance : request.issuances) {
-        uint32_t index = txc.GetTransaction().GetTxInIndex(
+        index = txc.GetTransaction().GetTxInIndex(
             Txid(issuance.txid), issuance.vout);
         IssuanceBlindingKeyPair key;
         if (!issuance.asset_blinding_key.empty()) {
@@ -980,6 +731,144 @@ ElementsTransactionApi::CreateRawPeginTransaction(  // NOLINT
   result = ExecuteStructApi<
       ElementsCreateRawPeginRequestStruct,
       ElementsCreateRawPeginResponseStruct>(
+      request, call_func, std::string(__FUNCTION__));
+  return result;
+}
+
+ElementsCreateRawPegoutResponseStruct
+ElementsTransactionApi::CreateRawPegoutTransaction(  // NOLINT
+    const ElementsCreateRawPegoutRequestStruct& request) {
+  auto call_func = [](const ElementsCreateRawPegoutRequestStruct& request)
+      -> ElementsCreateRawPegoutResponseStruct {  // NOLINT
+    ElementsCreateRawPegoutResponseStruct response;
+    // Transaction作成
+    ConfidentialTransactionController ctxc(request.version, request.locktime);
+
+    // TxInの追加
+    const uint32_t kLockTimeDisabledSequence =
+        ctxc.GetLockTimeDisabledSequence();
+    for (ElementsPegoutTxInStruct txin_req : request.txins) {
+      Txid txid(txin_req.txid);
+      uint32_t vout = txin_req.vout;
+
+      // TxInのunlocking_scriptは空で作成
+      if (kLockTimeDisabledSequence == txin_req.sequence) {
+        ctxc.AddTxIn(txid, vout, ctxc.GetDefaultSequence());
+      } else {
+        ctxc.AddTxIn(txid, vout, txin_req.sequence);
+      }
+    }
+
+    // TxOutの追加
+    for (ElementsPegoutTxOutStruct txout_req : request.txouts) {
+      const std::string addr = txout_req.address;
+      if (AbstractElementsAddress::IsConfidentialAddress(addr)) {
+        ctxc.AddTxOut(
+            ElementsConfidentialAddress(addr),
+            Amount::CreateBySatoshiAmount(txout_req.amount),
+            ConfidentialAssetId(txout_req.asset), txout_req.is_remove_nonce);
+      } else {
+        ctxc.AddTxOut(
+            ElementsUnblindedAddress(addr),
+            Amount::CreateBySatoshiAmount(txout_req.amount),
+            ConfidentialAssetId(txout_req.asset), txout_req.is_remove_nonce);
+      }
+    }
+
+    // PegoutのTxOut追加
+    const std::string pegout_address = request.pegout.btc_address;
+    NetType net_type = AddressApi::ConvertNetType(request.pegout.network);
+
+    if (!request.pegout.online_pubkey.empty() &&
+        !request.pegout.master_online_key.empty()) {
+      Privkey master_online_key;
+      if (request.pegout.master_online_key.size() ==
+          Privkey::kPrivkeySize * 2) {
+        // hex
+        master_online_key = Privkey(request.pegout.master_online_key);
+      } else {
+        // Wif
+        master_online_key =
+            Privkey::FromWif(request.pegout.master_online_key, net_type);
+      }
+      Address pegout_addr;
+      if (pegout_address.empty()) {
+        // TODO(k-matsuzawa): ExtKeyの正式対応が入るまでの暫定対応
+        // pegoutのtemplateに従い、xpub/counterから生成する
+        // descriptor parse
+        std::string desc = request.pegout.bitcoin_descriptor;
+        std::string::size_type start_point = desc.rfind('(');
+        std::string arg_type;
+        std::string xpub;
+        if (start_point == std::string::npos) {
+          xpub = desc;
+        } else {
+          arg_type = desc.substr(0, start_point);
+          xpub = desc.substr(start_point + 1);
+        }
+        std::string::size_type end_point = xpub.find('/');
+        if (end_point == std::string::npos) {
+          end_point = xpub.find(')');
+          if (end_point != std::string::npos) {
+            xpub = xpub.substr(0, end_point);
+          }
+        } else {
+          xpub = xpub.substr(0, end_point);
+        }
+        // info(CFD_LOG_SOURCE, "arg_type={}, xpub={}", arg_type, xpub);
+        // key生成
+        ExtKey ext_key = ExtKey(xpub).DerivePubkey(0).DerivePubkey(
+            request.pegout.bip32_counter);
+        Pubkey pubkey = ext_key.GetPubkey();
+
+        // Addressクラス生成
+        if (arg_type == "sh(wpkh") {
+          Script wpkh_script = ScriptUtil::CreateP2wpkhLockingScript(pubkey);
+          ByteData160 wpkh_hash = HashUtil::Hash160(wpkh_script);
+          pegout_addr =
+              Address(net_type, AddressType::kP2shAddress, wpkh_hash);
+        } else if (arg_type == "wpkh") {
+          pegout_addr = Address(net_type, WitnessVersion::kVersion0, pubkey);
+        } else {  // if (arg_type == "pkh(")
+          // pkh
+          pegout_addr = Address(net_type, pubkey);
+        }
+      } else {
+        pegout_addr = Address(pegout_address);
+      }
+
+      ctxc.AddPegoutTxOut(
+          Amount::CreateBySatoshiAmount(request.pegout.amount),
+          ConfidentialAssetId(request.pegout.asset),
+          BlockHash(request.pegout.mainchain_genesis_block_hash), pegout_addr,
+          net_type, Pubkey(request.pegout.online_pubkey), master_online_key,
+          request.pegout.bitcoin_descriptor, request.pegout.bip32_counter,
+          ByteData(request.pegout.whitelist));
+      response.btc_address = pegout_addr.GetAddress();
+
+    } else {
+      ctxc.AddPegoutTxOut(
+          Amount::CreateBySatoshiAmount(request.pegout.amount),
+          ConfidentialAssetId(request.pegout.asset),
+          BlockHash(request.pegout.mainchain_genesis_block_hash),
+          Address(pegout_address));
+      response.ignore_items.insert("btcAddress");
+    }
+
+    // feeの追加
+    ElementsPegoutTxOutFeeStruct fee_req = request.fee;
+    ctxc.AddTxOutFee(
+        Amount::CreateBySatoshiAmount(fee_req.amount),
+        ConfidentialAssetId(fee_req.asset));
+
+    response.hex = ctxc.GetHex();
+    return response;
+  };
+
+  ElementsCreateRawPegoutResponseStruct result;
+  result = ExecuteStructApi<
+      ElementsCreateRawPegoutRequestStruct,
+      ElementsCreateRawPegoutResponseStruct>(
       request, call_func, std::string(__FUNCTION__));
   return result;
 }

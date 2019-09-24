@@ -6,6 +6,7 @@
  */
 #include <vector>
 
+#include "cfdcore/cfdcore_coin.h"
 #include "cfdcore/cfdcore_exception.h"
 #include "cfdcore/cfdcore_logger.h"
 #include "cfdcore/cfdcore_script.h"
@@ -15,6 +16,7 @@
 
 namespace cfd {
 
+using cfdcore::BlockHash;
 using cfdcore::ByteData160;
 using cfdcore::ByteData256;
 using cfdcore::CfdError;
@@ -177,4 +179,19 @@ Script ScriptUtil::CreateMultisigRedeemScript(
   return redeem_script;
 }
 
+Script ScriptUtil::CreatePegoutLogkingScript(
+    const BlockHash& genesisblock_hash, const Script& script_pubkey,
+    const Pubkey& btc_pubkey_bytes, const ByteData& whitelist_proof) {
+  // script作成
+  ScriptBuilder builder;
+  builder.AppendOperator(ScriptOperator::OP_RETURN);
+  builder.AppendData(genesisblock_hash.GetData());
+  builder.AppendData(script_pubkey);
+  if (btc_pubkey_bytes.IsValid() && (whitelist_proof.GetDataSize() > 0)) {
+    builder.AppendData(btc_pubkey_bytes);
+    builder.AppendData(whitelist_proof);
+  }
+  Script locking_script = builder.Build();
+  return locking_script;
+}
 }  // namespace cfd
