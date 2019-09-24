@@ -19,7 +19,7 @@
 #include "cfdcore/cfdcore_util.h"
 
 #include "cfd/cfdapi_struct.h"
-#include "cfd/cfdapi_transaction.h"
+#include "cfd/cfdapi_transaction_base.h"
 #include "cfd/dlcapi_transaction.h"
 #include "dlcapi_internal.h"  // NOLINT
 
@@ -27,7 +27,7 @@ namespace dlc {
 namespace api {
 
 using cfd::TransactionController;
-using cfd::api::TransactionApi;
+using cfd::api::TransactionApiBase;
 using cfdcore::ByteData;
 using cfdcore::CfdError;
 using cfdcore::CfdException;
@@ -74,7 +74,7 @@ AddCETxSignResponseStruct DlcTransactionApi::AddCETxSign(
 
     ByteData sign_data;
     if (request.sign.der_encode) {
-      SigHashType sighashtype = TransactionApi::ConvertSigHashType(
+      SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
           request.sign.sighash_type, request.sign.sighash_anyone_can_pay);
       sign_data =
           CryptoUtil::ConvertSignatureToDer(request.sign.hex, sighashtype);

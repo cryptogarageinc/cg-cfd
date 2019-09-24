@@ -16,14 +16,13 @@
 #include "cfdcore/cfdcore_util.h"
 
 #include "cfd/cfdapi_sighash.h"
-#include "cfd/cfdapi_transaction.h"
+#include "cfd/cfdapi_transaction_base.h"
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
 namespace api {
 
 using cfd::TransactionController;
-using cfd::api::TransactionApi;
 using cfdcore::Amount;
 using cfdcore::CfdError;
 using cfdcore::CfdException;
@@ -47,7 +46,7 @@ CreateSignatureHashResponseStruct SigHashApi::CreateSignatureHash(
     const Txid& txid = Txid(request.txin_txid);
     uint32_t vout = request.txin_vout;
     TransactionController txc(request.tx_hex);
-    SigHashType sighashtype = TransactionApi::ConvertSigHashType(
+    SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
         request.sighash_type, request.sighash_anyone_can_pay);
 
     if (hashtype_str == "p2pkh") {

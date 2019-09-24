@@ -187,6 +187,30 @@ class CFD_EXPORT ConfidentialTransactionController
   const ConfidentialTxOutReference AddTxOut(
       const Script& locking_script, const Amount& value,
       const ConfidentialAssetId& asset, const ConfidentialNonce& nonce);
+
+  /**
+   * @brief Pegout用のTxOutを追加する.
+   * @param[in] value Pegout金額
+   * @param[in] asset AssetID
+   * @param[in] genesisblock_hash mainchainのgenesisblock hash
+   * @param[in] btc_address mainchainのアドレス
+   * @param[in] net_type mainchainのnetwork type
+   * @param[in] online_pubkey whitelist proof用のonline pubkey
+   * @param[in] master_online_key  whitelist proof用のonline privkey
+   * @param[in] btc_descriptor initpegoutwallet時に指定するdescriptor string
+   * @param[in] bip32_counter initpegoutwallet時に指定するconter
+   * @param[in] whitelist whitelist
+   * @return 追加したTxOutのTxOutReferenceインスタンス
+   */
+  const ConfidentialTxOutReference AddPegoutTxOut(
+      const Amount& value, const ConfidentialAssetId& asset,
+      const BlockHash& genesisblock_hash, const Address& btc_address,
+      NetType net_type = NetType::kMainnet,
+      const Pubkey& online_pubkey = Pubkey(),
+      const Privkey& master_online_key = Privkey(),
+      const std::string& btc_descriptor = "", uint32_t bip32_counter = 0,
+      const ByteData& whitelist = ByteData());
+
   /**
    * @brief TxOut(Fee)を追加する.
    * @param[in] value Fee額

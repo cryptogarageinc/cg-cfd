@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "cfd/cfd_common.h"
+#include "cfd/cfd_transaction.h"
 #include "cfd/cfdapi_struct.h"
 #include "cfdcore/cfdcore_bytedata.h"
 #include "cfdcore/cfdcore_script.h"
@@ -80,40 +81,6 @@ class CFD_EXPORT TransactionApi {
    */
   static AddMultisigSignResponseStruct AddMultisigSign(
       const AddMultisigSignRequestStruct& request);
-
-  /**
-   * @brief SigHashTypeを文字列から変換する。
-   * @param[in] sighash_type_string   SigHashTypeの文字列
-   * @param[in] is_anyone_can_pay     anyone_can_payかどうか
-   * @return SigHashType値
-   */
-  static cfdcore::SigHashType ConvertSigHashType(
-      const std::string& sighash_type_string, bool is_anyone_can_pay);
-
-  // internal API
-  /**
-   * @brief Multisigのredeem scriptからsignに必要なpublic keyを取得する.
-   * @details redeem scriptにOP_CHECKMULTISIG(VERIFY)が複数含まれる場合は、
-   *   末尾に近いOP_CHECKMULTISIGに必要なpublic keyのみを返却する.
-   * @param[in] multisig_script Multisigのredeem script
-   * @return signatureの順序を保ったpublic keyの配列
-   */
-  static const std::vector<cfdcore::Pubkey>
-  ExtractPubkeysFromMultisigScript(  // NOLINT
-      const cfdcore::Script& multisig_script);
-
-  /**
-   * @brief 署名情報の変換処理を行います
-   * @param[in] hex_string              署名情報
-   * @param[in] is_sign                 署名データかどうか
-   * @param[in] is_der_encode           DERエンコード指定かどうか
-   * @param[in] sighash_type            SigHash種別
-   * @param[in] sighash_anyone_can_pay  SigHashのAnyoneCanPayフラグ
-   * @return 変換後の署名情報
-   */
-  static cfdcore::ByteData ConvertSignDataToSignature(
-      const std::string& hex_string, bool is_sign, bool is_der_encode,
-      const std::string& sighash_type, bool sighash_anyone_can_pay);
 
  private:
   TransactionApi();
