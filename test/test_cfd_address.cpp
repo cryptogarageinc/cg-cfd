@@ -15,11 +15,12 @@ using cfdcore::NetType;
 using cfdcore::Pubkey;
 using cfdcore::Script;
 using cfdcore::WitnessVersion;
-using cfd::AddressUtil;
+using cfd::AddressFactory;
 
-TEST(AddressUtil, CreateP2pkhAddress)
+TEST(AddressFactory, CreateP2pkhAddress)
 {
+  AddressFactory factory;
   Pubkey pubkey = Pubkey("027592aab5d43618dda13fba71e3993cd7517a712d3da49664c06ee1bd3d1f70af");
-  Address addr = AddressUtil::CreateP2pkhAddress(pubkey, NetType::kMainnet);
+  Address addr = factory.CreateP2pkhAddress(pubkey);
   EXPECT_STREQ(addr.GetAddress().c_str(), "1ELuNB5fLNUcrLzb93oJDPmjxjnsVwhNHn");
 }

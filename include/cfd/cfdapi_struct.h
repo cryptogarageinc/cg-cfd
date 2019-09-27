@@ -183,6 +183,7 @@ struct BlindRawTransactionResponseStruct {
  * @brief CreateAddressRequestStruct 構造体
  */
 struct CreateAddressRequestStruct {
+  bool is_elements = false;          //!< is_elements  // NOLINT
   std::string script_hex = "";       //!< script_hex  // NOLINT
   std::string pubkey_hex = "";       //!< pubkey_hex  // NOLINT
   std::string network = "mainnet";   //!< network  // NOLINT
@@ -199,6 +200,7 @@ struct CreateAddressRequestStruct {
 struct CreateAddressResponseStruct {
   std::string address = "";         //!< address  // NOLINT
   std::string locking_script = "";  //!< locking_script  // NOLINT
+  std::string redeem_script = "";   //!< redeem_script  // NOLINT
   InnerErrorResponseStruct error;       //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
@@ -313,31 +315,6 @@ struct DecodeRawTransactionResponseStruct {
   uint32_t locktime = 0;                              //!< locktime  // NOLINT
   std::vector<DecodeRawTransactionTxInStruct> vin;    //!< vin  // NOLINT
   std::vector<DecodeRawTransactionTxOutStruct> vout;  //!< vout  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
-// CreateUnblindedAddressRequestStruct
-// ------------------------------------------------------------------------
-/**
- * @brief CreateUnblindedAddressRequestStruct 構造体
- */
-struct CreateUnblindedAddressRequestStruct {
-  std::string script_hex = "";                //!< script_hex  // NOLINT
-  std::string pubkey_hex = "";                //!< pubkey_hex  // NOLINT
-  std::string elements_network = "liquidv1";  //!< elements_network  // NOLINT
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
-// CreateUnblindedAddressResponseStruct
-// ------------------------------------------------------------------------
-/**
- * @brief CreateUnblindedAddressResponseStruct 構造体
- */
-struct CreateUnblindedAddressResponseStruct {
-  std::string unblinded_address = "";  //!< unblinded_address  // NOLINT
   InnerErrorResponseStruct error;       //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
@@ -604,6 +581,136 @@ struct ElementsCreateRawTransactionRequestStruct {
  */
 struct ElementsCreateRawTransactionResponseStruct {
   std::string hex = "";  //!< hex  // NOLINT
+  InnerErrorResponseStruct error;       //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsDecodeRawTransactionRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsDecodeRawTransactionRequestStruct 構造体
+ */
+struct ElementsDecodeRawTransactionRequestStruct {
+  std::string hex = "";                //!< hex  // NOLINT
+  std::string network = "liquidv1";    //!< network  // NOLINT
+  std::string mainchain_network = "";  //!< mainchain_network  // NOLINT
+  bool iswitness = true;               //!< iswitness  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsDecodeUnlockingScriptStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsDecodeUnlockingScriptStruct 構造体
+ */
+struct ElementsDecodeUnlockingScriptStruct {
+  std::string asm_ = "";  //!< asm_  // NOLINT
+  std::string hex = "";   //!< hex  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsDecodeIssuanceStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsDecodeIssuanceStruct 構造体
+ */
+struct ElementsDecodeIssuanceStruct {
+  std::string asset_blinding_nonce = "";   //!< asset_blinding_nonce  // NOLINT
+  std::string asset_entropy = "";          //!< asset_entropy  // NOLINT
+  bool isreissuance = false;               //!< isreissuance  // NOLINT
+  std::string token = "";                  //!< token  // NOLINT
+  std::string asset = "";                  //!< asset  // NOLINT
+  double assetamount = 0;                  //!< assetamount  // NOLINT
+  std::string assetamountcommitment = "";  //!< assetamountcommitment  // NOLINT
+  double tokenamount = 0;                  //!< tokenamount  // NOLINT
+  std::string tokenamountcommitment = "";  //!< tokenamountcommitment  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsDecodeRawTransactionTxInStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsDecodeRawTransactionTxInStruct 構造体
+ */
+struct ElementsDecodeRawTransactionTxInStruct {
+  std::string coinbase = "";                       //!< coinbase  // NOLINT
+  std::string txid = "";                           //!< txid  // NOLINT
+  int64_t vout = 0;                                //!< vout  // NOLINT
+  ElementsDecodeUnlockingScriptStruct script_sig;  //!< script_sig  // NOLINT
+  bool is_pegin = false;                           //!< is_pegin  // NOLINT
+  int64_t sequence = 0;                            //!< sequence  // NOLINT
+  std::vector<std::string> txinwitness;            //!< txinwitness  // NOLINT
+  std::vector<std::string> pegin_witness;          //!< pegin_witness  // NOLINT
+  ElementsDecodeIssuanceStruct issuance;           //!< issuance  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsDecodeLockingScriptStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsDecodeLockingScriptStruct 構造体
+ */
+struct ElementsDecodeLockingScriptStruct {
+  std::string asm_ = "";                      //!< asm_  // NOLINT
+  std::string hex = "";                       //!< hex  // NOLINT
+  int64_t req_sigs = 0;                       //!< req_sigs  // NOLINT
+  std::string type = "";                      //!< type  // NOLINT
+  std::vector<std::string> addresses;         //!< addresses  // NOLINT
+  std::string pegout_chain = "";              //!< pegout_chain  // NOLINT
+  std::string pegout_asm = "";                //!< pegout_asm  // NOLINT
+  std::string pegout_hex = "";                //!< pegout_hex  // NOLINT
+  int64_t pegout_req_sigs = 0;                //!< pegout_req_sigs  // NOLINT
+  std::string pegout_type = "";               //!< pegout_type  // NOLINT
+  std::vector<std::string> pegout_addresses;  //!< pegout_addresses  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsDecodeRawTransactionTxOutStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsDecodeRawTransactionTxOutStruct 構造体
+ */
+struct ElementsDecodeRawTransactionTxOutStruct {
+  double value = 0;                                  //!< value  // NOLINT
+  double value_minimum = 0;                          //!< value_minimum  // NOLINT
+  double value_maximum = 0;                          //!< value_maximum  // NOLINT
+  int64_t ct_exponent = 0;                           //!< ct_exponent  // NOLINT
+  int64_t ct_bits = 0;                               //!< ct_bits  // NOLINT
+  std::string surjectionproof = "";                  //!< surjectionproof  // NOLINT
+  std::string valuecommitment = "";                  //!< valuecommitment  // NOLINT
+  std::string asset = "";                            //!< asset  // NOLINT
+  std::string assetcommitment = "";                  //!< assetcommitment  // NOLINT
+  std::string commitmentnonce = "";                  //!< commitmentnonce  // NOLINT
+  bool commitmentnonce_fully_valid = false;          //!< commitmentnonce_fully_valid  // NOLINT
+  int64_t n = 0;                                     //!< n  // NOLINT
+  ElementsDecodeLockingScriptStruct script_pub_key;  //!< script_pub_key  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsDecodeRawTransactionResponseStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsDecodeRawTransactionResponseStruct 構造体
+ */
+struct ElementsDecodeRawTransactionResponseStruct {
+  std::string txid = "";                                      //!< txid  // NOLINT
+  std::string hash = "";                                      //!< hash  // NOLINT
+  std::string wtxid = "";                                     //!< wtxid  // NOLINT
+  std::string withash = "";                                   //!< withash  // NOLINT
+  uint32_t version = 0;                                       //!< version  // NOLINT
+  int64_t size = 0;                                           //!< size  // NOLINT
+  int64_t vsize = 0;                                          //!< vsize  // NOLINT
+  int64_t weight = 0;                                         //!< weight  // NOLINT
+  uint32_t locktime = 0;                                      //!< locktime  // NOLINT
+  std::vector<ElementsDecodeRawTransactionTxInStruct> vin;    //!< vin  // NOLINT
+  std::vector<ElementsDecodeRawTransactionTxOutStruct> vout;  //!< vout  // NOLINT
   InnerErrorResponseStruct error;       //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
@@ -904,10 +1011,11 @@ struct GetWitnessStackNumResponseStruct {
  * @brief CreateMultisigRequestStruct 構造体
  */
 struct CreateMultisigRequestStruct {
-  uint8_t nrequired = 1;                //!< nrequired  // NOLINT
-  std::vector<std::string> keys;        //!< keys  // NOLINT
-  std::string network = "mainnet";      //!< network  // NOLINT
-  std::string address_type = "bech32";  //!< address_type  // NOLINT
+  uint8_t nrequired = 1;               //!< nrequired  // NOLINT
+  std::vector<std::string> keys;       //!< keys  // NOLINT
+  bool is_elements = false;            //!< is_elements  // NOLINT
+  std::string network = "mainnet";     //!< network  // NOLINT
+  std::string address_type = "p2wsh";  //!< address_type  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 

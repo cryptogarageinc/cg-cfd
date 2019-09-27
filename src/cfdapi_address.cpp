@@ -24,9 +24,9 @@
 namespace cfd {
 namespace api {
 
-using cfd::AddressUtil;
 using cfd::ScriptUtil;
 using cfdcore::Address;
+using cfdcore::AddressFormatData;
 using cfdcore::AddressType;
 using cfdcore::CfdError;
 using cfdcore::CfdException;
@@ -43,63 +43,35 @@ CreateAddressResponseStruct AddressApi::CreateAddress(
     CreateAddressResponseStruct response;
     // Address作成
     Address addr;
-    std::string hash_type = request.hash_type;
+    Pubkey pubkey;
+    Script script;
+    Script locking_script;
+    Script redeem_script;
     std::string pubkey_hex = request.pubkey_hex;
     std::string script_hex = request.script_hex;
     NetType net_type = ConvertNetType(request.network);
+    AddressType addr_type =
+        AddressDirectApi::ConvertAddressType(request.hash_type);
 
-    if (pubkey_hex.empty()) {
-      if (hash_type == "p2pkh" || hash_type == "p2wpkh") {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to CreateAddress. Invalid pubkey_hex: pubkey is empty.");  // NOLINT
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError, "pubkey_hex is empty.");
-      }
+    if (!pubkey_hex.empty()) {
+      pubkey = Pubkey(pubkey_hex);
     }
-
-    if (script_hex.empty()) {
-      if (hash_type == "p2sh" || hash_type == "p2wsh") {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to CreateAddress. Invalid script_hex: script is empty.");  // NOLINT
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError, "script_hex is empty.");
-      }
+    if (!script_hex.empty()) {
+      script = Script(script_hex);
     }
-
-    Script locking_script;
-    if (hash_type == "p2pkh") {
-      Pubkey pubkey = Pubkey(pubkey_hex);
-      addr = Address(net_type, pubkey);
-      locking_script = ScriptUtil::CreateP2pkhLockingScript(pubkey);
-    } else if (hash_type == "p2sh") {
-      Script redeem_script = Script(script_hex);
-      addr = Address(net_type, redeem_script);
-      locking_script = ScriptUtil::CreateP2shLockingScript(redeem_script);
-    } else if (hash_type == "p2wpkh") {
-      Pubkey pubkey = Pubkey(pubkey_hex);
-      addr = Address(net_type, WitnessVersion::kVersion0, pubkey);
-      locking_script = ScriptUtil::CreateP2wpkhLockingScript(pubkey);
-    } else if (hash_type == "p2wsh") {
-      Script witness_script = Script(script_hex);
-      addr = Address(net_type, WitnessVersion::kVersion0, witness_script);
-      locking_script = ScriptUtil::CreateP2wshLockingScript(witness_script);
-    } else {
-      warn(
-          CFD_LOG_SOURCE,
-          "Failed to CreateAddress. Invalid hash_type:  hash_type={}",
-          hash_type);
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Invalid hash_type. hash_type must be \"p2pkh\" or "
-          "\"p2sh\" or \"p2wpkh\" or \"p2wsh\".");  // NOLINT
-    }
+    addr = AddressDirectApi::CreateAddress(
+        net_type, addr_type, &pubkey, &script, &locking_script,
+        &redeem_script);
 
     // レスポンスとなるモデルへ変換
     response.error.code = 0;
     response.address = addr.GetAddress();
     response.locking_script = locking_script.GetHex();
+    if (redeem_script.IsEmpty()) {
+      response.ignore_items.insert("redeemScript");
+    } else {
+      response.redeem_script = redeem_script.GetHex();
+    }
     return response;
   };
 
@@ -121,39 +93,16 @@ CreateMultisigResponseStruct AddressApi::CreateMultisig(
       pubkeys.push_back(Pubkey(key));
     }
 
-    // Multisig redeem scriptの作成
     uint32_t req_sig_num = static_cast<uint32_t>(request.nrequired);
-    Script redeem_script =
-        ScriptUtil::CreateMultisigRedeemScript(req_sig_num, pubkeys);
-
-    // Address作成
-    Address addr;
     NetType net_type = ConvertNetType(request.network);
-    AddressType addr_type = ConvertAddressType(request.address_type);
+    AddressType addr_type =
+        AddressDirectApi::ConvertAddressType(request.address_type);
     Script witness_script;
-    if (addr_type == AddressType::kP2shAddress) {
-      addr = AddressUtil::CreateP2shAddress(redeem_script, net_type);
-    } else if (addr_type == AddressType::kP2wshAddress) {
-      // Currently we support only witness version 0.
-      witness_script = redeem_script;
-      redeem_script = Script();
-      addr = AddressUtil::CreateP2wshAddress(
-          witness_script, WitnessVersion::kVersion0, net_type);
-    } else if (addr_type == AddressType::kP2shP2wshAddress) {
-      witness_script = redeem_script;
-      redeem_script = ScriptUtil::CreateP2wshLockingScript(witness_script);
-      addr = AddressUtil::CreateP2shAddress(redeem_script, net_type);
-    } else {
-      warn(
-          CFD_LOG_SOURCE,
-          "Failed to CreateMultisig. Invalid address_type passed:  "
-          "addressType={}",  // NOLINT
-          addr_type);
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Invalid address_type. address_type must be \"p2sh\" "
-          "\"p2wsh\" or \"p2sh-p2wsh\".");  // NOLINT
-    }
+    Script redeem_script;
+
+    Address addr = AddressDirectApi::CreateMultisig(
+        net_type, addr_type, req_sig_num, pubkeys, &redeem_script,
+        &witness_script);
 
     // レスポンスとなるモデルへ変換
     response.address = addr.GetAddress();
@@ -199,7 +148,159 @@ NetType AddressApi::ConvertNetType(const std::string& network_type) {
   return net_type;
 }
 
-AddressType AddressApi::ConvertAddressType(const std::string& address_type) {
+Address AddressDirectApi::CreateAddress(
+    NetType net_type, AddressType address_type, const Pubkey* pubkey,
+    const Script* script, Script* locking_script, Script* redeem_script,
+    std::vector<AddressFormatData>* prefix_list) {
+  if ((pubkey == nullptr) || (!pubkey->IsValid())) {
+    if (address_type == AddressType::kP2pkhAddress ||
+        address_type == AddressType::kP2wpkhAddress ||
+        address_type == AddressType::kP2shP2wpkhAddress) {
+      warn(
+          CFD_LOG_SOURCE,
+          "Failed to CreateAddress. Invalid pubkey_hex: pubkey is empty.");
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError, "pubkey_hex is empty.");
+    }
+  }
+  if ((script == nullptr) || (script->IsEmpty())) {
+    if (address_type == AddressType::kP2shAddress ||
+        address_type == AddressType::kP2wshAddress ||
+        address_type == AddressType::kP2shP2wshAddress) {
+      warn(
+          CFD_LOG_SOURCE,
+          "Failed to CreateAddress. Invalid script_hex: script is empty.");
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError, "script_hex is empty.");
+    }
+  }
+  std::vector<AddressFormatData> addr_prefixes;
+  if (prefix_list == nullptr) {
+    addr_prefixes = cfdcore::GetBitcoinAddressFormatList();
+  } else {
+    addr_prefixes = *prefix_list;
+  }
+  Address addr;
+
+  Script temp_script;
+  switch (address_type) {
+    case AddressType::kP2pkhAddress:
+      addr = Address(net_type, *pubkey, addr_prefixes);
+      if (locking_script != nullptr) {
+        *locking_script = ScriptUtil::CreateP2pkhLockingScript(*pubkey);
+      }
+      break;
+    case AddressType::kP2shAddress:
+      addr = Address(net_type, *script, addr_prefixes);
+      if (locking_script != nullptr) {
+        *locking_script = ScriptUtil::CreateP2shLockingScript(*script);
+      }
+      break;
+    case AddressType::kP2wpkhAddress:
+      addr =
+          Address(net_type, WitnessVersion::kVersion0, *pubkey, addr_prefixes);
+      if (locking_script != nullptr) {
+        *locking_script = ScriptUtil::CreateP2wpkhLockingScript(*pubkey);
+      }
+      break;
+    case AddressType::kP2wshAddress:
+      addr =
+          Address(net_type, WitnessVersion::kVersion0, *script, addr_prefixes);
+      if (locking_script != nullptr) {
+        *locking_script = ScriptUtil::CreateP2wshLockingScript(*script);
+      }
+      break;
+    case AddressType::kP2shP2wpkhAddress:
+      temp_script = ScriptUtil::CreateP2wpkhLockingScript(*pubkey);
+      addr = Address(net_type, temp_script, addr_prefixes);
+      if (locking_script != nullptr) {
+        *locking_script = ScriptUtil::CreateP2shLockingScript(temp_script);
+      }
+      if (redeem_script != nullptr) {
+        *redeem_script = temp_script;
+      }
+      break;
+    case AddressType::kP2shP2wshAddress:
+      temp_script = ScriptUtil::CreateP2wshLockingScript(*script);
+      addr = Address(net_type, temp_script, addr_prefixes);
+      if (locking_script != nullptr) {
+        *locking_script = ScriptUtil::CreateP2shLockingScript(temp_script);
+      }
+      if (redeem_script != nullptr) {
+        *redeem_script = temp_script;
+      }
+      break;
+    default:
+      warn(
+          CFD_LOG_SOURCE,
+          "Failed to CreateAddress. Invalid address type:  address_type={}",
+          address_type);
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError,
+          "Invalid address_type. address_type must be \"p2pkh\" or "
+          "\"p2sh\" or \"p2wpkh\" or \"p2wsh\" or \"p2sh-p2wpkh\" or "
+          "\"p2sh-p2wsh\".");  // NOLINT
+      break;
+  }
+
+  return addr;
+}
+
+Address AddressDirectApi::CreateMultisig(
+    NetType net_type, AddressType address_type, uint32_t req_sig_num,
+    const std::vector<Pubkey>& pubkeys, Script* redeem_script,
+    Script* witness_script, std::vector<AddressFormatData>* prefix_list) {
+  // Multisig redeem scriptの作成
+  Script multisig_script =
+      ScriptUtil::CreateMultisigRedeemScript(req_sig_num, pubkeys);
+
+  std::vector<AddressFormatData> addr_prefixes;
+  if (prefix_list == nullptr) {
+    addr_prefixes = cfdcore::GetBitcoinAddressFormatList();
+  } else {
+    addr_prefixes = *prefix_list;
+  }
+
+  // Address作成
+  Address addr;
+  Script script;
+  if (address_type == AddressType::kP2shAddress) {
+    addr = Address(net_type, multisig_script, addr_prefixes);
+    if (redeem_script != nullptr) {
+      *redeem_script = multisig_script;
+    }
+  } else if (address_type == AddressType::kP2wshAddress) {
+    // Currently we support only witness version 0.
+    addr = Address(
+        net_type, WitnessVersion::kVersion0, multisig_script, addr_prefixes);
+    if (witness_script != nullptr) {
+      *witness_script = multisig_script;
+    }
+  } else if (address_type == AddressType::kP2shP2wshAddress) {
+    script = ScriptUtil::CreateP2wshLockingScript(multisig_script);
+    addr = Address(net_type, script, addr_prefixes);
+    if (redeem_script != nullptr) {
+      *redeem_script = script;
+    }
+    if (witness_script != nullptr) {
+      *witness_script = multisig_script;
+    }
+  } else {
+    warn(
+        CFD_LOG_SOURCE,
+        "Failed to CreateMultisig. Invalid address_type passed:  "
+        "addressType={}",  // NOLINT
+        address_type);
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
+        "Invalid address_type. address_type must be \"p2sh\" "
+        "\"p2wsh\" or \"p2sh-p2wsh\".");  // NOLINT
+  }
+  return addr;
+}
+
+AddressType AddressDirectApi::ConvertAddressType(
+    const std::string& address_type) {
   AddressType addr_type;
   if (address_type == "p2pkh") {
     addr_type = AddressType::kP2pkhAddress;

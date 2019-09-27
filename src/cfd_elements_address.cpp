@@ -22,60 +22,58 @@ using cfd::ScriptUtil;
 using cfdcore::Address;
 using cfdcore::ConfidentialKey;
 using cfdcore::ContractHashUtil;
+using cfdcore::ElementsAddressType;
 using cfdcore::ElementsConfidentialAddress;
 using cfdcore::ElementsNetType;
-using cfdcore::ElementsUnblindedAddress;
+using cfdcore::GetElementsAddressFormatList;
 using cfdcore::Pubkey;
 using cfdcore::Script;
 
-ElementsUnblindedAddress ElementsAddressUtil::CreateP2pkhUnblindedAddress(
-    ElementsNetType type, const Pubkey& pubkey) {
-  return ElementsUnblindedAddress(type, pubkey);
+ElementsAddressFactory::ElementsAddressFactory()
+    : AddressFactory(NetType::kMainnet, GetElementsAddressFormatList()) {
+  // do nothing
 }
 
-ElementsUnblindedAddress ElementsAddressUtil::CreateP2shUnblindedAddress(
-    ElementsNetType type, const Script& script) {
-  return ElementsUnblindedAddress(type, script);
+ElementsAddressFactory::ElementsAddressFactory(NetType type)
+    : AddressFactory(type, GetElementsAddressFormatList()) {
+  // do nothing
 }
 
-ElementsConfidentialAddress ElementsAddressUtil::GetConfidentialAddress(
-    const ElementsUnblindedAddress& unblinded_address,
+ElementsAddressFactory::ElementsAddressFactory(
+    NetType type, WitnessVersion wit_ver)
+    : AddressFactory(type, wit_ver, GetElementsAddressFormatList()) {
+  // do nothing
+}
+
+ElementsConfidentialAddress ElementsAddressFactory::GetConfidentialAddress(
+    const Address& unblinded_address,
     const ConfidentialKey& confidential_key) {
   return ElementsConfidentialAddress(unblinded_address, confidential_key);
 }
 
-Address ElementsAddressUtil::CreatePegInAddress(
-    NetType net_type, const Pubkey& pubkey, const Script& fedpegscript) {
+Address ElementsAddressFactory::CreatePegInAddress(
+    const Pubkey& pubkey, const Script& fedpegscript) const {
   // create claim_script from pubkey
   Script claim_script = ScriptUtil::CreateP2wpkhLockingScript(pubkey);
-
-  return CreatePegInAddress(net_type, claim_script, fedpegscript);
+  return CreatePegInAddress(claim_script, fedpegscript);
 }
 
-Address ElementsAddressUtil::CreatePegInAddress(
-    NetType net_type, const Script& claim_script, const Script& fedpegscript) {
+Address ElementsAddressFactory::CreatePegInAddress(
+    const Script& claim_script, const Script& fedpegscript) const {
   // tweak add claim_script with fedpegscript
   Script tweak_fedpegscript =
       ContractHashUtil::GetContractScript(claim_script, fedpegscript);
-
-  return CreatePegInAddress(net_type, tweak_fedpegscript);
+  return CreatePegInAddress(tweak_fedpegscript);
 }
 
-Address ElementsAddressUtil::CreatePegInAddress(
-    NetType net_type, const Script& tweak_fedpegscript) {
+Address ElementsAddressFactory::CreatePegInAddress(
+    const Script& tweak_fedpegscript) const {
   // create peg-in address(P2CH = P2SH-P2WSH)
   Script witness_program =
       ScriptUtil::CreateP2wshLockingScript(tweak_fedpegscript);
-  return Address(net_type, witness_program);
+  return Address(type_, witness_program);
 }
 
-AbstractElementsAddress ElementsAddressUtil::GetElementsAddress(
-    std::string address_str) {
-  if (AbstractElementsAddress::IsConfidentialAddress(address_str)) {
-    return ElementsConfidentialAddress(address_str);
-  } else {
-    return ElementsUnblindedAddress(address_str);
-  }
-}
 }  // namespace cfd
+
 #endif  // CFD_DISABLE_ELEMENTS

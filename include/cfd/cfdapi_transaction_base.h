@@ -19,6 +19,7 @@
 #include "cfd/cfdapi_struct.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_bytedata.h"
+#include "cfdcore/cfdcore_key.h"
 #include "cfdcore/cfdcore_util.h"
 
 /**
@@ -26,6 +27,37 @@
  */
 namespace cfd {
 namespace api {
+
+using cfdcore::ByteData;
+using cfdcore::Pubkey;
+using cfdcore::Script;
+
+/**
+ * @typedef LockingScriptType
+ * @brief LockingScript の Script Type 定義
+ */
+enum LockingScriptType {
+  kNonStandard = 0,      //!< non standard locking script
+  kPayToPubkey,          //!< p2pk locking script
+  kPayToPubkeyHash,      //!< p2pkh locking script
+  kPayToScriptHash,      //!< p2sh locking script
+  kMultisig,             //!< multisig locking script
+  kNullData,             //!< null data of locking script
+  kWitnessV0ScriptHash,  //!< p2wsh locking script
+  kWitnessV0KeyHash,     //!< p2wpkh locking script
+  kWitnessUnknown,       //!< invalid witness ver locking script
+  kTrue,                 //!< can spend anyone script
+  kFee,                  //!< type fee
+};
+
+/**
+ * @brief LockingScriptの解析情報
+ */
+struct ExtractScriptData {
+  LockingScriptType script_type;  //!< LockingScript種別
+  std::vector<ByteData> pushed_datas;  //!< LockingScriptに含まれるhashデータ
+  int64_t req_sigs;                    //!< Unlockingに必要なSignature数
+};
 
 /**
  * @brief Class providing common functionalities to TransactionApi and
@@ -93,6 +125,21 @@ class CFD_EXPORT TransactionApiBase {
    */
   static cfdcore::SigHashType ConvertSigHashType(
       const std::string& sighash_type_string, bool is_anyone_can_pay);
+
+  /**
+   * @brief LockingScriptの解析を行う.
+   * @param[in] locking_script LockingScriptデータ
+   * @return 解析された ExtractScriptData インスタンス
+   */
+  static ExtractScriptData ExtractLockingScript(Script locking_script);
+
+  /**
+   * @brief LockingScriptType を文字列情報に変換する.
+   * @param[in] script_type LockingScriptType インスタンス
+   * @return LockingScriptType に応じたscript_type文字列
+   */
+  static std::string ConvertLockingScriptTypeString(
+      LockingScriptType script_type);
 };
 
 }  // namespace api

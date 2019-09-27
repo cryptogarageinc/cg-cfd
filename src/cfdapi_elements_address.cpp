@@ -27,60 +27,111 @@
 namespace cfd {
 namespace api {
 
-using cfd::ElementsAddressUtil;
+using cfd::ElementsAddressFactory;
 using cfd::ScriptUtil;
 using cfdcore::Address;
+using cfdcore::AddressFormatData;
 using cfdcore::CfdError;
 using cfdcore::CfdException;
 using cfdcore::ConfidentialKey;
 using cfdcore::ContractHashUtil;
 using cfdcore::ElementsConfidentialAddress;
 using cfdcore::ElementsNetType;
-using cfdcore::ElementsUnblindedAddress;
 using cfdcore::NetType;
 using cfdcore::Pubkey;
 using cfdcore::Script;
 using cfdcore::logger::warn;
 
-CreateUnblindedAddressResponseStruct
-ElementsAddressApi::CreateUnblindedAddress(
-    const CreateUnblindedAddressRequestStruct& request) {
-  auto call_func = [](const CreateUnblindedAddressRequestStruct& request)
-      -> CreateUnblindedAddressResponseStruct {  // NOLINT
-    CreateUnblindedAddressResponseStruct response;
+CreateAddressResponseStruct ElementsAddressApi::CreateAddress(
+    const CreateAddressRequestStruct& request) {
+  auto call_func = [](const CreateAddressRequestStruct& request)
+      -> CreateAddressResponseStruct {  // NOLINT
+    CreateAddressResponseStruct response;
     // Address作成
-    ElementsUnblindedAddress addr;
+    Address addr;
+    Pubkey pubkey;
+    Script script;
+    Script locking_script;
+    Script redeem_script;
     std::string pubkey_hex = request.pubkey_hex;
     std::string script_hex = request.script_hex;
-    ElementsNetType net_type =
-        ConvertElementsNetType(request.elements_network);
+    ElementsNetType net_type = ConvertElementsNetType(request.network);
+    AddressType addr_type =
+        AddressDirectApi::ConvertAddressType(request.hash_type);
 
     if (!pubkey_hex.empty()) {
-      Pubkey pubkey = Pubkey(pubkey_hex);
-      addr = ElementsAddressUtil::CreateP2pkhUnblindedAddress(
-          net_type,  // lf
-          pubkey);
-    } else if (!script_hex.empty()) {
-      Script redeem_script = Script(script_hex);
-      addr = ElementsAddressUtil::CreateP2shUnblindedAddress(
-          net_type, redeem_script);
-    } else {
-      warn(
-          CFD_LOG_SOURCE,
-          "Failed to CreateUnblindedAddress. pubkey and script is empty.");
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "pubkey_hex and script_hex is empty.");
+      pubkey = Pubkey(pubkey_hex);
     }
+    if (!script_hex.empty()) {
+      script = Script(script_hex);
+    }
+    std::vector<AddressFormatData> prefix_list =
+        cfdcore::GetElementsAddressFormatList();
+    addr = AddressDirectApi::CreateAddress(
+        net_type, addr_type, &pubkey, &script, &locking_script, &redeem_script,
+        &prefix_list);
 
-    response.unblinded_address = addr.GetAddress();
+    // レスポンスとなるモデルへ変換
+    response.error.code = 0;
+    response.address = addr.GetAddress();
+    response.locking_script = locking_script.GetHex();
+    if (redeem_script.IsEmpty()) {
+      response.ignore_items.insert("redeemScript");
+    } else {
+      response.redeem_script = redeem_script.GetHex();
+    }
     return response;
   };
 
-  CreateUnblindedAddressResponseStruct result;
+  CreateAddressResponseStruct result;
   result = ExecuteStructApi<
-      CreateUnblindedAddressRequestStruct,
-      CreateUnblindedAddressResponseStruct>(
+      CreateAddressRequestStruct, CreateAddressResponseStruct>(
+      request, call_func, std::string(__FUNCTION__));
+  return result;
+}
+
+CreateMultisigResponseStruct ElementsAddressApi::CreateMultisig(
+    const CreateMultisigRequestStruct& request) {
+  auto call_func = [](const CreateMultisigRequestStruct& request)
+      -> CreateMultisigResponseStruct {  // NOLINT
+    CreateMultisigResponseStruct response;
+    // pubkeyモデルへの変換
+    std::vector<Pubkey> pubkeys;
+    for (std::string key : request.keys) {
+      pubkeys.push_back(Pubkey(key));
+    }
+
+    uint32_t req_sig_num = static_cast<uint32_t>(request.nrequired);
+    ElementsNetType net_type = ConvertElementsNetType(request.network);
+    AddressType addr_type =
+        AddressDirectApi::ConvertAddressType(request.address_type);
+    Script witness_script;
+    Script redeem_script;
+    std::vector<AddressFormatData> prefix_list =
+        cfdcore::GetElementsAddressFormatList();
+
+    Address addr = AddressDirectApi::CreateMultisig(
+        net_type, addr_type, req_sig_num, pubkeys, &redeem_script,
+        &witness_script, &prefix_list);
+
+    // レスポンスとなるモデルへ変換
+    response.address = addr.GetAddress();
+    if (redeem_script.IsEmpty()) {
+      response.ignore_items.insert("redeemScript");
+    } else {
+      response.redeem_script = redeem_script.GetHex();
+    }
+    if (witness_script.IsEmpty()) {
+      response.ignore_items.insert("witnessScript");
+    } else {
+      response.witness_script = witness_script.GetHex();
+    }
+    return response;
+  };
+
+  CreateMultisigResponseStruct result;
+  result = ExecuteStructApi<
+      CreateMultisigRequestStruct, CreateMultisigResponseStruct>(
       request, call_func, std::string(__FUNCTION__));
   return result;
 }
@@ -109,7 +160,7 @@ ElementsAddressApi::GetConfidentialAddress(
           "key is empty.");
     }
 
-    ElementsUnblindedAddress addr(unblinded_addrss);
+    Address addr = ElementsAddressFactory().GetAddress(unblinded_addrss);
     ConfidentialKey conf_key(key);
     ElementsConfidentialAddress conf_addr(addr, conf_key);
 
@@ -172,8 +223,8 @@ ElementsAddressApi::CreatePegInAddress(
 
     // create peg-in address(P2CH = P2SH-P2WSH)
     NetType net_type = AddressApi::ConvertNetType(request.network);
-    Address p2ch = ElementsAddressUtil::CreatePegInAddress(
-        net_type, sidechain_pubkey, fedpegscript);
+    Address p2ch = ElementsAddressFactory(net_type).CreatePegInAddress(
+        sidechain_pubkey, fedpegscript);
 
     // convert parameters to response struct
     response.mainchain_address = p2ch.GetAddress();

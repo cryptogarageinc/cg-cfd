@@ -24,7 +24,7 @@
 namespace dlc {
 namespace api {
 
-using cfd::AddressUtil;
+using cfd::AddressFactory;
 using cfd::api::AddressApi;
 using cfdcore::Address;
 using cfdcore::CfdError;
@@ -66,8 +66,7 @@ CreateCETxAddressResponseStruct DlcAddressApi::CreateCETxAddress(
     // WitnessVersionは0のみサポート
     NetType net_type = AddressApi::ConvertNetType(request.network);
     Address cetx_addr;
-    cetx_addr = AddressUtil::CreateP2wshAddress(
-        redeem_script, WitnessVersion::kVersion0, net_type);
+    cetx_addr = AddressFactory(net_type).CreateP2wshAddress(redeem_script);
 
     // response jsonの作成
     response.address = cetx_addr.GetAddress();

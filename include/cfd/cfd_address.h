@@ -12,106 +12,142 @@
 
 #include "cfd/cfd_common.h"
 #include "cfdcore/cfdcore_address.h"
+#include "cfdcore/cfdcore_bytedata.h"
+#include "cfdcore/cfdcore_key.h"
+#include "cfdcore/cfdcore_script.h"
 
 namespace cfd {
 
 using cfdcore::Address;
+using cfdcore::AddressFormatData;
+using cfdcore::AddressType;
+using cfdcore::ByteData;
+using cfdcore::ByteData160;
 using cfdcore::NetType;
 using cfdcore::Pubkey;
 using cfdcore::Script;
 using cfdcore::WitnessVersion;
 
 /**
- * @brief Addressに関連するUtilityクラス
+ * @brief Addressを生成するFactoryクラス
  */
-class CFD_EXPORT AddressUtil {
+class CFD_EXPORT AddressFactory {
  public:
+  /**
+   * @brief コンストラクタ.
+   */
+  AddressFactory();
+
+  /**
+   * @brief コンストラクタ.
+   * @param[in] type      network type
+   */
+  explicit AddressFactory(NetType type);
+
+  /**
+   * @brief コンストラクタ.
+   * @param[in] type      network type
+   * @param[in] wit_ver   witness version
+   */
+  explicit AddressFactory(NetType type, WitnessVersion wit_ver);
+
+  /**
+   * @brief コンストラクタ.
+   * @param[in] type          network type
+   * @param[in] wit_ver       witness version
+   * @param[in] prefix_list   address prefix list
+   */
+  explicit AddressFactory(
+      NetType type, WitnessVersion wit_ver,
+      const std::vector<AddressFormatData>& prefix_list);
+
+  /**
+   * @brief コンストラクタ.
+   * @param[in] type          network type
+   * @param[in] prefix_list   address prefix list
+   */
+  explicit AddressFactory(
+      NetType type, const std::vector<AddressFormatData>& prefix_list);
+
+  /**
+   * @brief デストラクタ.
+   */
+  virtual ~AddressFactory() {
+    // do nothing
+  }
+
+  /**
+   * @brief アドレスを作成する
+   * @param[in] address_string address文字列
+   * @return address
+   */
+  Address GetAddress(const std::string& address_string) const;
+
+  /**
+   * @brief Hash情報からアドレスを作成する
+   * @param[in] address_type  address type
+   * @param[in] hash          hash data
+   * @return address
+   */
+  Address GetAddressByHash(
+      AddressType address_type, const ByteData& hash) const;
+  /**
+   * @brief Hash情報からアドレスを作成する
+   * @param[in] address_type  address type
+   * @param[in] hash          hash data
+   * @return address
+   */
+  Address GetAddressByHash(
+      AddressType address_type, const ByteData160& hash) const;
+
+  /**
+   * @brief Hash情報から segwit native アドレスを作成する
+   * @param[in] hash  hash data
+   * @return address
+   */
+  Address GetSegwitAddressByHash(const ByteData& hash) const;
+
   /**
    * @brief P2PKHアドレスを生成する.
    * @param[in] pubkey  Pubkeyインスタンス
-   * @param[in] type    cfdcore::NetType
    * @return P2PKHアドレスのAddressインスタンス
    */
-  static Address CreateP2pkhAddress(const Pubkey& pubkey, NetType type);
+  Address CreateP2pkhAddress(const Pubkey& pubkey) const;
 
   /**
    * @brief P2SHのアドレスを生成する.
    * @param[in] script  Scriptインスタンス
-   * @param[in] type    cfdcore::NetType
    * @return P2SHアドレスのAddressインスタンス
    */
-  static Address CreateP2shAddress(const Script& script, NetType type);
+  Address CreateP2shAddress(const Script& script) const;
 
-  /**
-   * @brief P2WPKHのアドレスを生成する.
-   * @param[in] pubkey  Pubkeyインスタンス
-   * @param[in] wit_ver cfdcore::WitnessVersion
-   * @param[in] type    cfdcore::NetType
-   * @return P2WPKHのAddressインスタンス
-   */
-  static Address CreateP2wpkhAddress(
-      const Pubkey& pubkey, WitnessVersion wit_ver, NetType type);
   /**
    * @brief P2WPKHのアドレスを生成する.
    * @param[in] pubkey      Pubkeyインスタンス
-   * @param[in] wit_ver     cfdcore::WitnessVersion
-   * @param[in] type        cfdcore::NetType
-   * @param[in] bech32_hrp  bech32 hrp
    * @return P2WPKHのAddressインスタンス
    */
-  static Address CreateP2wpkhAddress(
-      const Pubkey& pubkey, WitnessVersion wit_ver, NetType type,
-      const std::string& bech32_hrp);
-
-  /**
-   * @brief P2WSHのアドレスを生成する.
-   * @param[in] script  Scriptインスタンス
-   * @param[in] wit_ver cfdcore::WitnessVersion
-   * @param[in] type    cfdcore::NetType
-   * @return P2WSHのAddressインスタンス
-   */
-  static Address CreateP2wshAddress(
-      const Script& script, WitnessVersion wit_ver, NetType type);
+  Address CreateP2wpkhAddress(const Pubkey& pubkey) const;
 
   /**
    * @brief P2WSHのアドレスを生成する.
    * @param[in] script      Scriptインスタンス
-   * @param[in] wit_ver     cfdcore::WitnessVersion
-   * @param[in] type        cfdcore::NetType
-   * @param[in] bech32_hrp  bech32 hrp
    * @return P2WSHのAddressインスタンス
    */
-  static Address CreateP2wshAddress(
-      const Script& script, WitnessVersion wit_ver, NetType type,
-      const std::string& bech32_hrp);
+  Address CreateP2wshAddress(const Script& script) const;
 
   /**
    * @brief P2WSHのMultisig(n of m)アドレスを生成する.
    * @param[in] require_num signature要求数(n)
    * @param[in] pubkeys     Pubkeyリスト(m)
-   * @param[in] wit_ver     cfdcore::WitnessVersion
-   * @param[in] type        cfdcore::NetType
    * @return P2WSH MultisigのAddressインスタンス
    */
-  static Address CreateP2wshMultisigAddress(
-      uint32_t require_num, const std::vector<Pubkey>& pubkeys,
-      WitnessVersion wit_ver, NetType type);
+  Address CreateP2wshMultisigAddress(
+      uint32_t require_num, const std::vector<Pubkey>& pubkeys) const;
 
-  /**
-   * @brief P2WSHのMultisig(n of m)アドレスを生成する.
-   * @param[in] require_num signature要求数(n)
-   * @param[in] pubkeys     Pubkeyリスト(m)
-   * @param[in] wit_ver     cfdcore::WitnessVersion
-   * @param[in] type        cfdcore::NetType
-   * @param[in] bech32_hrp  bech32 hrp
-   * @return P2WSH MultisigのAddressインスタンス
-   */
-  static Address CreateP2wshMultisigAddress(
-      uint32_t require_num, const std::vector<Pubkey>& pubkeys,
-      WitnessVersion wit_ver, NetType type, const std::string& bech32_hrp);
-
- private:
-  AddressUtil();
+ protected:
+  NetType type_;                                //!< network type
+  WitnessVersion wit_ver_;                      //!< witness version
+  std::vector<AddressFormatData> prefix_list_;  //!< address prefix list
 };
 
 }  // namespace cfd

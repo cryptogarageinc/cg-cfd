@@ -11,6 +11,7 @@
 #include <string>
 #include "cfd/cfd_common.h"
 
+#include "cfd/cfd_address.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_elements_address.h"
 #include "cfdcore/cfdcore_key.h"
@@ -18,100 +19,85 @@
 
 namespace cfd {
 
-using cfdcore::AbstractElementsAddress;
 using cfdcore::Address;
 using cfdcore::ConfidentialKey;
 using cfdcore::ElementsConfidentialAddress;
 using cfdcore::ElementsNetType;
-using cfdcore::ElementsUnblindedAddress;
 using cfdcore::NetType;
 using cfdcore::Pubkey;
 using cfdcore::Script;
+using cfdcore::WitnessVersion;
 
 /**
- * @brief Elements用Addressに関連するUtilityクラス
+ * @brief Elements用Addressを生成するFactoryクラス
  */
-class CFD_EXPORT ElementsAddressUtil {
+class CFD_EXPORT ElementsAddressFactory : public AddressFactory {
  public:
   /**
-   * @brief P2PKHのUnblindedアドレスを生成する.
-   * @param[in] type    cfdcore::ElementsNetType
-   * @param[in] pubkey  Pubkeyインスタンス
-   * @return P2PKHアドレスのElementsUnblindedAddressインスタンス
+   * @brief コンストラクタ.
    */
-  static ElementsUnblindedAddress CreateP2pkhUnblindedAddress(
-      ElementsNetType type, const Pubkey& pubkey);
+  ElementsAddressFactory();
 
   /**
-   * @brief P2SHのUnblindedアドレスを生成する.
-   * @param[in] type    cfdcore::ElementsNetType
-   * @param[in] script  Scriptインスタンス
-   * @return P2SHアドレスのElementsUnblindedAddressインスタンス
+   * @brief コンストラクタ.
+   * @param[in] type      network type
    */
-  static ElementsUnblindedAddress CreateP2shUnblindedAddress(
-      ElementsNetType type, const Script& script);
+  explicit ElementsAddressFactory(NetType type);
+
+  /**
+   * @brief コンストラクタ.
+   * @param[in] type      network type
+   * @param[in] wit_ver   witness version
+   */
+  explicit ElementsAddressFactory(NetType type, WitnessVersion wit_ver);
+
+  /**
+   * @brief デストラクタ.
+   */
+  virtual ~ElementsAddressFactory() {
+    // do nothing
+  }
 
   /**
    * @brief UnblindedAddressをconfidential
    * keyでブラインドしたConfidentialAddressを取得する.
-   * @param[in] unblinded_address ElementsUnblindedAddressインスタンス
+   * @param[in] unblinded_address Addressインスタンス
    * @param[in] confidential_key  ConfidentialKeyインスタンス(ec public key)
    * @return BlindされたElementsConfidentialAddressインスタンス
    */
   static ElementsConfidentialAddress GetConfidentialAddress(
-      const ElementsUnblindedAddress& unblinded_address,
+      const Address& unblinded_address,
       const ConfidentialKey& confidential_key);
 
   /**
    * @brief fedpegscriptとpubkeyから、net_typeに応じたmainchain用のpeg-in
    * addressを作成する
-   * @param[in] net_type mainchainのnetworkタイプ
    * @param[in] pubkey 公開鍵
    * @param[in] fedpegscript elementsのfedpegscript
    * @return mainchain用peg-in address
    */
-  static Address CreatePegInAddress(
-      NetType net_type, const Pubkey& pubkey, const Script& fedpegscript);
+  Address CreatePegInAddress(
+      const Pubkey& pubkey, const Script& fedpegscript) const;
 
   /**
    * @brief fedpegscriptとclaim_scriptから、net_typeに応じたmainchain用のpeg-in
    * addressを作成する
-   * @param[in] net_type mainchainのnetworkタイプ
    * @param[in] claim_script sidechainでの資産引取りに必要なclaim script
    * @param[in] fedpegscript elementsのfedpegscript
    * @return mainchain用peg-in address
    */
-  static Address CreatePegInAddress(
-      NetType net_type, const Script& claim_script,
-      const Script& fedpegscript);
+  Address CreatePegInAddress(
+      const Script& claim_script, const Script& fedpegscript) const;
 
   /**
    * @brief tweakが足されたfedpegscriptから、net_typeに応じたmainchain用のpeg-in
    * addressを作成する
-   * @param[in] net_type mainchainのnetworkタイプ
    * @param[in] tweak_fedpegscript
    * fedpegscript内部のpubkeyをtweakと合成させたscript. (ref:
    * cfdcore::ContractHashUtil)
    * @return mainchain用peg-in address
    */
-  static Address CreatePegInAddress(
-      NetType net_type, const Script& tweak_fedpegscript);
-
-  /**
-   * @brief
-   * アドレス文字列から、ElementsConfidentialAddressかElementsUnblindedAddressを作成する.
-   * @param[in] address_str アドレス文字列
-   * @return AbstractElementsAddressオブジェクト
-   */
-  static AbstractElementsAddress GetElementsAddress(std::string address_str);
-
- private:
-  /**
-   * @brief constructor抑制
-   */
-  ElementsAddressUtil() {
-    // do nothing
-  }
+  Address CreatePegInAddress(const Script& tweak_fedpegscript) const;
 };
 
 }  // namespace cfd

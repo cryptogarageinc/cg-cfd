@@ -10,16 +10,25 @@
 #define CFD_INCLUDE_CFD_CFDAPI_ADDRESS_H_
 
 #include <string>
+#include <vector>
 
 #include "cfd/cfd_common.h"
 #include "cfd/cfdapi_struct.h"
 #include "cfdcore/cfdcore_address.h"
+#include "cfdcore/cfdcore_key.h"
 
 /**
  * @brief cfdapi名前空間
  */
 namespace cfd {
 namespace api {
+
+using cfdcore::Address;
+using cfdcore::AddressFormatData;
+using cfdcore::AddressType;
+using cfdcore::NetType;
+using cfdcore::Pubkey;
+using cfdcore::Script;
 
 /**
  * @brief Address関連の関数群クラス
@@ -50,17 +59,60 @@ class CFD_EXPORT AddressApi {
    */
   static cfdcore::NetType ConvertNetType(const std::string& network_type);
 
+ private:
+  AddressApi();
+};
+
+/**
+ * @brief Address関連の関数群クラス
+ * @details 現状は内部クラス扱い。あとで名称変更予定.
+ */
+class CFD_EXPORT AddressDirectApi {
+ public:
+  /**
+   * @brief Addressを作成する
+   * @param[in] net_type        network type
+   * @param[in] address_type    address type
+   * @param[in] pubkey          public key (default: nullptr)
+   * @param[in] script          script (default: nullptr)
+   * @param[out] locking_script locking script
+   * @param[out] redeem_script  redeem script
+   * @param[in] prefix_list     address prefix list
+   * @return Address
+   */
+  static Address CreateAddress(
+      NetType net_type, AddressType address_type, const Pubkey* pubkey,
+      const Script* script, Script* locking_script = nullptr,
+      Script* redeem_script = nullptr,
+      std::vector<AddressFormatData>* prefix_list = nullptr);
+
+  /**
+   * @brief Multisig Addressを作成する
+   * @param[in] net_type        network type
+   * @param[in] address_type    address type
+   * @param[in] req_sig_num     multisig require sign num
+   * @param[in] pubkeys         public key list
+   * @param[out] redeem_script  redeem script (p2sh, p2sh-p2wsh)
+   * @param[out] witness_script witness script (p2wsh, p2sh-p2wsh)
+   * @param[in] prefix_list     address prefix list
+   * @return Address
+   */
+  static Address CreateMultisig(
+      NetType net_type, AddressType address_type, uint32_t req_sig_num,
+      const std::vector<Pubkey>& pubkeys, Script* redeem_script = nullptr,
+      Script* witness_script = nullptr,
+      std::vector<AddressFormatData>* prefix_list = nullptr);
+
   /**
    * @brief Convert address type from string to AddressType.
    * @param[in] address_type the address type as a string.
    * @return the converted AddressType.
    * @throws CfdException if address_type does not match any known AddressType.
    */
-  static cfdcore::AddressType ConvertAddressType(
-      const std::string& address_type);
+  static AddressType ConvertAddressType(const std::string& address_type);
 
  private:
-  AddressApi();
+  AddressDirectApi();
 };
 
 }  // namespace api

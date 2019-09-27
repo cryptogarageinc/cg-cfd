@@ -36,7 +36,6 @@ namespace api {
 #ifndef CFD_DISABLE_ELEMENTS
 using cfd::api::ElementsTransactionApi;
 #endif  // CFD_DISABLE_ELEMENTS
-using cfd::AddressUtil;
 using cfd::ScriptUtil;
 using cfd::TransactionController;
 using cfd::api::AddressApi;
@@ -202,7 +201,7 @@ DecodeRawTransactionResponseStruct TransactionApi::DecodeRawTransaction(
     int32_t txout_count = 0;
     for (const TxOutReference& txout_ref : tx.GetTxOutList()) {
       DecodeRawTransactionTxOutStruct res_txout;
-      res_txout.value = txout_ref.GetValue().GetCoinValue();
+      res_txout.value = txout_ref.GetValue().GetSatoshiValue();
       res_txout.n = txout_count;
 
       std::vector<std::string> addresses;

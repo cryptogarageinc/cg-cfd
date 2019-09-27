@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "cfd/cfd_address.h"
 #include "cfd/cfd_script.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_amount.h"
@@ -112,40 +113,8 @@ const TxOutReference TransactionController::AddTxOut(
 
 const TxOutReference TransactionController::AddTxOut(
     const Address& address, const Amount& value) {
-  const AddressType addr_type = address.GetAddressType();
   const ByteData hash_data = address.GetHash();
-  Script locking_script;
-
-  // AddressTypeの種別ごとに、locking_scriptを作成
-  switch (addr_type) {
-    case AddressType::kP2pkhAddress: {
-      ByteData160 pubkey_hash(hash_data.GetBytes());
-      locking_script = ScriptUtil::CreateP2pkhLockingScript(pubkey_hash);
-      break;
-    }
-    case AddressType::kP2shAddress: {
-      ByteData160 script_hash(hash_data.GetBytes());
-      locking_script = ScriptUtil::CreateP2shLockingScript(script_hash);
-      break;
-    }
-    case AddressType::kP2wpkhAddress: {
-      ByteData160 pubkey_hash(hash_data.GetBytes());
-      locking_script = ScriptUtil::CreateP2wpkhLockingScript(pubkey_hash);
-      break;
-    }
-    case AddressType::kP2wshAddress: {
-      ByteData256 script_hash(hash_data.GetBytes());
-      locking_script = ScriptUtil::CreateP2wshLockingScript(script_hash);
-      break;
-    }
-      //    default: {
-      //      warn(CFD_LOG_SOURCE, "Unsupported Address type. AddressType={}.",
-      //           addr_type);
-      //      throw CfdException(CfdError::kCfdIllegalArgumentError,
-      //                         "AddTxOut Error. Unsupported Address type.");
-      //      break;
-      //    }
-  }
+  Script locking_script = address.GetLockingScript();
   uint32_t index = transaction_.AddTxOut(value, locking_script);
   return transaction_.GetTxOut(index);
 }

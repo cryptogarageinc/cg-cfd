@@ -27,7 +27,7 @@
  */
 namespace cfd {
 
-using cfdcore::AbstractElementsAddress;
+using cfdcore::Address;
 using cfdcore::Amount;
 using cfdcore::BlindFactor;
 using cfdcore::BlindParameter;
@@ -39,6 +39,7 @@ using cfdcore::ConfidentialNonce;
 using cfdcore::ConfidentialTransaction;
 using cfdcore::ConfidentialTxInReference;
 using cfdcore::ConfidentialTxOutReference;
+using cfdcore::ElementsConfidentialAddress;
 using cfdcore::IssuanceBlindingKeyPair;
 using cfdcore::IssuanceParameter;
 using cfdcore::Privkey;
@@ -147,25 +148,26 @@ class CFD_EXPORT ConfidentialTransactionController
 
   /**
    * @brief TxOutを追加する.
-   * @param[in] address  送金先アドレス
+   * @param[in] address  送金先unblindedアドレス
    * @param[in] value  送金額
    * @param[in] asset AssetID
    * @return 追加したTxOutのTxOutReferenceインスタンス
    */
   const ConfidentialTxOutReference AddTxOut(
-      const AbstractElementsAddress& address, const Amount& value,
+      const Address& address, const Amount& value,
       const ConfidentialAssetId& asset);
   /**
    * @brief TxOutを追加する.
-   * @param[in] address  送金先アドレス
+   * @param[in] address  送金先confidentialアドレス
    * @param[in] value  送金額
    * @param[in] asset AssetID
-   * @param[in] remove_nonce nonceの強制削除フラグ
+   * @param[in] remove_nonce      nonceの強制削除フラグ
    * @return 追加したTxOutのTxOutReferenceインスタンス
    */
   const ConfidentialTxOutReference AddTxOut(
-      const AbstractElementsAddress& address, const Amount& value,  // amount
-      const ConfidentialAssetId& asset, bool remove_nonce);
+      const ElementsConfidentialAddress& address,
+      const Amount& value,  // amount
+      const ConfidentialAssetId& asset, bool remove_nonce = false);
   /**
    * @brief TxOutを追加する.
    * @param[in] locking_script  送金先locking_script
@@ -371,22 +373,25 @@ class CFD_EXPORT ConfidentialTransactionController
 
   /**
    * @brief IssueAssetの情報を設定する.
-   * @param[in] txid              対象のTxInのtxid
-   * @param[in] vout              対象のTxInのvout
-   * @param[in] asset_amount      issuance amount
-   * @param[in] asset_address     asset destination address
-   * @param[in] token_amount      inflation keys
-   * @param[in] token_address     token destination address
-   * @param[in] is_blind          blinding issuance
-   * @param[in] contract_hash     asset entropy
-   * @param[in] is_randomize      set txout randomize
-   * @param[in] is_remove_nonce   nonceの強制削除フラグ
+   * @param[in] txid                 対象のTxInのtxid
+   * @param[in] vout                 対象のTxInのvout
+   * @param[in] asset_amount         issuance amount
+   * @param[in] asset_locking_script asset locking script
+   * @param[in] asset_nonce          asset nonce
+   * @param[in] token_amount         token amount
+   * @param[in] token_locking_script token locking script
+   * @param[in] token_nonce          token nonce
+   * @param[in] is_blind             blinding issuance
+   * @param[in] contract_hash        asset entropy
+   * @param[in] is_randomize         set txout randomize
+   * @param[in] is_remove_nonce      nonceの強制削除フラグ
    * @return issuance entropy and asset parameter.
    */
   IssuanceParameter SetAssetIssuance(
       const Txid& txid, uint32_t vout, const Amount& asset_amount,
-      const AbstractElementsAddress& asset_address, const Amount& token_amount,
-      const AbstractElementsAddress& token_address, bool is_blind,
+      const Script& asset_locking_script, const ByteData& asset_nonce,
+      const Amount& token_amount, const Script& token_locking_script,
+      const ByteData& token_nonce, bool is_blind,
       const ByteData256& contract_hash, bool is_randomize = false,
       bool is_remove_nonce = false);
 
@@ -395,7 +400,8 @@ class CFD_EXPORT ConfidentialTransactionController
    * @param[in] txid              対象のTxInのtxid
    * @param[in] vout              対象のTxInのvout
    * @param[in] amount            reissuance amount
-   * @param[in] address           asset destination address
+   * @param[in] locking_script    asset locking script
+   * @param[in] asset_nonce             confidential key
    * @param[in] blind_factor      blind factor
    * @param[in] entropy           asset entropy
    * @param[in] is_randomize      set txout randomize
@@ -404,9 +410,9 @@ class CFD_EXPORT ConfidentialTransactionController
    */
   IssuanceParameter SetAssetReissuance(
       const Txid& txid, uint32_t vout, const Amount& amount,
-      const AbstractElementsAddress& address, const BlindFactor& blind_factor,
-      const BlindFactor& entropy, bool is_randomize = false,
-      bool is_remove_nonce = false);
+      const Script& locking_script, const ByteData& asset_nonce,
+      const BlindFactor& blind_factor, const BlindFactor& entropy,
+      bool is_randomize = false, bool is_remove_nonce = false);
 
   /**
    * @brief TxOutの順序をランダム化する.
