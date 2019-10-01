@@ -1,0 +1,12 @@
+{
+	"namespace": ["cfd","api"],
+	"request": {
+		":class": "Bip39GetWordlistRequest",
+		"language": "en",
+		"language:hint": "support [en es fr it jp zhs zht]"
+	},
+	"response": {
+		":class": "Bip39GetWordlistResponse",
+		"wordlist": [""]
+	}
+}
