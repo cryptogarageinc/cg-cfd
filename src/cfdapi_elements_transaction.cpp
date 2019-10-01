@@ -1338,6 +1338,75 @@ ElementsTransactionApi::GetIssuanceBlindingKey(
   return result;
 }
 
+ElementsCreateDestroyAmountResponseStruct
+ElementsTransactionApi::CreateDestroyAmountTransaction(
+    const ElementsCreateDestroyAmountRequestStruct& request) {
+  auto call_func = [](const ElementsCreateDestroyAmountRequestStruct& request)
+      -> ElementsCreateDestroyAmountResponseStruct {  // NOLINT
+    ElementsCreateDestroyAmountResponseStruct response;
+    // Transaction作成
+    ConfidentialTransactionController ctxc(request.version, request.locktime);
+    ElementsAddressFactory address_factory;
+
+    // TxInの追加
+    const uint32_t kLockTimeDisabledSequence =
+        ctxc.GetLockTimeDisabledSequence();
+    for (ElementsDestroyAmountTxInStruct txin_req : request.txins) {
+      Txid txid(txin_req.txid);
+      uint32_t vout = txin_req.vout;
+
+      // TxInのunlocking_scriptは空で作成
+      if (kLockTimeDisabledSequence == txin_req.sequence) {
+        ctxc.AddTxIn(txid, vout, ctxc.GetDefaultSequence());
+      } else {
+        ctxc.AddTxIn(txid, vout, txin_req.sequence);
+      }
+    }
+
+    // TxOutの追加
+    for (ElementsDestroyAmountTxOutStruct txout_req : request.txouts) {
+      const std::string addr = txout_req.address;
+      if (ElementsConfidentialAddress::IsConfidentialAddress(addr)) {
+        ctxc.AddTxOut(
+            ElementsConfidentialAddress(addr),
+            Amount::CreateBySatoshiAmount(txout_req.amount),
+            ConfidentialAssetId(txout_req.asset), txout_req.is_remove_nonce);
+      } else {
+        ctxc.AddTxOut(
+            address_factory.GetAddress(addr),
+            Amount::CreateBySatoshiAmount(txout_req.amount),
+            ConfidentialAssetId(txout_req.asset));
+      }
+    }
+
+    // DestroyのTxOut追加
+    // script作成
+    ScriptBuilder builder;
+    builder.AppendOperator(ScriptOperator::OP_RETURN);
+    Script locking_script = builder.Build();
+
+    ctxc.AddTxOut(
+        locking_script, Amount::CreateBySatoshiAmount(request.destroy.amount),
+        ConfidentialAssetId(request.destroy.asset));
+
+    // feeの追加
+    ElementsDestroyAmountFeeStruct fee_req = request.fee;
+    ctxc.AddTxOutFee(
+        Amount::CreateBySatoshiAmount(fee_req.amount),
+        ConfidentialAssetId(fee_req.asset));
+
+    response.hex = ctxc.GetHex();
+    return response;
+  };
+
+  ElementsCreateDestroyAmountResponseStruct result;
+  result = ExecuteStructApi<
+      ElementsCreateDestroyAmountRequestStruct,
+      ElementsCreateDestroyAmountResponseStruct>(
+      request, call_func, std::string(__FUNCTION__));
+  return result;
+}
+
 }  // namespace api
 }  // namespace cfd
 #endif  // CFD_DISABLE_ELEMENTS

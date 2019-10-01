@@ -321,6 +321,110 @@ struct DecodeRawTransactionResponseStruct {
 };
 
 // ------------------------------------------------------------------------
+// CreateUnblindedAddressRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief CreateUnblindedAddressRequestStruct 構造体
+ */
+struct CreateUnblindedAddressRequestStruct {
+  std::string script_hex = "";                //!< script_hex  // NOLINT
+  std::string pubkey_hex = "";                //!< pubkey_hex  // NOLINT
+  std::string elements_network = "liquidv1";  //!< elements_network  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// CreateUnblindedAddressResponseStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief CreateUnblindedAddressResponseStruct 構造体
+ */
+struct CreateUnblindedAddressResponseStruct {
+  std::string unblinded_address = "";  //!< unblinded_address  // NOLINT
+  InnerErrorResponseStruct error;       //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsDestroyAmountTxInStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsDestroyAmountTxInStruct 構造体
+ */
+struct ElementsDestroyAmountTxInStruct {
+  std::string txid = "";           //!< txid  // NOLINT
+  uint32_t vout = 0;               //!< vout  // NOLINT
+  uint32_t sequence = 4294967295;  //!< sequence  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsDestroyAmountTxOutStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsDestroyAmountTxOutStruct 構造体
+ */
+struct ElementsDestroyAmountTxOutStruct {
+  std::string address = "";      //!< address  // NOLINT
+  int64_t amount = 0;            //!< amount  // NOLINT
+  std::string asset = "";        //!< asset  // NOLINT
+  bool is_remove_nonce = false;  //!< is_remove_nonce  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsDestroyAmountStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsDestroyAmountStruct 構造体
+ */
+struct ElementsDestroyAmountStruct {
+  int64_t amount = 0;      //!< amount  // NOLINT
+  std::string asset = "";  //!< asset  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsDestroyAmountFeeStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsDestroyAmountFeeStruct 構造体
+ */
+struct ElementsDestroyAmountFeeStruct {
+  int64_t amount = 0;      //!< amount  // NOLINT
+  std::string asset = "";  //!< asset  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsCreateDestroyAmountRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsCreateDestroyAmountRequestStruct 構造体
+ */
+struct ElementsCreateDestroyAmountRequestStruct {
+  uint32_t version = 2;                                  //!< version  // NOLINT
+  uint32_t locktime = 0;                                 //!< locktime  // NOLINT
+  std::vector<ElementsDestroyAmountTxInStruct> txins;    //!< txins  // NOLINT
+  std::vector<ElementsDestroyAmountTxOutStruct> txouts;  //!< txouts  // NOLINT
+  ElementsDestroyAmountStruct destroy;                   //!< destroy  // NOLINT
+  ElementsDestroyAmountFeeStruct fee;                    //!< fee  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ElementsCreateDestroyAmountResponseStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsCreateDestroyAmountResponseStruct 構造体
+ */
+struct ElementsCreateDestroyAmountResponseStruct {
+  std::string hex = "";  //!< hex  // NOLINT
+  InnerErrorResponseStruct error;       //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
 // ElementsCreatePegInAddressRequestStruct
 // ------------------------------------------------------------------------
 /**
