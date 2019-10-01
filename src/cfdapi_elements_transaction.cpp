@@ -231,18 +231,29 @@ ElementsTransactionApi::DecodeRawTransaction(  // NOLINT
     // TxInの追加
     for (const ConfidentialTxInReference& tx_in_ref : ctx.GetTxInList()) {
       ElementsDecodeRawTransactionTxInStruct tx_in_res;
-      // TODO(fujita-cg): coinbaseであるかどうかの判定
-      tx_in_res.ignore_items.insert("coinbase");  // force to ignore this field
-      // FIXME(k-matsuzawa): 実装する
+      if (ctx.IsCoinBase()) {
+        tx_in_res.ignore_items.insert("txid");
+        tx_in_res.ignore_items.insert("vout");
+        tx_in_res.ignore_items.insert("scriptSig");
+        tx_in_res.ignore_items.insert("is_pegin");
 
-      // FIXME(fujita-cg): Elemnets Specific Valueまでは共通化ができるはず
-      tx_in_res.txid = tx_in_ref.GetTxid().GetHex();
-      tx_in_res.vout = tx_in_ref.GetVout();
-      if (!tx_in_ref.GetUnlockingScript().IsEmpty()) {
-        tx_in_res.script_sig.asm_ = tx_in_ref.GetUnlockingScript().ToString();
-        tx_in_res.script_sig.hex = tx_in_ref.GetUnlockingScript().GetHex();
+        if (!tx_in_ref.GetUnlockingScript().IsEmpty()) {
+          tx_in_res.coinbase = tx_in_ref.GetUnlockingScript().GetHex();
+        }
+      } else {
+        tx_in_res.ignore_items.insert("coinbase");
+
+        // FIXME(fujita-cg): Elemnets Specific Valueまでは共通化ができるはず
+        tx_in_res.txid = tx_in_ref.GetTxid().GetHex();
+        tx_in_res.vout = tx_in_ref.GetVout();
+        if (!tx_in_ref.GetUnlockingScript().IsEmpty()) {
+          tx_in_res.script_sig.asm_ =
+              tx_in_ref.GetUnlockingScript().ToString();
+          tx_in_res.script_sig.hex = tx_in_ref.GetUnlockingScript().GetHex();
+        }
+        tx_in_res.is_pegin = (tx_in_ref.GetPeginWitnessStackNum() > 0);
       }
-      tx_in_res.is_pegin = (tx_in_ref.GetPeginWitnessStackNum() > 0);
+
       tx_in_res.sequence = tx_in_ref.GetSequence();
 
       for (const ByteData& witness :

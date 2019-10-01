@@ -263,6 +263,7 @@ struct DecodeUnlockingScriptStruct {
  * @brief DecodeRawTransactionTxInStruct 構造体
  */
 struct DecodeRawTransactionTxInStruct {
+  std::string coinbase = "";               //!< coinbase  // NOLINT
   std::string txid = "";                   //!< txid  // NOLINT
   int64_t vout = 0;                        //!< vout  // NOLINT
   DecodeUnlockingScriptStruct script_sig;  //!< script_sig  // NOLINT
