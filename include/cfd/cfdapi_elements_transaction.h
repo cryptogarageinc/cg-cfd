@@ -159,6 +159,15 @@ class CFD_EXPORT ElementsTransactionApi {
   // 別クラスに分ける。Struct系のAPIを ～StructApi というクラスにした方が良い
   // Privkey GetIssuanceBlindingKey(const Privkey& master_blinding_key,
   //     const Txid& txid, int32_t vout);
+
+  /**
+   * @brief パラメータの情報を元に、Elements DestroyAmount用のRaw Transactionを作成する.
+   * @param[in] request Transactionを構築するパラメータの構造体
+   * @return Transactionのhexデータを格納した構造体
+   */
+  static ElementsCreateDestroyAmountResponseStruct
+  CreateDestroyAmountTransaction(
+      const ElementsCreateDestroyAmountRequestStruct& request);
 };
 
 }  // namespace api
