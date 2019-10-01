@@ -28,12 +28,20 @@ namespace api {
 class CFD_EXPORT ElementsAddressApi {
  public:
   /**
-   * @brief 構造体の情報を元に、Elements用UnblindedAddressを作成する
-   * @param[in] request UnblindedAddressを構築するパラメータ
+   * @brief JSONパラメータの情報を元に、Addressを作成する
+   * @param[in] request Addressを構築するパラメータ
    * @return Addressのhexデータを格納した構造体
    */
-  static CreateUnblindedAddressResponseStruct CreateUnblindedAddress(
-      const CreateUnblindedAddressRequestStruct& request);
+  static CreateAddressResponseStruct CreateAddress(
+      const CreateAddressRequestStruct& request);
+
+  /**
+   * @brief JSONパラメータの情報を元に、Multisigを作成する
+   * @param[in] request Multisigを構築するパラメータ
+   * @return MultisigAddressとredeem scriptのhexデータを格納した構造体
+   */
+  static CreateMultisigResponseStruct CreateMultisig(
+      const CreateMultisigRequestStruct& request);
 
   /**
    * @brief

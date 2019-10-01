@@ -7,9 +7,11 @@
 		"keys": [
 			""
 		],
+		"isElements": false,
 		"network": "mainnet",
-		"addressType": "bech32",
-		"addressType:hint": "p2sh, p2wsh or p2sh-p2wsh"
+		"network:hint": "bitcoin:'mainnet, testnet, regtest'. elements:'liquidv1, regtest'",
+		"addressType": "p2wsh",
+		"addressType:hint": "p2sh, p2wsh, p2sh-p2wsh"
 	},
 	"response": {
 		":class": "CreateMultisigResponse",

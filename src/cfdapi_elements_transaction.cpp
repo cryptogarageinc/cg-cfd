@@ -25,9 +25,11 @@
 #include "cfdcore/cfdcore_transaction.h"
 #include "cfdcore/cfdcore_util.h"
 
+#include "cfd/cfd_address.h"
 #include "cfd/cfd_elements_address.h"
 #include "cfd/cfd_script.h"
 #include "cfd/cfdapi_address.h"
+#include "cfd/cfdapi_elements_address.h"
 #include "cfd/cfdapi_elements_transaction.h"
 #include "cfd/cfdapi_struct.h"
 #include "cfd/cfdapi_transaction.h"
@@ -38,33 +40,37 @@ namespace cfd {
 namespace api {
 
 using cfd::ConfidentialTransactionController;
-using cfd::ElementsAddressUtil;
+using cfd::ElementsAddressFactory;
 using cfd::ScriptUtil;
 using cfd::api::AddressApi;
 using cfd::api::TransactionApi;
-using cfdcore::AbstractElementsAddress;
+using cfdcore::Address;
 using cfdcore::AddressType;
 using cfdcore::Amount;
 using cfdcore::BlindFactor;
 using cfdcore::BlindParameter;
 using cfdcore::BlockHash;
 using cfdcore::ByteData;
+using cfdcore::ByteData160;
 using cfdcore::ByteData256;
 using cfdcore::CfdError;
 using cfdcore::CfdException;
 using cfdcore::ConfidentialAssetId;
 using cfdcore::ConfidentialTransaction;
+using cfdcore::ConfidentialTxOut;
 using cfdcore::ConfidentialValue;
+using cfdcore::ElementsAddressType;
 using cfdcore::ElementsConfidentialAddress;
-using cfdcore::ElementsUnblindedAddress;
 using cfdcore::ExtKey;
 using cfdcore::HashUtil;
 using cfdcore::IssuanceBlindingKeyPair;
 using cfdcore::IssuanceParameter;
 using cfdcore::Privkey;
 using cfdcore::Pubkey;
+using cfdcore::RangeProofInfo;
 using cfdcore::Script;
 using cfdcore::ScriptBuilder;
+using cfdcore::ScriptElement;
 using cfdcore::ScriptOperator;
 using cfdcore::SigHashType;
 using cfdcore::Transaction;
@@ -73,6 +79,44 @@ using cfdcore::UnblindParameter;
 using cfdcore::WitnessVersion;
 using cfdcore::logger::info;
 using cfdcore::logger::warn;
+
+/**
+ * @brief Issuance領域を表現する構造体
+ */
+struct Issuance {
+  ByteData256 asset_blinding_nonce_;  //!< nonce value for blinding asset
+  ByteData256 asset_entropy_;         //!< entropy for calculate asset/token
+  ConfidentialValue amount_;          //!< asset value
+  ConfidentialValue inflation_keys_;  //!< reissuance token value
+
+  /**
+   * @brief constructor
+   * @param[in] asset_blinding_nonce nonce for blinding
+   * @param[in] asset_entropy entropy for calculate asset
+   * @param[in] amount asset value (or commitment)
+   * @param[in] inflation_keys reissuance token value (or commitment)
+   */
+  Issuance(
+      const ByteData256& asset_blinding_nonce,
+      const ByteData256& asset_entropy, const ConfidentialValue& amount,
+      const ConfidentialValue& inflation_keys)
+      : asset_blinding_nonce_(asset_blinding_nonce),
+        asset_entropy_(asset_entropy),
+        amount_(amount),
+        inflation_keys_(inflation_keys) {
+    // do nothing
+  }
+
+  /**
+   * @brief IssuanceがNullであるかどうかの判定を行う.
+   * @retval true issuance is null
+   * @retval false issuance is not null
+   * @details assetのamountとtokenのamountが設定されているかを判定している.
+   */
+  bool isNull() const {
+    return (amount_.IsEmpty() && inflation_keys_.IsEmpty());
+  }
+};
 
 // -----------------------------------------------------------------------------
 // ファイル内関数
@@ -117,16 +161,16 @@ ElementsTransactionApi::CreateRawTransaction(  // NOLINT
     // TxOutの追加
     for (ElementsTxOutRequestStruct txout_req : request.txouts) {
       const std::string addr = txout_req.address;
-      if (AbstractElementsAddress::IsConfidentialAddress(addr)) {
+      if (ElementsConfidentialAddress::IsConfidentialAddress(addr)) {
         ctxc.AddTxOut(
             ElementsConfidentialAddress(addr),
             Amount::CreateBySatoshiAmount(txout_req.amount),
             ConfidentialAssetId(txout_req.asset), txout_req.is_remove_nonce);
       } else {
         ctxc.AddTxOut(
-            ElementsUnblindedAddress(addr),
+            ElementsAddressFactory().GetAddress(addr),
             Amount::CreateBySatoshiAmount(txout_req.amount),
-            ConfidentialAssetId(txout_req.asset), txout_req.is_remove_nonce);
+            ConfidentialAssetId(txout_req.asset));
       }
     }
 
@@ -147,6 +191,353 @@ ElementsTransactionApi::CreateRawTransaction(  // NOLINT
   result = ExecuteStructApi<
       ElementsCreateRawTransactionRequestStruct,
       ElementsCreateRawTransactionResponseStruct>(
+      request, call_func, std::string(__FUNCTION__));
+  return result;
+}
+
+ElementsDecodeRawTransactionResponseStruct
+ElementsTransactionApi::DecodeRawTransaction(  // NOLINT
+    const ElementsDecodeRawTransactionRequestStruct& request) {
+  auto call_func = [](const ElementsDecodeRawTransactionRequestStruct& request)
+      -> ElementsDecodeRawTransactionResponseStruct {  // NOLINT
+    ElementsDecodeRawTransactionResponseStruct response;
+
+    // validate input hex
+    const std::string& hex_string = request.hex;
+    if (hex_string.empty()) {
+      warn(
+          CFD_LOG_SOURCE,
+          "Failed to ElementsDecodeRawTransactionRequest. empty hex.");
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError,
+          "Invalid hex string. empty data.");
+    }
+    // FIXME(fujita-cg): 引数のiswitness未使用。elementsでの利用シーンが不明瞭
+
+    // Decode transaction hex
+    ConfidentialTransactionController ctxc(hex_string);
+    const ConfidentialTransaction& ctx = ctxc.GetTransaction();
+
+    response.txid = ctx.GetTxid().GetHex();
+    response.hash = Txid(ctx.GetWitnessHash()).GetHex();
+    response.wtxid = Txid(ctx.GetWitnessHash()).GetHex();
+    response.withash = Txid(ctx.GetWitnessOnlyHash()).GetHex();
+    response.version = ctx.GetVersion();
+    response.size = ctx.GetTotalSize();
+    response.vsize = ctx.GetVsize();
+    response.weight = ctx.GetWeight();
+    response.locktime = ctx.GetLockTime();
+
+    // TxInの追加
+    for (const ConfidentialTxInReference& tx_in_ref : ctx.GetTxInList()) {
+      ElementsDecodeRawTransactionTxInStruct tx_in_res;
+      if (ctx.IsCoinBase()) {
+        tx_in_res.ignore_items.insert("txid");
+        tx_in_res.ignore_items.insert("vout");
+        tx_in_res.ignore_items.insert("scriptSig");
+        tx_in_res.ignore_items.insert("is_pegin");
+
+        if (!tx_in_ref.GetUnlockingScript().IsEmpty()) {
+          tx_in_res.coinbase = tx_in_ref.GetUnlockingScript().GetHex();
+        }
+      } else {
+        tx_in_res.ignore_items.insert("coinbase");
+
+        // FIXME(fujita-cg): Elemnets Specific Valueまでは共通化ができるはず
+        tx_in_res.txid = tx_in_ref.GetTxid().GetHex();
+        tx_in_res.vout = tx_in_ref.GetVout();
+        if (!tx_in_ref.GetUnlockingScript().IsEmpty()) {
+          tx_in_res.script_sig.asm_ =
+              tx_in_ref.GetUnlockingScript().ToString();
+          tx_in_res.script_sig.hex = tx_in_ref.GetUnlockingScript().GetHex();
+        }
+        tx_in_res.is_pegin = (tx_in_ref.GetPeginWitnessStackNum() > 0);
+      }
+
+      tx_in_res.sequence = tx_in_ref.GetSequence();
+
+      for (const ByteData& witness :
+           tx_in_ref.GetScriptWitness().GetWitness()) {  // NOLINT
+        tx_in_res.txinwitness.push_back(witness.GetHex());
+      }
+      if (tx_in_res.txinwitness.empty()) {
+        // txinwitnessを除外
+        tx_in_res.ignore_items.insert("txinwitness");
+      }
+
+      // Elememts specific values
+      // peg-in witness
+      for (const ByteData& pegin_witness_item :
+           tx_in_ref.GetPeginWitness().GetWitness()) {
+        tx_in_res.pegin_witness.push_back(pegin_witness_item.GetHex());
+      }
+      if (tx_in_res.pegin_witness.empty()) {
+        // pegin_witnessを除外
+        tx_in_res.ignore_items.insert("pegin_witness");
+      }
+
+      // issuance
+      Issuance issuance(
+          tx_in_ref.GetBlindingNonce(), tx_in_ref.GetAssetEntropy(),
+          tx_in_ref.GetIssuanceAmount(), tx_in_ref.GetInflationKeys());
+      if (!issuance.isNull()) {
+        tx_in_res.issuance.asset_blinding_nonce =
+            BlindFactor(issuance.asset_blinding_nonce_).GetHex();
+
+        BlindFactor asset_entropy;
+        bool is_blind = issuance.amount_.HasBlinding();
+        IssuanceParameter param;
+        if (issuance.asset_blinding_nonce_.Equals(ByteData256())) {
+          // asset entropy
+          asset_entropy = ConfidentialTransaction::CalculateAssetEntropy(
+              tx_in_ref.GetTxid(), tx_in_ref.GetVout(),
+              issuance.asset_entropy_);
+          tx_in_res.issuance.asset_entropy = asset_entropy.GetHex();
+          tx_in_res.issuance.isreissuance = false;
+          // token
+          ConfidentialAssetId token =
+              ConfidentialTransaction::CalculateReissuanceToken(
+                  asset_entropy, is_blind);
+          tx_in_res.issuance.token = token.GetHex();
+        } else {
+          asset_entropy = BlindFactor(issuance.asset_entropy_);
+          tx_in_res.issuance.asset_entropy = asset_entropy.GetHex();
+          tx_in_res.issuance.isreissuance = true;
+          tx_in_res.issuance.ignore_items.insert("token");
+        }
+        // asset
+        ConfidentialAssetId asset =
+            ConfidentialTransaction::CalculateAsset(asset_entropy);
+        tx_in_res.issuance.asset = asset.GetHex();
+
+        const ConfidentialValue asset_amount = issuance.amount_;
+        if (!asset_amount.IsEmpty()) {
+          if (asset_amount.HasBlinding()) {
+            tx_in_res.issuance.assetamountcommitment = asset_amount.GetHex();
+            tx_in_res.issuance.ignore_items.insert("assetamount");
+          } else {
+            tx_in_res.issuance.assetamount =
+                asset_amount.GetAmount().GetSatoshiValue();
+            tx_in_res.issuance.ignore_items.insert("assetamountcommitment");
+          }
+        } else {
+          tx_in_res.issuance.ignore_items.insert("assetamount");
+          tx_in_res.issuance.ignore_items.insert("assetamountcommitment");
+        }
+
+        const ConfidentialValue inflation_keys = issuance.inflation_keys_;
+        if (!inflation_keys.IsEmpty()) {
+          if (inflation_keys.HasBlinding()) {
+            tx_in_res.issuance.tokenamountcommitment = inflation_keys.GetHex();
+            tx_in_res.issuance.ignore_items.insert("tokenamount");
+          } else {
+            tx_in_res.issuance.tokenamount =
+                inflation_keys.GetAmount().GetSatoshiValue();
+            tx_in_res.issuance.ignore_items.insert("tokenamountcommitment");
+          }
+        } else {
+          tx_in_res.issuance.ignore_items.insert("tokenamount");
+          tx_in_res.issuance.ignore_items.insert("tokenamountcommitment");
+        }
+      } else {
+        // issuanceを除外
+        tx_in_res.ignore_items.insert("issuance");
+      }
+      // End Elements specific values
+
+      response.vin.push_back(tx_in_res);
+    }
+
+    // TxOut
+    int32_t txout_count = 0;
+    for (const ConfidentialTxOutReference& tx_out_ref : ctx.GetTxOutList()) {
+      ElementsDecodeRawTransactionTxOutStruct tx_out_res;
+      const ConfidentialValue tx_out_value = tx_out_ref.GetConfidentialValue();
+      if (!tx_out_value.HasBlinding()) {
+        tx_out_res.value = tx_out_value.GetAmount().GetSatoshiValue();
+        tx_out_res.ignore_items.insert("value-minimum");
+        tx_out_res.ignore_items.insert("value-maximum");
+        tx_out_res.ignore_items.insert("ct-exponent");
+        tx_out_res.ignore_items.insert("ct-bits");
+        tx_out_res.ignore_items.insert("surjectionproof");
+        tx_out_res.ignore_items.insert("valuecommitment");
+      } else {
+        const ByteData& range_proof = tx_out_ref.GetRangeProof();
+        if (range_proof.GetDataSize()) {
+          const RangeProofInfo& range_proof_info =
+              ConfidentialTxOut::DecodeRangeProofInfo(range_proof);
+          tx_out_res.value_minimum =
+              Amount::CreateBySatoshiAmount(range_proof_info.min_value)
+                  .GetSatoshiValue();
+          tx_out_res.value_maximum =
+              Amount::CreateBySatoshiAmount(range_proof_info.max_value)
+                  .GetSatoshiValue();
+          tx_out_res.ct_exponent = range_proof_info.exponent;
+          tx_out_res.ct_bits = range_proof_info.mantissa;
+        } else {
+          tx_out_res.ignore_items.insert("value-minimum");
+          tx_out_res.ignore_items.insert("value-maximum");
+          tx_out_res.ignore_items.insert("ct-exponent");
+          tx_out_res.ignore_items.insert("ct-bits");
+        }
+
+        const ByteData& surjection_proof = tx_out_ref.GetSurjectionProof();
+        if (surjection_proof.GetDataSize()) {
+          tx_out_res.surjectionproof = surjection_proof.GetHex();
+        } else {
+          tx_out_res.ignore_items.insert("surjectionproof");
+        }
+
+        tx_out_res.valuecommitment = tx_out_value.GetHex();
+        tx_out_res.ignore_items.insert("value");
+      }
+
+      const ConfidentialAssetId asset = tx_out_ref.GetAsset();
+      if (!asset.HasBlinding()) {
+        tx_out_res.asset = asset.GetHex();
+        tx_out_res.ignore_items.insert("assetcommitment");
+      } else {
+        tx_out_res.assetcommitment = asset.GetHex();
+        tx_out_res.ignore_items.insert("asset");
+      }
+      ConfidentialNonce nonce = tx_out_ref.GetNonce();
+      tx_out_res.commitmentnonce = nonce.GetHex();
+      tx_out_res.commitmentnonce_fully_valid =
+          Pubkey::IsValid(nonce.GetData());
+      tx_out_res.n = txout_count;
+
+      // Parse unlocking script
+      ElementsDecodeLockingScriptStruct script_pub_key_res;
+      Script locking_script = tx_out_ref.GetLockingScript();
+      script_pub_key_res.asm_ = locking_script.ToString();
+      script_pub_key_res.hex = locking_script.GetHex();
+
+      ExtractScriptData extract_data =
+          TransactionApiBase::ExtractLockingScript(locking_script);
+      LockingScriptType type = extract_data.script_type;
+      script_pub_key_res.type =
+          TransactionApiBase::ConvertLockingScriptTypeString(type);
+      script_pub_key_res.req_sigs = extract_data.pushed_datas.size();
+
+      ElementsNetType elements_net_type =
+          ElementsAddressApi::ConvertElementsNetType(request.network);
+      ElementsAddressFactory addr_factory(elements_net_type);
+      Address address;
+      if (type == LockingScriptType::kMultisig) {
+        script_pub_key_res.req_sigs = extract_data.req_sigs;
+        for (ByteData pubkey_bytes : extract_data.pushed_datas) {
+          Pubkey pubkey = Pubkey(pubkey_bytes);
+          address = addr_factory.CreateP2pkhAddress(pubkey);
+          script_pub_key_res.addresses.push_back(address.GetAddress());
+        }
+      } else if (type == LockingScriptType::kPayToPubkey) {
+        Pubkey pubkey = Pubkey(extract_data.pushed_datas[0]);
+        address = addr_factory.CreateP2pkhAddress(pubkey);
+        script_pub_key_res.addresses.push_back(address.GetAddress());
+      } else if (type == LockingScriptType::kPayToPubkeyHash) {
+        ByteData160 hash =
+            ByteData160(extract_data.pushed_datas[0].GetBytes());
+        address = addr_factory.GetAddressByHash(
+            ElementsAddressType::kP2pkhAddress, hash);
+        script_pub_key_res.addresses.push_back(address.GetAddress());
+      } else if (type == LockingScriptType::kPayToScriptHash) {
+        ByteData160 hash =
+            ByteData160(extract_data.pushed_datas[0].GetBytes());
+        address = addr_factory.GetAddressByHash(
+            ElementsAddressType::kP2shAddress, hash);
+        script_pub_key_res.addresses.push_back(address.GetAddress());
+      } else if (type == LockingScriptType::kWitnessV0KeyHash) {
+        address =
+            addr_factory.GetSegwitAddressByHash(extract_data.pushed_datas[0]);
+        script_pub_key_res.addresses.push_back(address.GetAddress());
+      } else if (type == LockingScriptType::kWitnessV0ScriptHash) {
+        address =
+            addr_factory.GetSegwitAddressByHash(extract_data.pushed_datas[0]);
+        script_pub_key_res.addresses.push_back(address.GetAddress());
+      } else {
+        script_pub_key_res.ignore_items.insert("reqSigs");
+        script_pub_key_res.ignore_items.insert("addresses");
+      }
+
+      // parse pegout locking script
+      if (locking_script.IsPegoutScript()) {
+        std::vector<ScriptElement> elems = locking_script.GetElementList();
+        // pegout chain はリバースバイト表示
+        std::vector<uint8_t> pegout_chain_bytes =
+            elems[1].GetBinaryData().GetBytes();
+        std::reverse(pegout_chain_bytes.begin(), pegout_chain_bytes.end());
+        script_pub_key_res.pegout_chain =
+            ByteData256(pegout_chain_bytes).GetHex();
+        Script pegout_locking_script = Script(elems[2].GetBinaryData());
+        script_pub_key_res.pegout_asm = pegout_locking_script.ToString();
+        script_pub_key_res.pegout_hex = pegout_locking_script.GetHex();
+
+        ExtractScriptData pegout_extract_data =
+            TransactionApiBase::ExtractLockingScript(pegout_locking_script);
+        LockingScriptType pegout_type = pegout_extract_data.script_type;
+        script_pub_key_res.pegout_type =
+            TransactionApiBase::ConvertLockingScriptTypeString(pegout_type);
+        script_pub_key_res.pegout_req_sigs =
+            pegout_extract_data.pushed_datas.size();
+
+        const NetType net_type =
+            AddressApi::ConvertNetType(request.mainchain_network);
+        AddressFactory btcaddr_factory(net_type);
+        if (pegout_type == LockingScriptType::kMultisig) {
+          script_pub_key_res.pegout_req_sigs = pegout_extract_data.req_sigs;
+          for (ByteData pubkey_bytes : pegout_extract_data.pushed_datas) {
+            Pubkey pubkey = Pubkey(pubkey_bytes);
+            address = btcaddr_factory.CreateP2pkhAddress(pubkey);
+            script_pub_key_res.addresses.push_back(address.GetAddress());
+          }
+        } else if (pegout_type == LockingScriptType::kPayToPubkey) {
+          Pubkey pubkey = Pubkey(pegout_extract_data.pushed_datas[0]);
+          address = btcaddr_factory.CreateP2pkhAddress(pubkey);
+          script_pub_key_res.pegout_addresses.push_back(address.GetAddress());
+        } else if (pegout_type == LockingScriptType::kPayToPubkeyHash) {
+          ByteData160 hash =
+              ByteData160(pegout_extract_data.pushed_datas[0].GetBytes());
+          address = btcaddr_factory.GetAddressByHash(
+              AddressType::kP2pkhAddress, hash);
+          script_pub_key_res.pegout_addresses.push_back(address.GetAddress());
+        } else if (pegout_type == LockingScriptType::kPayToScriptHash) {
+          ByteData160 hash =
+              ByteData160(pegout_extract_data.pushed_datas[0].GetBytes());
+          address = btcaddr_factory.GetAddressByHash(
+              AddressType::kP2shAddress, hash);
+          script_pub_key_res.pegout_addresses.push_back(address.GetAddress());
+        } else if (pegout_type == LockingScriptType::kWitnessV0KeyHash) {
+          address = btcaddr_factory.GetSegwitAddressByHash(
+              pegout_extract_data.pushed_datas[0]);
+          script_pub_key_res.pegout_addresses.push_back(address.GetAddress());
+        } else if (pegout_type == LockingScriptType::kWitnessV0ScriptHash) {
+          address = btcaddr_factory.GetSegwitAddressByHash(
+              pegout_extract_data.pushed_datas[0]);
+          script_pub_key_res.pegout_addresses.push_back(address.GetAddress());
+        } else {
+          script_pub_key_res.ignore_items.insert("pegout_reqSigs");
+          script_pub_key_res.ignore_items.insert("pegout_addresses");
+        }
+      } else {
+        script_pub_key_res.ignore_items.insert("pegout_chain");
+        script_pub_key_res.ignore_items.insert("pegout_asm");
+        script_pub_key_res.ignore_items.insert("pegout_hex");
+        script_pub_key_res.ignore_items.insert("pegout_reqSigs");
+        script_pub_key_res.ignore_items.insert("pegout_type");
+        script_pub_key_res.ignore_items.insert("pegout_addresses");
+      }
+
+      tx_out_res.script_pub_key = script_pub_key_res;
+      response.vout.push_back(tx_out_res);
+      ++txout_count;
+    }
+    return response;
+  };
+
+  ElementsDecodeRawTransactionResponseStruct result;
+  result = ExecuteStructApi<
+      ElementsDecodeRawTransactionRequestStruct,
+      ElementsDecodeRawTransactionResponseStruct>(
       request, call_func, std::string(__FUNCTION__));
   return result;
 }
@@ -579,17 +970,52 @@ SetRawIssueAssetResponseStruct ElementsTransactionApi::SetRawIssueAsset(
       -> SetRawIssueAssetResponseStruct {  // NOLINT
     SetRawIssueAssetResponseStruct response;
     ConfidentialTransactionController ctxc(request.tx_hex);
+    ElementsAddressFactory address_factory;
 
     for (IssuanceDataRequestStruct req_issuance : request.issuances) {
+      Script asset_locking_script;
+      ByteData asset_nonce;
+
+      if (ElementsConfidentialAddress::IsConfidentialAddress(
+              req_issuance.asset_address)) {
+        ElementsConfidentialAddress confidential_addr(
+            req_issuance.asset_address);
+        asset_locking_script = confidential_addr.GetLockingScript();
+        if (!req_issuance.is_remove_nonce) {
+          asset_nonce = confidential_addr.GetConfidentialKey().GetData();
+        }
+      } else {
+        Address unblind_addr =
+            address_factory.GetAddress(req_issuance.asset_address);
+        asset_locking_script = unblind_addr.GetLockingScript();
+      }
+
+      Script token_locking_script;
+      ByteData token_nonce;
+
+      if (ElementsConfidentialAddress::IsConfidentialAddress(
+              req_issuance.token_address)) {
+        ElementsConfidentialAddress confidential_addr(
+            req_issuance.token_address);
+        token_locking_script = confidential_addr.GetLockingScript();
+        if (!req_issuance.is_remove_nonce) {
+          token_nonce = confidential_addr.GetConfidentialKey().GetData();
+        }
+      } else {
+        Address unblind_addr =
+            address_factory.GetAddress(req_issuance.token_address);
+        token_locking_script = unblind_addr.GetLockingScript();
+      }
+
       // Txin1つずつissuanceの設定を行う
       IssuanceParameter issuance_param = ctxc.SetAssetIssuance(
           Txid(req_issuance.txin_txid), req_issuance.txin_vout,
           Amount::CreateBySatoshiAmount(req_issuance.asset_amount),
-          ElementsAddressUtil::GetElementsAddress(req_issuance.asset_address),
+          asset_locking_script, asset_nonce,
           Amount::CreateBySatoshiAmount(req_issuance.token_amount),
-          ElementsAddressUtil::GetElementsAddress(req_issuance.token_address),
-          req_issuance.is_blind, ByteData256(req_issuance.contract_hash),
-          false, req_issuance.is_remove_nonce);
+          token_locking_script, token_nonce, req_issuance.is_blind,
+          ByteData256(req_issuance.contract_hash), false,
+          req_issuance.is_remove_nonce);
 
       IssuanceDataResponseStruct res_issuance;
       res_issuance.txin_txid = req_issuance.txin_txid;
@@ -623,14 +1049,30 @@ SetRawReissueAssetResponseStruct ElementsTransactionApi::SetRawReissueAsset(
       -> SetRawReissueAssetResponseStruct {  // NOLINT
     SetRawReissueAssetResponseStruct response;
     ConfidentialTransactionController ctxc(request.tx_hex);
+    ElementsAddressFactory address_factory;
 
     for (ReissuanceDataRequestStruct req_issuance : request.issuances) {
       // Txin1つずつissuanceの設定を行う
+      Script locking_script;
+      ByteData nonce;
+
+      if (ElementsConfidentialAddress::IsConfidentialAddress(
+              req_issuance.address)) {
+        ElementsConfidentialAddress confidential_addr(req_issuance.address);
+        locking_script = confidential_addr.GetLockingScript();
+        if (!req_issuance.is_remove_nonce) {
+          nonce = confidential_addr.GetConfidentialKey().GetData();
+        }
+      } else {
+        Address unblind_addr =
+            address_factory.GetAddress(req_issuance.address);
+        locking_script = unblind_addr.GetLockingScript();
+      }
+
       IssuanceParameter issuance_param = ctxc.SetAssetReissuance(
           Txid(req_issuance.txin_txid), req_issuance.txin_vout,
-          Amount::CreateBySatoshiAmount(req_issuance.amount),
-          ElementsAddressUtil::GetElementsAddress(req_issuance.address),
-          BlindFactor(req_issuance.asset_blinding_nonce),
+          Amount::CreateBySatoshiAmount(req_issuance.amount), locking_script,
+          nonce, BlindFactor(req_issuance.asset_blinding_nonce),
           BlindFactor(req_issuance.asset_entropy), false,
           req_issuance.is_remove_nonce);
 
@@ -666,6 +1108,7 @@ ElementsTransactionApi::CreateRawPeginTransaction(  // NOLINT
     ElementsCreateRawPeginResponseStruct response;
     // Transaction作成
     ConfidentialTransactionController ctxc(request.version, request.locktime);
+    ElementsAddressFactory address_factory;
 
     // TxInの追加
     const uint32_t kLockTimeDisabledSequence =
@@ -704,16 +1147,16 @@ ElementsTransactionApi::CreateRawPeginTransaction(  // NOLINT
     // TxOutの追加
     for (ElementsPeginTxOutStruct txout_req : request.txouts) {
       const std::string addr = txout_req.address;
-      if (AbstractElementsAddress::IsConfidentialAddress(addr)) {
+      if (ElementsConfidentialAddress::IsConfidentialAddress(addr)) {
         ctxc.AddTxOut(
             ElementsConfidentialAddress(addr),
             Amount::CreateBySatoshiAmount(txout_req.amount),
             ConfidentialAssetId(txout_req.asset), txout_req.is_remove_nonce);
       } else {
         ctxc.AddTxOut(
-            ElementsUnblindedAddress(addr),
+            address_factory.GetAddress(addr),
             Amount::CreateBySatoshiAmount(txout_req.amount),
-            ConfidentialAssetId(txout_req.asset), txout_req.is_remove_nonce);
+            ConfidentialAssetId(txout_req.asset));
       }
     }
 
@@ -743,6 +1186,7 @@ ElementsTransactionApi::CreateRawPegoutTransaction(  // NOLINT
     ElementsCreateRawPegoutResponseStruct response;
     // Transaction作成
     ConfidentialTransactionController ctxc(request.version, request.locktime);
+    ElementsAddressFactory address_factory;
 
     // TxInの追加
     const uint32_t kLockTimeDisabledSequence =
@@ -762,16 +1206,16 @@ ElementsTransactionApi::CreateRawPegoutTransaction(  // NOLINT
     // TxOutの追加
     for (ElementsPegoutTxOutStruct txout_req : request.txouts) {
       const std::string addr = txout_req.address;
-      if (AbstractElementsAddress::IsConfidentialAddress(addr)) {
+      if (ElementsConfidentialAddress::IsConfidentialAddress(addr)) {
         ctxc.AddTxOut(
             ElementsConfidentialAddress(addr),
             Amount::CreateBySatoshiAmount(txout_req.amount),
             ConfidentialAssetId(txout_req.asset), txout_req.is_remove_nonce);
       } else {
         ctxc.AddTxOut(
-            ElementsUnblindedAddress(addr),
+            address_factory.GetAddress(addr),
             Amount::CreateBySatoshiAmount(txout_req.amount),
-            ConfidentialAssetId(txout_req.asset), txout_req.is_remove_nonce);
+            ConfidentialAssetId(txout_req.asset));
       }
     }
 

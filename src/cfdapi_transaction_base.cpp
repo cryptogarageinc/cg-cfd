@@ -4,6 +4,7 @@
  *
  * @brief cfd-apiで利用するTransaction作成の実装ファイル
  */
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -23,7 +24,6 @@
 namespace cfd {
 namespace api {
 
-using cfd::AddressUtil;
 using cfd::ConfidentialTransactionController;
 using cfd::TransactionController;
 using cfdcore::AddressType;
@@ -478,7 +478,8 @@ AddMultisigSignResponseStruct TransactionApiBase::AddMultisigSign(
       -> AddMultisigSignResponseStruct {  // NOLINT
     AddMultisigSignResponseStruct response;
     // validate request
-    AddressType addr_type = AddressApi::ConvertAddressType(request.txin_type);
+    AddressType addr_type =
+        AddressDirectApi::ConvertAddressType(request.txin_type);
     ValidateAddMultisigSignRequest(request, addr_type);
 
     const std::string& hex_string = request.tx_hex;
@@ -612,6 +613,124 @@ TransactionApiBase::AddMultisigSign<ConfidentialTransactionController>(
     const AddMultisigSignRequestStruct& request,
     std::function<ConfidentialTransactionController(const std::string&)>
         create_controller);
+
+ExtractScriptData TransactionApiBase::ExtractLockingScript(
+    Script locking_script) {
+  ExtractScriptData extract_data;
+
+  std::string script_type;
+  std::vector<ScriptElement> elems = locking_script.GetElementList();
+  // FIXME(fujita-cg): anyonecanspent_aremineフラグの判定
+  if (elems.size() == 1 && elems[0].GetOpCode() == ScriptOperator::OP_TRUE) {
+    extract_data.script_type = LockingScriptType::kTrue;
+    return extract_data;
+  }
+  if (locking_script.IsEmpty()) {
+    // empty
+    extract_data.script_type = LockingScriptType::kFee;
+    return extract_data;
+  }
+  if (locking_script.IsP2shScript()) {
+    // P2shScript
+    extract_data.script_type = LockingScriptType::kPayToScriptHash;
+    extract_data.pushed_datas.push_back(elems[1].GetBinaryData());
+    return extract_data;
+  }
+
+  // WitnessData
+  if (locking_script.IsWitnessProgram()) {
+    uint8_t witness_version = static_cast<uint8_t>(elems[0].GetNumber());
+    ByteData program = elems[1].GetBinaryData();
+    if (locking_script.IsP2wpkhScript()) {
+      // tx witness keyhash
+      extract_data.script_type = LockingScriptType::kWitnessV0KeyHash;
+      extract_data.pushed_datas.push_back(program);
+    } else if (locking_script.IsP2wshScript()) {
+      // tx witness scripthash
+      extract_data.script_type = LockingScriptType::kWitnessV0ScriptHash;
+      extract_data.pushed_datas.push_back(program);
+    } else if (witness_version != 0) {
+      // tx witness unknown
+      extract_data.script_type = LockingScriptType::kWitnessUnknown;
+      std::vector<uint8_t> data;
+      data.reserve(program.GetDataSize() + 1);
+      data.push_back(witness_version);
+      std::copy(
+          program.GetBytes().begin(), program.GetBytes().end(),
+          std::back_inserter(data));
+      extract_data.pushed_datas.push_back(ByteData(data));
+    } else {
+      // non standard
+      extract_data.script_type = LockingScriptType::kNonStandard;
+    }
+    return extract_data;
+  }
+
+  if (elems.size() >= 1 && elems[0].GetOpCode() == ScriptOperator::OP_RETURN) {
+    // tx null data
+    extract_data.script_type = LockingScriptType::kNullData;
+    return extract_data;
+  }
+  if (locking_script.IsP2pkScript()) {
+    // tx pubkey
+    extract_data.script_type = LockingScriptType::kPayToPubkey;
+    extract_data.pushed_datas.push_back(elems[0].GetBinaryData());
+    return extract_data;
+  }
+  if (locking_script.IsP2pkhScript()) {
+    // tx pubkey hash
+    extract_data.script_type = LockingScriptType::kPayToPubkeyHash;
+    extract_data.pushed_datas.push_back(elems[2].GetBinaryData());
+    return extract_data;
+  }
+  if (locking_script.IsMultisigScript()) {
+    // tx multisig
+    extract_data.script_type = LockingScriptType::kMultisig;
+    decltype(elems)::const_iterator itr = elems.cbegin();
+    extract_data.req_sigs = (*itr).GetNumber();
+    ++itr;
+    for (; itr != (elems.cend() - 2); ++itr) {
+      ByteData pubkey_byte = (*itr).GetBinaryData();
+      extract_data.pushed_datas.push_back(pubkey_byte);
+    }
+    return extract_data;
+  }
+
+  // tx nonstandard
+  extract_data.script_type = LockingScriptType::kNonStandard;
+  return extract_data;
+}
+
+std::string TransactionApiBase::ConvertLockingScriptTypeString(
+    LockingScriptType script_type) {
+  switch (script_type) {
+    case LockingScriptType::kNonStandard:
+      return "nonstandard";
+    case LockingScriptType::kPayToPubkey:
+      return "pubkey";
+    case LockingScriptType::kPayToPubkeyHash:
+      return "pubkeyhash";
+    case LockingScriptType::kPayToScriptHash:
+      return "scripthash";
+    case LockingScriptType::kMultisig:
+      return "multisig";
+    case LockingScriptType::kNullData:
+      return "nulldata";
+    case LockingScriptType::kWitnessV0ScriptHash:
+      return "witness_v0_scripthash";
+    case LockingScriptType::kWitnessV0KeyHash:
+      return "witness_v0_keyhash";
+    case LockingScriptType::kWitnessUnknown:
+      return "witness_unknown";
+    case LockingScriptType::kTrue:
+      return "true";
+#ifndef CFD_DISABLE_ELEMENTS
+    case LockingScriptType::kFee:
+      return "fee";
+#endif  // CFD_DISABLE_ELEMENTS
+  }
+  return "";
+}
 
 }  // namespace api
 }  // namespace cfd

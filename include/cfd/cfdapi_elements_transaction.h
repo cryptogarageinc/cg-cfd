@@ -40,6 +40,14 @@ class CFD_EXPORT ElementsTransactionApi {
       const ElementsCreateRawTransactionRequestStruct& request);
 
   /**
+   * @brief パラメータの情報を元に、Transactionをデコードして出力する.
+   * @param[in] request Transactionとデコード用の情報を格納した構造体
+   * @return Transactionの表示用データを格納した構造体
+   */
+  static ElementsDecodeRawTransactionResponseStruct DecodeRawTransaction(
+      const ElementsDecodeRawTransactionRequestStruct& request);
+
+  /**
    * @brief パラメータの情報を元に、WitnessStack数を出力する.
    * @param[in] request Transactionと対象TxIn情報を格納した構造体
    * @return WitnessStack数を格納した構造体

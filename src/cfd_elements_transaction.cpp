@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include "cfd/cfd_address.h"
+#include "cfd/cfd_elements_address.h"
 #include "cfd/cfd_fee.h"
 #include "cfd/cfd_script.h"
 #include "cfdcore/cfdcore_address.h"
@@ -24,7 +26,6 @@
 #include "cfdcore/cfdcore_transaction.h"
 
 namespace cfd {
-
 using cfdcore::AddressType;
 using cfdcore::Amount;
 using cfdcore::ByteData256;
@@ -105,29 +106,22 @@ const ConfidentialTxInReference ConfidentialTransactionController::GetTxIn(
 }
 
 const ConfidentialTxOutReference ConfidentialTransactionController::AddTxOut(
-    const AbstractElementsAddress& address, const Amount& value,
+    const Address& address, const Amount& value,
     const ConfidentialAssetId& asset) {
-  return AddTxOut(address, value, asset, false);
+  const ByteData hash_data = address.GetHash();
+  Script locking_script = address.GetLockingScript();
+
+  return AddTxOut(locking_script, value, asset, ConfidentialNonce());
 }
 
 const ConfidentialTxOutReference ConfidentialTransactionController::AddTxOut(
-    const AbstractElementsAddress& address, const Amount& value,
+    const ElementsConfidentialAddress& address, const Amount& value,
     const ConfidentialAssetId& asset, bool remove_nonce) {
-  const ElementsAddressType addr_type = address.GetAddressType();
   const ByteData hash_data = address.GetHash();
-  Script locking_script;
+  Script locking_script = address.GetLockingScript();
 
-  // AddressTypeの種別ごとに、locking_scriptを作成
   ByteData nonce;
-  if (addr_type == ElementsAddressType::kElementsP2pkhAddress) {
-    ByteData160 pubkey_hash(hash_data.GetBytes());
-    locking_script = ScriptUtil::CreateP2pkhLockingScript(pubkey_hash);
-  } else if (addr_type == ElementsAddressType::kElementsP2shAddress) {
-    ByteData160 script_hash(hash_data.GetBytes());
-    locking_script = ScriptUtil::CreateP2shLockingScript(script_hash);
-  }
-
-  if ((!remove_nonce) && address.IsBlinded()) {
+  if (!remove_nonce) {
     ElementsConfidentialAddress confidential_addr(address.GetAddress());
     nonce = confidential_addr.GetConfidentialKey().GetData();
   }
@@ -155,31 +149,8 @@ ConfidentialTransactionController::AddPegoutTxOut(
     const Privkey& master_online_key, const std::string& btc_descriptor,
     uint32_t bip32_counter, const ByteData& whitelist) {
   // AddressTypeの種別ごとに、locking_scriptを作成
-  Script script;
-  const AddressType addr_type = btc_address.GetAddressType();
   const ByteData hash_data = btc_address.GetHash();
-  switch (addr_type) {
-    case AddressType::kP2pkhAddress: {
-      ByteData160 pubkey_hash(hash_data.GetBytes());
-      script = ScriptUtil::CreateP2pkhLockingScript(pubkey_hash);
-      break;
-    }
-    case AddressType::kP2shAddress: {
-      ByteData160 script_hash(hash_data.GetBytes());
-      script = ScriptUtil::CreateP2shLockingScript(script_hash);
-      break;
-    }
-    case AddressType::kP2wpkhAddress: {
-      ByteData160 pubkey_hash(hash_data.GetBytes());
-      script = ScriptUtil::CreateP2wpkhLockingScript(pubkey_hash);
-      break;
-    }
-    case AddressType::kP2wshAddress: {
-      ByteData256 script_hash(hash_data.GetBytes());
-      script = ScriptUtil::CreateP2wshLockingScript(script_hash);
-      break;
-    }
-  }
+  Script script = btc_address.GetLockingScript();
 
   PegoutKeyData key_data;
   if (online_pubkey.IsValid() && !master_online_key.IsInvalid()) {
@@ -354,58 +325,25 @@ ConfidentialTransactionController::GetTransaction() const {
 
 IssuanceParameter ConfidentialTransactionController::SetAssetIssuance(
     const Txid& txid, uint32_t vout, const Amount& asset_amount,
-    const AbstractElementsAddress& asset_address, const Amount& token_amount,
-    const AbstractElementsAddress& token_address, bool is_blind,
+    const Script& asset_locking_script, const ByteData& asset_nonce,
+    const Amount& token_amount, const Script& token_locking_script,
+    const ByteData& token_nonce, bool is_blind,
     const ByteData256& contract_hash, bool is_randomize,
     bool is_remove_nonce) {
   uint32_t txin_index = transaction_.GetTxInIndex(txid, vout);
-  Script asset_locking_script;
-  ByteData asset_nonce;
-  switch (asset_address.GetAddressType()) {
-    case ElementsAddressType::kElementsP2pkhAddress: {
-      ByteData160 pubkey_hash(asset_address.GetHash().GetBytes());
-      asset_locking_script = ScriptUtil::CreateP2pkhLockingScript(pubkey_hash);
-      break;
-    }
-    case ElementsAddressType::kElementsP2shAddress: {
-      ByteData160 script_hash(asset_address.GetHash().GetBytes());
-      asset_locking_script = ScriptUtil::CreateP2shLockingScript(script_hash);
-      break;
-    }
-    default:
-      break;
-  }
-  if ((!is_remove_nonce) && asset_address.IsBlinded()) {
-    ElementsConfidentialAddress confidential_addr(asset_address.GetAddress());
-    asset_nonce = confidential_addr.GetConfidentialKey().GetData();
-  }
 
-  Script token_locking_script;
-  ByteData token_nonce;
-  switch (token_address.GetAddressType()) {
-    case ElementsAddressType::kElementsP2pkhAddress: {
-      ByteData160 pubkey_hash(token_address.GetHash().GetBytes());
-      token_locking_script = ScriptUtil::CreateP2pkhLockingScript(pubkey_hash);
-      break;
-    }
-    case ElementsAddressType::kElementsP2shAddress: {
-      ByteData160 script_hash(token_address.GetHash().GetBytes());
-      token_locking_script = ScriptUtil::CreateP2shLockingScript(script_hash);
-      break;
-    }
-    default:
-      break;
-  }
-  if ((!is_remove_nonce) && token_address.IsBlinded()) {
-    ElementsConfidentialAddress confidential_addr(token_address.GetAddress());
-    token_nonce = confidential_addr.GetConfidentialKey().GetData();
+  ConfidentialNonce confidential_asset_nonce;
+  ConfidentialNonce confidential_token_nonce;
+  if (!is_remove_nonce) {
+    confidential_asset_nonce = ConfidentialNonce(asset_nonce);
+    confidential_token_nonce = ConfidentialNonce(token_nonce);
   }
 
   IssuanceParameter param;
   param = transaction_.SetAssetIssuance(
-      txin_index, asset_amount, asset_locking_script,
-      ConfidentialNonce(asset_nonce), token_amount, token_locking_script,
-      ConfidentialNonce(token_nonce), is_blind, contract_hash);
+      txin_index, asset_amount, asset_locking_script, confidential_asset_nonce,
+      token_amount, token_locking_script, confidential_token_nonce, is_blind,
+      contract_hash);
   if (is_randomize) {
     RandomizeTxOut();
   }
@@ -414,33 +352,19 @@ IssuanceParameter ConfidentialTransactionController::SetAssetIssuance(
 
 IssuanceParameter ConfidentialTransactionController::SetAssetReissuance(
     const Txid& txid, uint32_t vout, const Amount& amount,
-    const AbstractElementsAddress& address, const BlindFactor& blind_factor,
-    const BlindFactor& entropy, bool is_randomize, bool is_remove_nonce) {
+    const Script& locking_script, const ByteData& asset_nonce,
+    const BlindFactor& blind_factor, const BlindFactor& entropy,
+    bool is_randomize, bool is_remove_nonce) {
   uint32_t txin_index = transaction_.GetTxInIndex(txid, vout);
-  Script locking_script;
-  ByteData asset_nonce;
-  switch (address.GetAddressType()) {
-    case ElementsAddressType::kElementsP2pkhAddress: {
-      ByteData160 pubkey_hash(address.GetHash().GetBytes());
-      locking_script = ScriptUtil::CreateP2pkhLockingScript(pubkey_hash);
-      break;
-    }
-    case ElementsAddressType::kElementsP2shAddress: {
-      ByteData160 script_hash(address.GetHash().GetBytes());
-      locking_script = ScriptUtil::CreateP2shLockingScript(script_hash);
-      break;
-    }
-    default:
-      break;
-  }
-  if ((!is_remove_nonce) && address.IsBlinded()) {
-    ElementsConfidentialAddress confidential_addr(address.GetAddress());
-    asset_nonce = confidential_addr.GetConfidentialKey().GetData();
+
+  ConfidentialNonce confidential_asset_nonce;
+  if (!is_remove_nonce) {
+    confidential_asset_nonce = ConfidentialNonce(asset_nonce);
   }
 
   IssuanceParameter param;
   param = transaction_.SetAssetReissuance(
-      txin_index, amount, locking_script, ConfidentialNonce(asset_nonce),
+      txin_index, amount, locking_script, confidential_asset_nonce,
       blind_factor, entropy);
 
   if (is_randomize) {

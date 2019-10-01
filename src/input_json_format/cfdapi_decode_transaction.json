@@ -20,6 +20,8 @@
 		"vin": [
 			{
 				":class": "DecodeRawTransactionTxIn",
+				"coinbase": "",
+				"coinbase:hint": "coinbase is only ", 
 				"txid": "",
 				"vout": 0,
 				"scriptSig": {

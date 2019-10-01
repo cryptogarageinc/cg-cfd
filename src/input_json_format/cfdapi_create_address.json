@@ -2,16 +2,20 @@
 	"namespace": ["cfd","api"],
 	"request": {
 		":class": "CreateAddressRequest",
+		"isElements": false,
 		"scriptHex": "",
 		"pubkeyHex": "",
 		"network": "mainnet",
+		"network:hint": "bitcoin:'mainnet, testnet, regtest'. elements:'liquidv1, regtest'",
 		"hashType": "p2wpkh",
-		"hashType:hint": "p2wpkh, p2wsh, p2pkh, p2sh"
+		"hashType:hint": "p2wpkh, p2wsh, p2pkh, p2sh, p2sh-p2wpkh, p2sh-p2wsh"
 	},
 	"response": {
 		":class": "CreateAddressResponse",
 		"address": "",
 		"lockingScript": "",
-		"lockingScript:comment": "(redeem script or pubkey) locking script"
+		"lockingScript:comment": "(redeem script or pubkey) locking script",
+		"redeemScript": "",
+		"redeemScript:comment": "(required for P2SH-P2WPKH or P2SH-P2WSH) redeem script for unlocking script"
 	}
 }

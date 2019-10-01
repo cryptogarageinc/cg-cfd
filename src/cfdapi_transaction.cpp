@@ -36,7 +36,6 @@ namespace api {
 #ifndef CFD_DISABLE_ELEMENTS
 using cfd::api::ElementsTransactionApi;
 #endif  // CFD_DISABLE_ELEMENTS
-using cfd::AddressUtil;
 using cfd::ScriptUtil;
 using cfd::TransactionController;
 using cfd::api::AddressApi;
@@ -180,19 +179,32 @@ DecodeRawTransactionResponseStruct TransactionApi::DecodeRawTransaction(
     // TxInの追加
     for (const TxInReference& tx_in_ref : tx.GetTxInList()) {
       DecodeRawTransactionTxInStruct res_txin;
-      res_txin.txid = tx_in_ref.GetTxid().GetHex();
-      res_txin.vout = tx_in_ref.GetVout();
-      if (!tx_in_ref.GetUnlockingScript().IsEmpty()) {
-        res_txin.script_sig.asm_ = tx_in_ref.GetUnlockingScript().ToString();
-        res_txin.script_sig.hex = tx_in_ref.GetUnlockingScript().GetHex();
-      }
-      for (const ByteData& witness :
-           tx_in_ref.GetScriptWitness().GetWitness()) {  // NOLINT
-        res_txin.txinwitness.push_back(witness.GetHex());
-      }
-      if (res_txin.txinwitness.empty()) {
-        // txinwitnessを除外
+      if (tx.IsCoinBase()) {
+        res_txin.ignore_items.insert("txid");
+        res_txin.ignore_items.insert("vout");
+        res_txin.ignore_items.insert("scriptSig");
         res_txin.ignore_items.insert("txinwitness");
+
+        if (!tx_in_ref.GetUnlockingScript().IsEmpty()) {
+          res_txin.coinbase = tx_in_ref.GetUnlockingScript().GetHex();
+        }
+      } else {
+        res_txin.ignore_items.insert("coinbase");
+
+        res_txin.txid = tx_in_ref.GetTxid().GetHex();
+        res_txin.vout = tx_in_ref.GetVout();
+        if (!tx_in_ref.GetUnlockingScript().IsEmpty()) {
+          res_txin.script_sig.asm_ = tx_in_ref.GetUnlockingScript().ToString();
+          res_txin.script_sig.hex = tx_in_ref.GetUnlockingScript().GetHex();
+        }
+        for (const ByteData& witness :
+             tx_in_ref.GetScriptWitness().GetWitness()) {  // NOLINT
+          res_txin.txinwitness.push_back(witness.GetHex());
+        }
+        if (res_txin.txinwitness.empty()) {
+          // txinwitnessを除外
+          res_txin.ignore_items.insert("txinwitness");
+        }
       }
       res_txin.sequence = tx_in_ref.GetSequence();
       response.vin.push_back(res_txin);
@@ -202,7 +214,7 @@ DecodeRawTransactionResponseStruct TransactionApi::DecodeRawTransaction(
     int32_t txout_count = 0;
     for (const TxOutReference& txout_ref : tx.GetTxOutList()) {
       DecodeRawTransactionTxOutStruct res_txout;
-      res_txout.value = txout_ref.GetValue().GetCoinValue();
+      res_txout.value = txout_ref.GetValue().GetSatoshiValue();
       res_txout.n = txout_count;
 
       std::vector<std::string> addresses;

@@ -6,13 +6,15 @@
 #include "cfdcore/cfdcore_key.h"
 #include "cfd/cfd_common.h"
 #include "cfd/cfd_elements_transaction.h"
+#include "cfd/cfd_address.h"
+#include "cfd/cfd_elements_address.h"
 #include "cfdcore/cfdcore_address.h"
 
 using cfdcore::Amount;
+using cfdcore::Address;
 using cfdcore::ByteData;
 using cfdcore::ByteData256;
 using cfdcore::IssuanceParameter;
-using cfdcore::ElementsUnblindedAddress;
 using cfdcore::Pubkey;
 using cfdcore::Privkey;
 using cfdcore::Txid;
@@ -24,6 +26,7 @@ using cfdcore::ConfidentialAssetId;
 using cfdcore::BlockHash;
 using cfdcore::Address;
 using cfdcore::NetType;
+using cfdcore::AddressFormatData;
 
 TEST(ConfidentialTransactionController, CalculateSimpleFeeTest)
 {
@@ -49,14 +52,17 @@ TEST(ConfidentialTransactionController, SetAssetIssuanceTest1)
     Txid txid("c678107274b4d235d0e587194914b72b37b6ccd268cffad3a40194db65a33d7f");
     Amount asset_amount = Amount::CreateByCoinAmount(100.0);
     Amount token_amount = Amount::CreateByCoinAmount(10.0);
-    ElementsUnblindedAddress asset_address("2dbH8YS7rqRDM1F7EXrGBXvZywXxuEQtZ2z");
-    ElementsUnblindedAddress token_address("2dqLgUheB1R4gw7G2DKuxBeMr1jdgxECAoG");
+    Address asset_address("2dbH8YS7rqRDM1F7EXrGBXvZywXxuEQtZ2z", cfdcore::GetElementsAddressFormatList());
+    Address token_address("2dqLgUheB1R4gw7G2DKuxBeMr1jdgxECAoG", cfdcore::GetElementsAddressFormatList());
     ByteData256 contract_hash;
     bool is_blind = false;
     IssuanceParameter param;
     EXPECT_NO_THROW(
-        (param = tx.SetAssetIssuance(txid, 1, asset_amount, asset_address,
-                                     token_amount, token_address, is_blind,
+        (param = tx.SetAssetIssuance(txid, 1, asset_amount,
+                                     asset_address.GetLockingScript(),
+                                     ByteData(), token_amount,
+                                     token_address.GetLockingScript(),
+                                     ByteData(), is_blind,
                                      contract_hash, false)));
     EXPECT_STREQ(tx.GetHex().c_str(), expect_tx.GetHex().c_str());
     EXPECT_STREQ(
@@ -66,8 +72,12 @@ TEST(ConfidentialTransactionController, SetAssetIssuanceTest1)
     // txout randomize
     tx = tx_base;
     EXPECT_NO_THROW(
-        (tx.SetAssetIssuance(txid, 1, asset_amount, asset_address, token_amount,
-                             token_address, is_blind, contract_hash, true)));
+        (tx.SetAssetIssuance(txid, 1, asset_amount,
+                             asset_address.GetLockingScript(),
+                             ByteData(), token_amount,
+                             token_address.GetLockingScript(),
+                             ByteData(), is_blind,
+                             contract_hash, true)));
     EXPECT_STRNE(tx.GetHex().c_str(), expect_tx.GetHex().c_str());
 }
 
@@ -88,15 +98,19 @@ TEST(ConfidentialTransactionController, SetAssetReissuanceTest1)
 
     IssuanceParameter param;
     EXPECT_NO_THROW(
-        (param = tx.SetAssetReissuance(txid, 2, amount, address, blind_factor,
-                                     entropy, false, false)));
+        (param = tx.SetAssetReissuance(txid, 2, amount,
+                                       address.GetLockingScript(),
+                                       address.GetConfidentialKey().GetData(), blind_factor,
+                                       entropy, false, false)));
     EXPECT_STREQ(tx.GetHex().c_str(), expect_tx.GetHex().c_str());
 
     // txout randomize
     tx = tx_base;
     EXPECT_NO_THROW(
-        (tx.SetAssetReissuance(txid, 2, amount, address, blind_factor,
-                                     entropy, true, false)));
+        (tx.SetAssetReissuance(txid, 2, amount,
+                               address.GetLockingScript(),
+                               ByteData(), blind_factor,
+                               entropy, true, false)));
     EXPECT_STRNE(tx.GetHex().c_str(), expect_tx.GetHex().c_str());
 }
 
@@ -154,10 +168,9 @@ TEST(ConfidentialTransactionController, AddPegoutTxOut)
     ConfidentialTransactionController txc(2, 0);
     txc.AddTxIn(Txid("4aa201f333e80b8f62ba5b593edb47b4730212e2917b21279f389ba1c14588a3"), 0, 4294967293);
     txc.AddTxOut(
-        ElementsUnblindedAddress("XBMr6srTXmWuHifFd8gs54xYfiCBsvrksA"),
+        Address("XBMr6srTXmWuHifFd8gs54xYfiCBsvrksA", cfdcore::GetElementsAddressFormatList()),
         Amount::CreateBySatoshiAmount(209998999992700),
-        ConfidentialAssetId("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"),
-        false);
+        ConfidentialAssetId("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"));
     txc.AddPegoutTxOut(
         Amount::CreateBySatoshiAmount(1000000000),
         ConfidentialAssetId("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"),
@@ -182,10 +195,9 @@ TEST(ConfidentialTransactionController, AddPegoutTxOut2)
     ConfidentialTransactionController txc(2, 0);
     txc.AddTxIn(Txid("4aa201f333e80b8f62ba5b593edb47b4730212e2917b21279f389ba1c14588a3"), 0, 4294967293);
     txc.AddTxOut(
-        ElementsUnblindedAddress("XBMr6srTXmWuHifFd8gs54xYfiCBsvrksA"),
+        Address("XBMr6srTXmWuHifFd8gs54xYfiCBsvrksA", cfdcore::GetElementsAddressFormatList()),
         Amount::CreateBySatoshiAmount(209998999992700),
-        ConfidentialAssetId("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"),
-        false);
+        ConfidentialAssetId("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"));
     txc.AddPegoutTxOut(
         Amount::CreateBySatoshiAmount(1000000000),
         ConfidentialAssetId("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"),
