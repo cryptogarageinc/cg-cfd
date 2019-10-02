@@ -18,24 +18,24 @@ namespace api {
 
 using cfdcore::HDWallet;
 
-Bip39GetWordlistResponseStruct HDWalletApi::Bip39GetWordlist(
-    const Bip39GetWordlistRequestStruct& request) {
-  auto call_func = [](const Bip39GetWordlistRequestStruct& request)
-      -> Bip39GetWordlistResponseStruct {
-    Bip39GetWordlistResponseStruct response;
+GetMnemonicWordlistResponseStruct HDWalletApi::GetMnemonicWordlist(
+    const GetMnemonicWordlistRequestStruct& request) {
+  auto call_func = [](const GetMnemonicWordlistRequestStruct& request)
+      -> GetMnemonicWordlistResponseStruct {
+    GetMnemonicWordlistResponseStruct response;
     // check language is support
     std::string language = request.language;
 
     // get bip39 wordlist
-    std::vector<std::string> wordlist = HDWallet::Bip39GetWordlist(language);
+    std::vector<std::string> wordlist = HDWallet::GetMnemonicWordlist(language);
 
     response.wordlist = wordlist;
     return response;
   };
 
-  Bip39GetWordlistResponseStruct result;
+  GetMnemonicWordlistResponseStruct result;
   result = ExecuteStructApi<
-      Bip39GetWordlistRequestStruct, Bip39GetWordlistResponseStruct>(
+      GetMnemonicWordlistRequestStruct, GetMnemonicWordlistResponseStruct>(
       request, call_func, std::string(__FUNCTION__));
   return result;
 }

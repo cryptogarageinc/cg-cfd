@@ -28,8 +28,8 @@ class CFD_EXPORT HDWalletApi {
    * @param[in] request Wordlistの言語を含むリクエスト構造体
    * @return Wordlist一覧を含むレスポンス構造体
    */
-  static Bip39GetWordlistResponseStruct Bip39GetWordlist(
-      const Bip39GetWordlistRequestStruct& request);
+  static GetMnemonicWordlistResponseStruct GetMnemonicWordlist(
+      const GetMnemonicWordlistRequestStruct& request);
 
  private:
   HDWalletApi();

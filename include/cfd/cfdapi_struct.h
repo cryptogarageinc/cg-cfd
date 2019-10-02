@@ -121,29 +121,6 @@ struct AddSignResponseStruct {
 };
 
 // ------------------------------------------------------------------------
-// Bip39GetWordlistRequestStruct
-// ------------------------------------------------------------------------
-/**
- * @brief Bip39GetWordlistRequestStruct 構造体
- */
-struct Bip39GetWordlistRequestStruct {
-  std::string language = "en";  //!< language  // NOLINT
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
-// Bip39GetWordlistResponseStruct
-// ------------------------------------------------------------------------
-/**
- * @brief Bip39GetWordlistResponseStruct 構造体
- */
-struct Bip39GetWordlistResponseStruct {
-  std::vector<std::string> wordlist;  //!< wordlist  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
 // BlindTxInRequestStruct
 // ------------------------------------------------------------------------
 /**
@@ -1102,6 +1079,29 @@ struct GetIssuanceBlindingKeyRequestStruct {
  */
 struct GetIssuanceBlindingKeyResponseStruct {
   std::string blinding_key = "";  //!< blinding_key  // NOLINT
+  InnerErrorResponseStruct error;       //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// GetMnemonicWordlistRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief GetMnemonicWordlistRequestStruct 構造体
+ */
+struct GetMnemonicWordlistRequestStruct {
+  std::string language = "en";  //!< language  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// GetMnemonicWordlistResponseStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief GetMnemonicWordlistResponseStruct 構造体
+ */
+struct GetMnemonicWordlistResponseStruct {
+  std::vector<std::string> wordlist;  //!< wordlist  // NOLINT
   InnerErrorResponseStruct error;       //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
