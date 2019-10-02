@@ -381,6 +381,67 @@ AddMultisigSignResponseStruct TransactionApi::AddMultisigSign(
   return result;
 }
 
+CreateSignatureHashResponseStruct TransactionApi::CreateSignatureHash(
+    const CreateSignatureHashRequestStruct& request) {
+  auto call_func = [](const CreateSignatureHashRequestStruct& request)
+      -> CreateSignatureHashResponseStruct {  // NOLINT
+    CreateSignatureHashResponseStruct response;
+    std::string sig_hash;
+    int64_t amount = request.amount;
+    const std::string& hashtype_str = request.hash_type;
+    const Txid& txid = Txid(request.txin_txid);
+    uint32_t vout = request.txin_vout;
+    TransactionController txc(request.tx);
+    SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
+        request.sighash_type, request.sighash_anyone_can_pay);
+
+    Pubkey pubkey;
+    Script script;
+    if (request.key_data.type == "pubkey") {
+      pubkey = Pubkey(request.key_data.hex);
+    } else if (request.key_data.type == "redeem_script") {
+      script = Script(request.key_data.hex);
+    }
+
+    if (hashtype_str == "p2pkh") {
+      sig_hash = txc.CreateP2pkhSignatureHash(
+          txid, vout,  // vout
+          pubkey, sighashtype);
+    } else if (hashtype_str == "p2sh") {
+      sig_hash = txc.CreateP2shSignatureHash(
+          txid, vout, script, sighashtype);
+    } else if (hashtype_str == "p2wpkh") {
+      sig_hash = txc.CreateP2wpkhSignatureHash(
+          txid, vout, pubkey, sighashtype,
+          Amount::CreateBySatoshiAmount(amount));
+    } else if (hashtype_str == "p2wsh") {
+      sig_hash = txc.CreateP2wshSignatureHash(
+          txid, vout, script, sighashtype,
+          Amount::CreateBySatoshiAmount(amount));
+    } else {
+      warn(
+          CFD_LOG_SOURCE,
+          "Failed to CreateSignatureHash. Invalid hashtype_str:  "
+          "hashtype_str={}",  // NOLINT
+          hashtype_str);
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError,
+          "Invalid hashtype_str. hashtype_str must be \"p2pkh\" "
+          "or \"p2sh\" or \"p2wpkh\" or \"p2wsh\".");  // NOLINT
+    }
+
+    // レスポンスとなるモデルへ変換
+    response.sighash = sig_hash;
+    return response;
+  };
+
+  CreateSignatureHashResponseStruct result;
+  result = ExecuteStructApi<
+      CreateSignatureHashRequestStruct, CreateSignatureHashResponseStruct>(
+      request, call_func, std::string(__FUNCTION__));
+  return result;
+}
+
 bool TransactionApi::CheckMultiSigScript(const Script& script) {
   bool is_match = false;
   std::vector<ScriptElement> script_element = script.GetElementList();

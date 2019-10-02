@@ -50,7 +50,7 @@ using cfdcore::logger::warn;
 static void ValidateAddMultisigSignRequest(  // linefeed
     AddMultisigSignRequestStruct req, AddressType addr_type) {
   // check txHex
-  if (req.tx_hex.empty()) {
+  if (req.tx.empty()) {
     warn(
         CFD_LOG_SOURCE,
         "Failed to AddSegwitMultisigSignRequest. Transaction hex empty.");
@@ -196,7 +196,7 @@ AddSignResponseStruct TransactionApiBase::AddSign(
       [create_controller](
           const AddSignRequestStruct& request) -> AddSignResponseStruct {
     AddSignResponseStruct response;
-    const std::string& hex_string = request.tx_hex;
+    const std::string& hex_string = request.tx;
     if (hex_string.empty()) {
       warn(CFD_LOG_SOURCE, "Failed to AddSignRequest. hex empty.");
       throw CfdException(
@@ -251,7 +251,7 @@ GetWitnessStackNumResponseStruct TransactionApiBase::GetWitnessStackNum(
       [create_controller](const GetWitnessStackNumRequestStruct& request)
       -> GetWitnessStackNumResponseStruct {  // NOLINT
     GetWitnessStackNumResponseStruct response;
-    std::string hex_string = request.tx_hex;
+    std::string hex_string = request.tx;
     if (hex_string.empty()) {
       warn(CFD_LOG_SOURCE, "Failed to GetWitnessStackNum. hex empty.");
       throw CfdException(
@@ -283,7 +283,7 @@ UpdateWitnessStackResponseStruct TransactionApiBase::UpdateWitnessStack(
       [create_controller](const UpdateWitnessStackRequestStruct& request)
       -> UpdateWitnessStackResponseStruct {  // NOLINT
     UpdateWitnessStackResponseStruct response;
-    const std::string& hex_string = request.tx_hex;
+    const std::string& hex_string = request.tx;
     if (hex_string.empty()) {
       warn(CFD_LOG_SOURCE, "Failed to UpdateWitnessStack. hex empty.");
       throw CfdException(
@@ -482,7 +482,7 @@ AddMultisigSignResponseStruct TransactionApiBase::AddMultisigSign(
         AddressDirectApi::ConvertAddressType(request.txin_type);
     ValidateAddMultisigSignRequest(request, addr_type);
 
-    const std::string& hex_string = request.tx_hex;
+    const std::string& hex_string = request.tx;
     T txc = create_controller(hex_string);
 
     // extract pubkeys from redeem script

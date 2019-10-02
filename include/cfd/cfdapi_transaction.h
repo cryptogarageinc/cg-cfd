@@ -82,6 +82,14 @@ class CFD_EXPORT TransactionApi {
   static AddMultisigSignResponseStruct AddMultisigSign(
       const AddMultisigSignRequestStruct& request);
 
+  /**
+   * @brief JSONパラメータの情報を元に、SigHashを作成する
+   * @param[in] request sighashを生成するパラメータ
+   * @return sighashのhexデータを格納した構造体
+   */
+  static CreateSignatureHashResponseStruct CreateSignatureHash(
+      const CreateSignatureHashRequestStruct& request);
+
  private:
   TransactionApi();
 

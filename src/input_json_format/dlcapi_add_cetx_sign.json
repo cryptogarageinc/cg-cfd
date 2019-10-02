@@ -2,7 +2,8 @@
 	"namespace": ["dlc","api"],
 	"request": {
 		":class": "AddCETxSignRequest",
-		"txHex": "",
+		"tx": "",
+		"tx:comment": "transaction hex",
 		"txinTxid": "",
 		"txinVout": 0,
 		"txinVout:type": "uint32_t",

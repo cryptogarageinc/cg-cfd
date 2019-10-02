@@ -53,7 +53,7 @@ struct MultisigSignDataStruct {
  */
 struct AddMultisigSignRequestStruct {
   bool is_elements = false;                         //!< is_elements  // NOLINT
-  std::string tx_hex = "";                          //!< tx_hex  // NOLINT
+  std::string tx = "";                              //!< tx  // NOLINT
   std::string txin_txid = "";                       //!< txin_txid  // NOLINT
   uint32_t txin_vout = 0;                           //!< txin_vout  // NOLINT
   std::vector<MultisigSignDataStruct> sign_params;  //!< sign_params  // NOLINT
@@ -98,7 +98,7 @@ struct SignDataStruct {
  * @brief AddSignRequestStruct 構造体
  */
 struct AddSignRequestStruct {
-  std::string tx_hex = "";                 //!< tx_hex  // NOLINT
+  std::string tx = "";                     //!< tx  // NOLINT
   bool is_elements = false;                //!< is_elements  // NOLINT
   std::string txin_txid = "";              //!< txin_txid  // NOLINT
   uint32_t txin_vout = 0;                  //!< txin_vout  // NOLINT
@@ -157,7 +157,7 @@ struct BlindIssuanceRequestStruct {
  * @brief BlindRawTransactionRequestStruct 構造体
  */
 struct BlindRawTransactionRequestStruct {
-  std::string tx_hex = "";                            //!< tx_hex  // NOLINT
+  std::string tx = "";                                //!< tx  // NOLINT
   std::vector<BlindTxInRequestStruct> txins;          //!< txins  // NOLINT
   std::vector<std::string> blind_pubkeys;             //!< blind_pubkeys  // NOLINT
   std::vector<BlindIssuanceRequestStruct> issuances;  //!< issuances  // NOLINT
@@ -177,17 +177,28 @@ struct BlindRawTransactionResponseStruct {
 };
 
 // ------------------------------------------------------------------------
+// CreateAddressKeyDataStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief CreateAddressKeyDataStruct 構造体
+ */
+struct CreateAddressKeyDataStruct {
+  std::string hex = "";         //!< hex  // NOLINT
+  std::string type = "pubkey";  //!< type  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
 // CreateAddressRequestStruct
 // ------------------------------------------------------------------------
 /**
  * @brief CreateAddressRequestStruct 構造体
  */
 struct CreateAddressRequestStruct {
-  bool is_elements = false;          //!< is_elements  // NOLINT
-  std::string script_hex = "";       //!< script_hex  // NOLINT
-  std::string pubkey_hex = "";       //!< pubkey_hex  // NOLINT
-  std::string network = "mainnet";   //!< network  // NOLINT
-  std::string hash_type = "p2wpkh";  //!< hash_type  // NOLINT
+  bool is_elements = false;             //!< is_elements  // NOLINT
+  CreateAddressKeyDataStruct key_data;  //!< key_data  // NOLINT
+  std::string network = "mainnet";      //!< network  // NOLINT
+  std::string hash_type = "p2wpkh";     //!< hash_type  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -316,31 +327,6 @@ struct DecodeRawTransactionResponseStruct {
   uint32_t locktime = 0;                              //!< locktime  // NOLINT
   std::vector<DecodeRawTransactionTxInStruct> vin;    //!< vin  // NOLINT
   std::vector<DecodeRawTransactionTxOutStruct> vout;  //!< vout  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
-// CreateUnblindedAddressRequestStruct
-// ------------------------------------------------------------------------
-/**
- * @brief CreateUnblindedAddressRequestStruct 構造体
- */
-struct CreateUnblindedAddressRequestStruct {
-  std::string script_hex = "";                //!< script_hex  // NOLINT
-  std::string pubkey_hex = "";                //!< pubkey_hex  // NOLINT
-  std::string elements_network = "liquidv1";  //!< elements_network  // NOLINT
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
-// CreateUnblindedAddressResponseStruct
-// ------------------------------------------------------------------------
-/**
- * @brief CreateUnblindedAddressResponseStruct 構造体
- */
-struct CreateUnblindedAddressResponseStruct {
-  std::string unblinded_address = "";  //!< unblinded_address  // NOLINT
   InnerErrorResponseStruct error;       //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
@@ -893,7 +879,7 @@ struct IssuanceDataRequestStruct {
  * @brief SetRawIssueAssetRequestStruct 構造体
  */
 struct SetRawIssueAssetRequestStruct {
-  std::string tx_hex = "";                           //!< tx_hex  // NOLINT
+  std::string tx = "";                               //!< tx  // NOLINT
   bool is_randomize = false;                         //!< is_randomize  // NOLINT
   std::vector<IssuanceDataRequestStruct> issuances;  //!< issuances  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
@@ -952,7 +938,7 @@ struct ReissuanceDataRequestStruct {
  * @brief SetRawReissueAssetRequestStruct 構造体
  */
 struct SetRawReissueAssetRequestStruct {
-  std::string tx_hex = "";                             //!< tx_hex  // NOLINT
+  std::string tx = "";                                 //!< tx  // NOLINT
   bool is_randomize = false;                           //!< is_randomize  // NOLINT
   std::vector<ReissuanceDataRequestStruct> issuances;  //!< issuances  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
@@ -1007,7 +993,7 @@ struct UnblindIssuanceStruct {
  * @brief UnblindRawTransactionRequestStruct 構造体
  */
 struct UnblindRawTransactionRequestStruct {
-  std::string tx_hex = "";                       //!< tx_hex  // NOLINT
+  std::string tx = "";                           //!< tx  // NOLINT
   int64_t target_output_index = -1;              //!< target_output_index  // NOLINT
   std::vector<std::string> blinding_keys;        //!< blinding_keys  // NOLINT
   std::vector<UnblindIssuanceStruct> issuances;  //!< issuances  // NOLINT
@@ -1113,7 +1099,7 @@ struct GetMnemonicWordlistResponseStruct {
  * @brief GetWitnessStackNumRequestStruct 構造体
  */
 struct GetWitnessStackNumRequestStruct {
-  std::string tx_hex = "";     //!< tx_hex  // NOLINT
+  std::string tx = "";         //!< tx  // NOLINT
   bool is_elements = false;    //!< is_elements  // NOLINT
   std::string txin_txid = "";  //!< txin_txid  // NOLINT
   uint32_t txin_vout = 0;      //!< txin_vout  // NOLINT
@@ -1162,17 +1148,28 @@ struct CreateMultisigResponseStruct {
 };
 
 // ------------------------------------------------------------------------
+// SignatureHashKeyDataStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief SignatureHashKeyDataStruct 構造体
+ */
+struct SignatureHashKeyDataStruct {
+  std::string hex = "";         //!< hex  // NOLINT
+  std::string type = "pubkey";  //!< type  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
 // CreateSignatureHashRequestStruct
 // ------------------------------------------------------------------------
 /**
  * @brief CreateSignatureHashRequestStruct 構造体
  */
 struct CreateSignatureHashRequestStruct {
-  std::string tx_hex = "";              //!< tx_hex  // NOLINT
+  std::string tx = "";                  //!< tx  // NOLINT
   std::string txin_txid = "";           //!< txin_txid  // NOLINT
   uint32_t txin_vout = 0;               //!< txin_vout  // NOLINT
-  std::string script_hex = "";          //!< script_hex  // NOLINT
-  std::string pubkey_hex = "";          //!< pubkey_hex  // NOLINT
+  SignatureHashKeyDataStruct key_data;  //!< key_data  // NOLINT
   int64_t amount = 0;                   //!< amount  // NOLINT
   std::string hash_type = "p2wsh";      //!< hash_type  // NOLINT
   std::string sighash_type = "all";     //!< sighash_type  // NOLINT
@@ -1193,22 +1190,33 @@ struct CreateSignatureHashResponseStruct {
 };
 
 // ------------------------------------------------------------------------
+// ElementsSignatureHashKeyDataStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ElementsSignatureHashKeyDataStruct 構造体
+ */
+struct ElementsSignatureHashKeyDataStruct {
+  std::string hex = "";         //!< hex  // NOLINT
+  std::string type = "pubkey";  //!< type  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
 // CreateElementsSignatureHashRequestStruct
 // ------------------------------------------------------------------------
 /**
  * @brief CreateElementsSignatureHashRequestStruct 構造体
  */
 struct CreateElementsSignatureHashRequestStruct {
-  std::string tx_hex = "";                  //!< tx_hex  // NOLINT
-  std::string txin_txid = "";               //!< txin_txid  // NOLINT
-  uint32_t txin_vout = 0;                   //!< txin_vout  // NOLINT
-  std::string script_hex = "";              //!< script_hex  // NOLINT
-  std::string pubkey_hex = "";              //!< pubkey_hex  // NOLINT
-  int64_t amount = 0;                       //!< amount  // NOLINT
-  std::string confidential_value_hex = "";  //!< confidential_value_hex  // NOLINT
-  std::string hash_type = "p2wsh";          //!< hash_type  // NOLINT
-  std::string sighash_type = "all";         //!< sighash_type  // NOLINT
-  bool sighash_anyone_can_pay = false;      //!< sighash_anyone_can_pay  // NOLINT
+  std::string tx = "";                             //!< tx  // NOLINT
+  std::string txin_txid = "";                      //!< txin_txid  // NOLINT
+  uint32_t txin_vout = 0;                          //!< txin_vout  // NOLINT
+  ElementsSignatureHashKeyDataStruct key_data;     //!< key_data  // NOLINT
+  int64_t amount = 0;                              //!< amount  // NOLINT
+  std::string confidential_value_commitment = "";  //!< confidential_value_commitment  // NOLINT
+  std::string hash_type = "p2wsh";                 //!< hash_type  // NOLINT
+  std::string sighash_type = "all";                //!< sighash_type  // NOLINT
+  bool sighash_anyone_can_pay = false;             //!< sighash_anyone_can_pay  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -1313,7 +1321,7 @@ struct WitnessStackDataStruct {
  * @brief UpdateWitnessStackRequestStruct 構造体
  */
 struct UpdateWitnessStackRequestStruct {
-  std::string tx_hex = "";               //!< tx_hex  // NOLINT
+  std::string tx = "";                   //!< tx  // NOLINT
   bool is_elements = false;              //!< is_elements  // NOLINT
   std::string txin_txid = "";            //!< txin_txid  // NOLINT
   uint32_t txin_vout = 0;                //!< txin_vout  // NOLINT
@@ -1338,48 +1346,6 @@ struct UpdateWitnessStackResponseStruct {
 
 namespace dlc {
 namespace api {
-
-// ------------------------------------------------------------------------
-// CETxSignDataStruct
-// ------------------------------------------------------------------------
-/**
- * @brief CETxSignDataStruct 構造体
- */
-struct CETxSignDataStruct {
-  std::string hex = "";                 //!< hex  // NOLINT
-  bool der_encode = true;               //!< der_encode  // NOLINT
-  std::string sighash_type = "all";     //!< sighash_type  // NOLINT
-  bool sighash_anyone_can_pay = false;  //!< sighash_anyone_can_pay  // NOLINT
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
-// AddCETxSignRequestStruct
-// ------------------------------------------------------------------------
-/**
- * @brief AddCETxSignRequestStruct 構造体
- */
-struct AddCETxSignRequestStruct {
-  std::string tx_hex = "";         //!< tx_hex  // NOLINT
-  std::string txin_txid = "";      //!< txin_txid  // NOLINT
-  uint32_t txin_vout = 0;          //!< txin_vout  // NOLINT
-  CETxSignDataStruct sign;         //!< sign  // NOLINT
-  bool delayed_unlocking = false;  //!< delayed_unlocking  // NOLINT
-  std::string redeem_script = "";  //!< redeem_script  // NOLINT
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
-// AddCETxSignResponseStruct
-// ------------------------------------------------------------------------
-/**
- * @brief AddCETxSignResponseStruct 構造体
- */
-struct AddCETxSignResponseStruct {
-  std::string hex = "";  //!< hex  // NOLINT
-  cfd::api::InnerErrorResponseStruct error;   //!< error information
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
 
 // ------------------------------------------------------------------------
 // CombineKeysRequestStruct
@@ -1417,6 +1383,48 @@ struct CreateCETxAddressResponseStruct {
   std::string address = "";          //!< address  // NOLINT
   std::string redeem_script = "";    //!< redeem_script  // NOLINT
   std::string combined_pubkey = "";  //!< combined_pubkey  // NOLINT
+  cfd::api::InnerErrorResponseStruct error;   //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// CETxSignDataStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief CETxSignDataStruct 構造体
+ */
+struct CETxSignDataStruct {
+  std::string hex = "";                 //!< hex  // NOLINT
+  bool der_encode = true;               //!< der_encode  // NOLINT
+  std::string sighash_type = "all";     //!< sighash_type  // NOLINT
+  bool sighash_anyone_can_pay = false;  //!< sighash_anyone_can_pay  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// AddCETxSignRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief AddCETxSignRequestStruct 構造体
+ */
+struct AddCETxSignRequestStruct {
+  std::string tx = "";             //!< tx  // NOLINT
+  std::string txin_txid = "";      //!< txin_txid  // NOLINT
+  uint32_t txin_vout = 0;          //!< txin_vout  // NOLINT
+  CETxSignDataStruct sign;         //!< sign  // NOLINT
+  bool delayed_unlocking = false;  //!< delayed_unlocking  // NOLINT
+  std::string redeem_script = "";  //!< redeem_script  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// AddCETxSignResponseStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief AddCETxSignResponseStruct 構造体
+ */
+struct AddCETxSignResponseStruct {
+  std::string hex = "";  //!< hex  // NOLINT
   cfd::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };

@@ -619,33 +619,39 @@ ElementsTransactionApi::CreateSignatureHash(  // NOLINT
     std::string sig_hash;
     int64_t amount = request.amount;
     const std::string& hashtype_str = request.hash_type;
-    const std::string& pubkey_hex = request.pubkey_hex;
-    const std::string& script_hex = request.script_hex;
-    const std::string& value_hex = request.confidential_value_hex;
+    const std::string& value_hex = request.confidential_value_commitment;
     const Txid& txid = Txid(request.txin_txid);
     uint32_t vout = request.txin_vout;
-    ConfidentialTransactionController txc(request.tx_hex);
+    ConfidentialTransactionController txc(request.tx);
     SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
         request.sighash_type, request.sighash_anyone_can_pay);
+
+    Pubkey pubkey;
+    Script script;
+    if (request.key_data.type == "pubkey") {
+      pubkey = Pubkey(request.key_data.hex);
+    } else if (request.key_data.type == "redeem_script") {
+      script = Script(request.key_data.hex);
+    }
 
     if ((hashtype_str == "p2pkh") || (hashtype_str == "p2wpkh")) {
       if (value_hex.empty()) {
         sig_hash = txc.CreateSignatureHash(
-            txid, vout, Pubkey(pubkey_hex), sighashtype,
+            txid, vout, pubkey, sighashtype,
             Amount::CreateBySatoshiAmount(amount), (hashtype_str == "p2wpkh"));
       } else {
         sig_hash = txc.CreateSignatureHash(
-            txid, vout, Pubkey(pubkey_hex), sighashtype, ByteData(value_hex),
+            txid, vout, pubkey, sighashtype, ByteData(value_hex),
             (hashtype_str == "p2wpkh"));
       }
     } else if ((hashtype_str == "p2sh") || (hashtype_str == "p2wsh")) {
       if (value_hex.empty()) {
         sig_hash = txc.CreateSignatureHash(
-            txid, vout, Script(script_hex), sighashtype,
+            txid, vout, script, sighashtype,
             Amount::CreateBySatoshiAmount(amount), (hashtype_str == "p2wsh"));
       } else {
         sig_hash = txc.CreateSignatureHash(
-            txid, vout, Script(script_hex), sighashtype, ByteData(value_hex),
+            txid, vout, script, sighashtype, ByteData(value_hex),
             (hashtype_str == "p2wsh"));
       }
     } else {
@@ -677,7 +683,7 @@ BlindRawTransactionResponseStruct ElementsTransactionApi::BlindTransaction(
   auto call_func = [](const BlindRawTransactionRequestStruct& request)
       -> BlindRawTransactionResponseStruct {  // NOLINT
     BlindRawTransactionResponseStruct response;
-    ConfidentialTransactionController txc(request.tx_hex);
+    ConfidentialTransactionController txc(request.tx);
     const ConfidentialTransaction& tx = txc.GetTransaction();
 
     uint32_t txin_count = tx.GetTxInCount();
@@ -825,7 +831,7 @@ UnblindRawTransactionResponseStruct ElementsTransactionApi::UnblindTransaction(
   auto call_func = [](const UnblindRawTransactionRequestStruct& request)
       -> UnblindRawTransactionResponseStruct {
     UnblindRawTransactionResponseStruct response;
-    ConfidentialTransactionController ctxc(request.tx_hex);
+    ConfidentialTransactionController ctxc(request.tx);
     const ConfidentialTransaction& tx = ctxc.GetTransaction();
 
     bool unblind_single = false;
@@ -969,7 +975,7 @@ SetRawIssueAssetResponseStruct ElementsTransactionApi::SetRawIssueAsset(
   auto call_func = [](const SetRawIssueAssetRequestStruct& request)
       -> SetRawIssueAssetResponseStruct {  // NOLINT
     SetRawIssueAssetResponseStruct response;
-    ConfidentialTransactionController ctxc(request.tx_hex);
+    ConfidentialTransactionController ctxc(request.tx);
     ElementsAddressFactory address_factory;
 
     for (IssuanceDataRequestStruct req_issuance : request.issuances) {
@@ -1048,7 +1054,7 @@ SetRawReissueAssetResponseStruct ElementsTransactionApi::SetRawReissueAsset(
   auto call_func = [](const SetRawReissueAssetRequestStruct& request)
       -> SetRawReissueAssetResponseStruct {  // NOLINT
     SetRawReissueAssetResponseStruct response;
-    ConfidentialTransactionController ctxc(request.tx_hex);
+    ConfidentialTransactionController ctxc(request.tx);
     ElementsAddressFactory address_factory;
 
     for (ReissuanceDataRequestStruct req_issuance : request.issuances) {

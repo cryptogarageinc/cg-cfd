@@ -2,12 +2,17 @@
 	"namespace": ["cfd","api"],
 	"request": {
 		":class": "CreateSignatureHashRequest",
-		"txHex": "",
+		"tx": "",
+		"tx:comment": "transaction hex",
 		"txinTxid": "",
 		"txinVout": 0,
 		"txinVout:type": "uint32_t",
-		"scriptHex": "",
-		"pubkeyHex": "",
+		"keyData": {
+			":class": "SignatureHashKeyData",
+			"hex": "",
+			"type": "pubkey",
+			"type:hint": "pubkey, redeem_script"
+		},
 		"amount": 0,
 		"amount:type": "int64_t",
 		"hashType": "p2wsh",
