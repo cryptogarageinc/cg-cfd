@@ -389,8 +389,8 @@ CreateSignatureHashResponseStruct TransactionApi::CreateSignatureHash(
     std::string sig_hash;
     int64_t amount = request.amount;
     const std::string& hashtype_str = request.hash_type;
-    const Txid& txid = Txid(request.txin_txid);
-    uint32_t vout = request.txin_vout;
+    const Txid& txid = Txid(request.txid);
+    uint32_t vout = request.vout;
     TransactionController txc(request.tx);
     SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
         request.sighash_type, request.sighash_anyone_can_pay);

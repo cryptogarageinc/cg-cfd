@@ -93,7 +93,7 @@ AddCETxSignResponseStruct DlcTransactionApi::AddCETxSign(
     witness_datas[1] = check_op_if_data;
     witness_datas[2] = redeem_script.GetData();
     txc.AddWitnessStack(
-        Txid(request.txin_txid), request.txin_vout, witness_datas);
+        Txid(request.txid), request.vout, witness_datas);
 
     response.hex = txc.GetHex();
     return response;

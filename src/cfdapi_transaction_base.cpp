@@ -209,9 +209,9 @@ AddSignResponseStruct TransactionApiBase::AddSign(
 
     if (request.is_witness) {
       // Witnessの追加
-      Txid txid = Txid(request.txin_txid);
+      Txid txid = Txid(request.txid);
       if (request.clear_stack) {
-        txc.RemoveWitnessStackAll(txid, request.txin_vout);
+        txc.RemoveWitnessStackAll(txid, request.vout);
       }
       std::vector<ByteData> witness_datas;
       for (const SignDataStruct& stack_req : request.sign_param) {
@@ -220,7 +220,7 @@ AddSignResponseStruct TransactionApiBase::AddSign(
             stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
         witness_datas.push_back(byte_data);
       }
-      txc.AddWitnessStack(txid, request.txin_vout, witness_datas);
+      txc.AddWitnessStack(txid, request.vout, witness_datas);
     } else {
       std::vector<ByteData> unlock_script;
       for (const SignDataStruct& stack_req : request.sign_param) {
@@ -230,7 +230,7 @@ AddSignResponseStruct TransactionApiBase::AddSign(
         unlock_script.push_back(byte_data);
       }
       txc.SetUnlockingScript(
-          Txid(request.txin_txid), request.txin_vout, unlock_script);
+          Txid(request.txid), request.vout, unlock_script);
     }
 
     response.hex = txc.GetHex();
@@ -263,7 +263,7 @@ GetWitnessStackNumResponseStruct TransactionApiBase::GetWitnessStackNum(
     T txc = create_controller(hex_string);
 
     uint32_t count =
-        txc.GetWitnessStackNum(Txid(request.txin_txid), request.txin_vout);
+        txc.GetWitnessStackNum(Txid(request.txid), request.vout);
 
     response.count = count;
     return response;
@@ -300,7 +300,7 @@ UpdateWitnessStackResponseStruct TransactionApiBase::UpdateWitnessStack(
         stack_req.hex, (stack_req.type == "sign"), stack_req.der_encode,
         stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
     txc.SetWitnessStack(
-        Txid(request.txin_txid), request.txin_vout,
+        Txid(request.txid), request.vout,
         static_cast<uint32_t>(stack_req.index), byte_data);
 
     response.hex = txc.GetHex();
@@ -479,7 +479,7 @@ AddMultisigSignResponseStruct TransactionApiBase::AddMultisigSign(
     AddMultisigSignResponseStruct response;
     // validate request
     AddressType addr_type =
-        AddressDirectApi::ConvertAddressType(request.txin_type);
+        AddressDirectApi::ConvertAddressType(request.hash_type);
     ValidateAddMultisigSignRequest(request, addr_type);
 
     const std::string& hex_string = request.tx;
@@ -536,13 +536,13 @@ AddMultisigSignResponseStruct TransactionApiBase::AddMultisigSign(
     }
 
     // set signatures to target input
-    Txid txid(request.txin_txid);
+    Txid txid(request.txid);
     if (addr_type == AddressType::kP2shAddress) {
       SetP2shMultisigUnlockingScript(
-          signature_data, redeem_script, txid, request.txin_vout, &txc);
+          signature_data, redeem_script, txid, request.vout, &txc);
     } else {
       SetP2wshMultisigWitnessStack(
-          signature_data, redeem_script, txid, request.txin_vout,
+          signature_data, redeem_script, txid, request.vout,
           request.clear_stack, &txc);
     }
 
@@ -552,7 +552,7 @@ AddMultisigSignResponseStruct TransactionApiBase::AddMultisigSign(
       ScriptBuilder sb;
       sb.AppendData(p2sh_redeem_script);
       txc.SetUnlockingScript(
-          Txid(request.txin_txid), request.txin_vout, sb.Build());
+          Txid(request.txid), request.vout, sb.Build());
     }
 
     response.hex = txc.GetHex();

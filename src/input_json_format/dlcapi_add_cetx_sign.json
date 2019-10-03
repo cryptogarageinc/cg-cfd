@@ -4,9 +4,9 @@
 		":class": "AddCETxSignRequest",
 		"tx": "",
 		"tx:comment": "transaction hex",
-		"txinTxid": "",
-		"txinVout": 0,
-		"txinVout:type": "uint32_t",
+		"txid": "",
+		"vout": 0,
+		"vout:type": "uint32_t",
 		"sign": {
 			":class": "CETxSignData",
 			"hex": "",

@@ -101,7 +101,7 @@ CreateMultisigResponseStruct ElementsAddressApi::CreateMultisig(
     uint32_t req_sig_num = static_cast<uint32_t>(request.nrequired);
     ElementsNetType net_type = ConvertElementsNetType(request.network);
     AddressType addr_type =
-        AddressDirectApi::ConvertAddressType(request.address_type);
+        AddressDirectApi::ConvertAddressType(request.hash_type);
     Script witness_script;
     Script redeem_script;
     std::vector<AddressFormatData> prefix_list =

@@ -93,7 +93,7 @@ CreateMultisigResponseStruct AddressApi::CreateMultisig(
     uint32_t req_sig_num = static_cast<uint32_t>(request.nrequired);
     NetType net_type = ConvertNetType(request.network);
     AddressType addr_type =
-        AddressDirectApi::ConvertAddressType(request.address_type);
+        AddressDirectApi::ConvertAddressType(request.hash_type);
     Script witness_script;
     Script redeem_script;
 
