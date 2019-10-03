@@ -24,7 +24,6 @@
 namespace cfd {
 namespace api {
 
-using cfd::ConfidentialTransactionController;
 using cfd::TransactionController;
 using cfdcore::AddressType;
 using cfdcore::ByteData;
@@ -566,54 +565,6 @@ AddMultisigSignResponseStruct TransactionApiBase::AddMultisigSign(
   return result;
 }
 
-template AddSignResponseStruct
-TransactionApiBase::AddSign<TransactionController>(
-    const AddSignRequestStruct& request,
-    std::function<TransactionController(const std::string&)>
-        create_controller);
-
-template AddSignResponseStruct
-TransactionApiBase::AddSign<ConfidentialTransactionController>(
-    const AddSignRequestStruct& request,
-    std::function<ConfidentialTransactionController(const std::string&)>
-        create_controller);
-
-template GetWitnessStackNumResponseStruct
-TransactionApiBase::GetWitnessStackNum<TransactionController>(
-    const GetWitnessStackNumRequestStruct& request,
-    std::function<TransactionController(const std::string&)>
-        create_controller);
-
-template GetWitnessStackNumResponseStruct
-TransactionApiBase::GetWitnessStackNum<ConfidentialTransactionController>(
-    const GetWitnessStackNumRequestStruct& request,
-    std::function<ConfidentialTransactionController(const std::string&)>
-        create_controller);
-
-template UpdateWitnessStackResponseStruct
-TransactionApiBase::UpdateWitnessStack<TransactionController>(
-    const UpdateWitnessStackRequestStruct& request,
-    std::function<TransactionController(const std::string&)>
-        create_controller);
-
-template UpdateWitnessStackResponseStruct
-TransactionApiBase::UpdateWitnessStack<ConfidentialTransactionController>(
-    const UpdateWitnessStackRequestStruct& request,
-    std::function<ConfidentialTransactionController(const std::string&)>
-        create_controller);
-
-template AddMultisigSignResponseStruct
-TransactionApiBase::AddMultisigSign<TransactionController>(
-    const AddMultisigSignRequestStruct& request,
-    std::function<TransactionController(const std::string&)>
-        create_controller);
-
-template AddMultisigSignResponseStruct
-TransactionApiBase::AddMultisigSign<ConfidentialTransactionController>(
-    const AddMultisigSignRequestStruct& request,
-    std::function<ConfidentialTransactionController(const std::string&)>
-        create_controller);
-
 ExtractScriptData TransactionApiBase::ExtractLockingScript(
     Script locking_script) {
   ExtractScriptData extract_data;
@@ -731,6 +682,59 @@ std::string TransactionApiBase::ConvertLockingScriptTypeString(
   }
   return "";
 }
+
+template AddSignResponseStruct
+TransactionApiBase::AddSign<TransactionController>(
+    const AddSignRequestStruct& request,
+    std::function<TransactionController(const std::string&)>
+        create_controller);
+
+template GetWitnessStackNumResponseStruct
+TransactionApiBase::GetWitnessStackNum<TransactionController>(
+    const GetWitnessStackNumRequestStruct& request,
+    std::function<TransactionController(const std::string&)>
+        create_controller);
+
+template UpdateWitnessStackResponseStruct
+TransactionApiBase::UpdateWitnessStack<TransactionController>(
+    const UpdateWitnessStackRequestStruct& request,
+    std::function<TransactionController(const std::string&)>
+        create_controller);
+
+template AddMultisigSignResponseStruct
+TransactionApiBase::AddMultisigSign<TransactionController>(
+    const AddMultisigSignRequestStruct& request,
+    std::function<TransactionController(const std::string&)>
+        create_controller);
+
+#ifndef CFD_DISABLE_ELEMENTS
+
+using cfd::ConfidentialTransactionController;
+
+template AddSignResponseStruct
+TransactionApiBase::AddSign<ConfidentialTransactionController>(
+    const AddSignRequestStruct& request,
+    std::function<ConfidentialTransactionController(const std::string&)>
+        create_controller);
+
+template GetWitnessStackNumResponseStruct
+TransactionApiBase::GetWitnessStackNum<ConfidentialTransactionController>(
+    const GetWitnessStackNumRequestStruct& request,
+    std::function<ConfidentialTransactionController(const std::string&)>
+        create_controller);
+
+template UpdateWitnessStackResponseStruct
+TransactionApiBase::UpdateWitnessStack<ConfidentialTransactionController>(
+    const UpdateWitnessStackRequestStruct& request,
+    std::function<ConfidentialTransactionController(const std::string&)>
+        create_controller);
+
+template AddMultisigSignResponseStruct
+TransactionApiBase::AddMultisigSign<ConfidentialTransactionController>(
+    const AddMultisigSignRequestStruct& request,
+    std::function<ConfidentialTransactionController(const std::string&)>
+        create_controller);
+#endif
 
 }  // namespace api
 }  // namespace cfd
