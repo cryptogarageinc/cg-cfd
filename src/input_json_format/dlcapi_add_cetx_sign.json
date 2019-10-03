@@ -10,6 +10,8 @@
 		"sign": {
 			":class": "CETxSignData",
 			"hex": "",
+			"type": "sign",
+			"type:hint": "sign only",
 			"derEncode": true,
 			"sighashType": "all",
 			"sighashType:hint": "all, none, single",

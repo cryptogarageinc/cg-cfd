@@ -38,6 +38,7 @@ struct InnerErrorResponseStruct {
  */
 struct MultisigSignDataStruct {
   std::string hex = "";                 //!< hex  // NOLINT
+  std::string type = "sign";            //!< type  // NOLINT
   bool der_encode = true;               //!< der_encode  // NOLINT
   std::string sighash_type = "all";     //!< sighash_type  // NOLINT
   bool sighash_anyone_can_pay = false;  //!< sighash_anyone_can_pay  // NOLINT
@@ -1395,6 +1396,7 @@ struct CreateCETxAddressResponseStruct {
  */
 struct CETxSignDataStruct {
   std::string hex = "";                 //!< hex  // NOLINT
+  std::string type = "sign";            //!< type  // NOLINT
   bool der_encode = true;               //!< der_encode  // NOLINT
   std::string sighash_type = "all";     //!< sighash_type  // NOLINT
   bool sighash_anyone_can_pay = false;  //!< sighash_anyone_can_pay  // NOLINT

@@ -13,6 +13,8 @@
 			{
 				":class": "MultisigSignData",
 				"hex": "",
+				"type": "sign",
+				"type:hint": "sign only",
 				"derEncode": true,
 				"sighashType": "all",
 				"sighashType:hint": "all, none or single",

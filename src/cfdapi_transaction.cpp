@@ -408,8 +408,7 @@ CreateSignatureHashResponseStruct TransactionApi::CreateSignatureHash(
           txid, vout,  // vout
           pubkey, sighashtype);
     } else if (hashtype_str == "p2sh") {
-      sig_hash = txc.CreateP2shSignatureHash(
-          txid, vout, script, sighashtype);
+      sig_hash = txc.CreateP2shSignatureHash(txid, vout, script, sighashtype);
     } else if (hashtype_str == "p2wpkh") {
       sig_hash = txc.CreateP2wpkhSignatureHash(
           txid, vout, pubkey, sighashtype,

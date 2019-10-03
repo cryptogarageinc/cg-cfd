@@ -27,7 +27,8 @@ GetMnemonicWordlistResponseStruct HDWalletApi::GetMnemonicWordlist(
     std::string language = request.language;
 
     // get bip39 wordlist
-    std::vector<std::string> wordlist = HDWallet::GetMnemonicWordlist(language);
+    std::vector<std::string> wordlist =
+        HDWallet::GetMnemonicWordlist(language);
 
     response.wordlist = wordlist;
     return response;
