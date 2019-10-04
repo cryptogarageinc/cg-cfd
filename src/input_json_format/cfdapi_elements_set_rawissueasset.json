@@ -8,9 +8,9 @@
 		"issuances": [
 			{
 				":class": "IssuanceDataRequest",
-				"txinTxid": "",
-				"txinVout": 0,
-				"txinVout:type": "uint32_t",
+				"txid": "",
+				"vout": 0,
+				"vout:type": "uint32_t",
 				"assetAmount": 0,
 				"assetAddress": "",
 				"tokenAmount": 0,
@@ -27,9 +27,9 @@
 		"issuances": [
 			{
 				":class": "IssuanceDataResponse",
-				"txinTxid": "",
-				"txinVout": 0,
-				"txinVout:type": "uint32_t",
+				"txid": "",
+				"vout": 0,
+				"vout:type": "uint32_t",
 				"asset": "",
 				"entropy": "",
 				"token": ""

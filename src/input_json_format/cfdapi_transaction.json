@@ -12,8 +12,6 @@
 				"txid": "",
 				"vout": 0,
 				"vout:type": "uint32_t",
-				"data": "",
-				"addrType": "mainnet",
 				"sequence": 4294967295,
 				"sequence:type": "uint32_t"
 			}

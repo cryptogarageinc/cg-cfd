@@ -10,8 +10,8 @@
 		"isElements": false,
 		"network": "mainnet",
 		"network:hint": "bitcoin:'mainnet, testnet, regtest'. elements:'liquidv1, regtest'",
-		"addressType": "p2wsh",
-		"addressType:hint": "p2sh, p2wsh, p2sh-p2wsh"
+		"hashType": "p2wsh",
+		"hashType:hint": "p2sh, p2wsh, p2sh-p2wsh"
 	},
 	"response": {
 		":class": "CreateMultisigResponse",

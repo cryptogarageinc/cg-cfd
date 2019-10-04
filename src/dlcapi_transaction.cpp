@@ -51,7 +51,7 @@ AddCETxSignResponseStruct DlcTransactionApi::AddCETxSign(
           "Invalid hex string. empty data.");
     }
 
-    if (request.sign.hex.empty()) {
+    if (request.txin.sign.hex.empty()) {
       warn(
           CFD_LOG_SOURCE,
           "Failed to AddCETxSignRequest. sign hex empty.");  // NOLINT
@@ -60,7 +60,7 @@ AddCETxSignResponseStruct DlcTransactionApi::AddCETxSign(
           "Invalid hex string. empty sign hex.");
     }
 
-    if (request.redeem_script.empty()) {
+    if (request.txin.redeem_script.empty()) {
       warn(
           CFD_LOG_SOURCE,
           "Failed to AddCETxSignRequest. redeem script empty.");
@@ -73,27 +73,28 @@ AddCETxSignResponseStruct DlcTransactionApi::AddCETxSign(
     TransactionController txc(hex_string);
 
     ByteData sign_data;
-    if (request.sign.der_encode) {
+    if (request.txin.sign.der_encode) {
       SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
-          request.sign.sighash_type, request.sign.sighash_anyone_can_pay);
-      sign_data =
-          CryptoUtil::ConvertSignatureToDer(request.sign.hex, sighashtype);
+          request.txin.sign.sighash_type,
+          request.txin.sign.sighash_anyone_can_pay);
+      sign_data = CryptoUtil::ConvertSignatureToDer(
+          request.txin.sign.hex, sighashtype);
     } else {
-      sign_data = ByteData(request.sign.hex);
+      sign_data = ByteData(request.txin.sign.hex);
     }
     std::vector<uint8_t> delayed_unlocking;
-    if (!request.delayed_unlocking) {
+    if (!request.txin.delayed_unlocking) {
       delayed_unlocking.push_back(1);
     }
     ByteData check_op_if_data(delayed_unlocking);
-    Script redeem_script(request.redeem_script);
+    Script redeem_script(request.txin.redeem_script);
 
     std::vector<ByteData> witness_datas(3);
     witness_datas[0] = sign_data;
     witness_datas[1] = check_op_if_data;
     witness_datas[2] = redeem_script.GetData();
     txc.AddWitnessStack(
-        Txid(request.txin_txid), request.txin_vout, witness_datas);
+        Txid(request.txin.txid), request.txin.vout, witness_datas);
 
     response.hex = txc.GetHex();
     return response;
