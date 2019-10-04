@@ -387,20 +387,20 @@ CreateSignatureHashResponseStruct TransactionApi::CreateSignatureHash(
       -> CreateSignatureHashResponseStruct {  // NOLINT
     CreateSignatureHashResponseStruct response;
     std::string sig_hash;
-    int64_t amount = request.amount;
-    const std::string& hashtype_str = request.hash_type;
-    const Txid& txid = Txid(request.txid);
-    uint32_t vout = request.vout;
+    int64_t amount = request.txin.amount;
+    const std::string& hashtype_str = request.txin.hash_type;
+    const Txid& txid = Txid(request.txin.txid);
+    uint32_t vout = request.txin.vout;
     TransactionController txc(request.tx);
     SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
-        request.sighash_type, request.sighash_anyone_can_pay);
+        request.txin.sighash_type, request.txin.sighash_anyone_can_pay);
 
     Pubkey pubkey;
     Script script;
-    if (request.key_data.type == "pubkey") {
-      pubkey = Pubkey(request.key_data.hex);
-    } else if (request.key_data.type == "redeem_script") {
-      script = Script(request.key_data.hex);
+    if (request.txin.key_data.type == "pubkey") {
+      pubkey = Pubkey(request.txin.key_data.hex);
+    } else if (request.txin.key_data.type == "redeem_script") {
+      script = Script(request.txin.key_data.hex);
     }
 
     if (hashtype_str == "p2pkh") {

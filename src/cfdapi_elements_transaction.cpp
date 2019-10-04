@@ -578,7 +578,7 @@ AddMultisigSignResponseStruct ElementsTransactionApi::AddMultisigSign(
     AddMultisigSignResponseStruct response;
     // レスポンスとなるモデルへ変換
     // validate request
-    if (request.hash_type == "p2wsh") {
+    if (request.txin.hash_type == "p2wsh") {
       throw CfdException(
           CfdError::kCfdOutOfRangeError,
           "Failed to AddMultisigSign. p2wsh is excluded.");
@@ -617,21 +617,21 @@ ElementsTransactionApi::CreateSignatureHash(  // NOLINT
       -> CreateElementsSignatureHashResponseStruct {  // NOLINT
     CreateElementsSignatureHashResponseStruct response;
     std::string sig_hash;
-    int64_t amount = request.amount;
-    const std::string& hashtype_str = request.hash_type;
-    const std::string& value_hex = request.confidential_value_commitment;
-    const Txid& txid = Txid(request.txid);
-    uint32_t vout = request.vout;
+    int64_t amount = request.txin.amount;
+    const std::string& hashtype_str = request.txin.hash_type;
+    const std::string& value_hex = request.txin.confidential_value_commitment;
+    const Txid& txid = Txid(request.txin.txid);
+    uint32_t vout = request.txin.vout;
     ConfidentialTransactionController txc(request.tx);
     SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
-        request.sighash_type, request.sighash_anyone_can_pay);
+        request.txin.sighash_type, request.txin.sighash_anyone_can_pay);
 
     Pubkey pubkey;
     Script script;
-    if (request.key_data.type == "pubkey") {
-      pubkey = Pubkey(request.key_data.hex);
-    } else if (request.key_data.type == "redeem_script") {
-      script = Script(request.key_data.hex);
+    if (request.txin.key_data.type == "pubkey") {
+      pubkey = Pubkey(request.txin.key_data.hex);
+    } else if (request.txin.key_data.type == "redeem_script") {
+      script = Script(request.txin.key_data.hex);
     }
 
     if ((hashtype_str == "p2pkh") || (hashtype_str == "p2wpkh")) {

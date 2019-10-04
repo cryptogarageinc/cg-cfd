@@ -8,24 +8,27 @@
 		"tx": "",
 		"tx:comment": "transaction hex",
 		"isElements": false,
-		"txid": "",
-		"vout": 0,
-		"vout:type": "uint32_t",
-		"isWitness": true,
-		"signParam": [
-			{
-				":class": "SignData",
-				"hex": "",
-				"type": "binary",
-				"type:hint": "binary, sign, pubkey, redeem_script",
-				"derEncode": false,
-				"sighashType": "all",
-				"sighashType:hint": "all, none, single",
-				"sighashAnyoneCanPay": false
-			}
-		],
-		"clearStack": true,
-		"clearStack:comment": "Clear the stack before addSign. If isWitness is false, clearStack is forced to be true."
+		"txin": {
+			":class": "AddSignTxInRequest",
+			"txid": "",
+			"vout": 0,
+			"vout:type": "uint32_t",
+			"isWitness": true,
+			"signParam": [
+				{
+					":class": "SignData",
+					"hex": "",
+					"type": "binary",
+					"type:hint": "binary, sign, pubkey, redeem_script",
+					"derEncode": false,
+					"sighashType": "all",
+					"sighashType:hint": "all, none, single",
+					"sighashAnyoneCanPay": false
+				}
+			],
+			"clearStack": true,
+			"clearStack:comment": "Clear the stack before addSign. If isWitness is false, clearStack is forced to be true."
+		}
 	},
 	"response": {
 		":class": "AddSignResponse",

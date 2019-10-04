@@ -5,9 +5,12 @@
 		"tx": "",
 		"tx:comment": "transaction hex",
 		"isElements": false,
-		"txid": "",
-		"vout": 0,
-		"vout:type": "uint32_t"
+		"txin": {
+			":class": "GetWitnessStackNumTxInRequest",
+			"txid": "",
+			"vout": 0,
+			"vout:type": "uint32_t"
+		}
 	},
 	"response": {
 		":class": "GetWitnessStackNumResponse",
