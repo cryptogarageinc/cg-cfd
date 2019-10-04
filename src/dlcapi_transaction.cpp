@@ -75,9 +75,10 @@ AddCETxSignResponseStruct DlcTransactionApi::AddCETxSign(
     ByteData sign_data;
     if (request.txin.sign.der_encode) {
       SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
-          request.txin.sign.sighash_type, request.txin.sign.sighash_anyone_can_pay);
-      sign_data =
-          CryptoUtil::ConvertSignatureToDer(request.txin.sign.hex, sighashtype);
+          request.txin.sign.sighash_type,
+          request.txin.sign.sighash_anyone_can_pay);
+      sign_data = CryptoUtil::ConvertSignatureToDer(
+          request.txin.sign.hex, sighashtype);
     } else {
       sign_data = ByteData(request.txin.sign.hex);
     }
