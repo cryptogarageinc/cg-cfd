@@ -328,7 +328,7 @@ IssuanceParameter ConfidentialTransactionController::SetAssetIssuance(
     const Script& asset_locking_script, const ByteData& asset_nonce,
     const Amount& token_amount, const Script& token_locking_script,
     const ByteData& token_nonce, bool is_blind,
-    const ByteData256& contract_hash, bool is_randomize,
+    const ByteData256& contract_hash, bool is_random_sort,
     bool is_remove_nonce) {
   uint32_t txin_index = transaction_.GetTxInIndex(txid, vout);
 
@@ -344,8 +344,8 @@ IssuanceParameter ConfidentialTransactionController::SetAssetIssuance(
       txin_index, asset_amount, asset_locking_script, confidential_asset_nonce,
       token_amount, token_locking_script, confidential_token_nonce, is_blind,
       contract_hash);
-  if (is_randomize) {
-    RandomizeTxOut();
+  if (is_random_sort) {
+    RandomSortTxOut();
   }
   return param;
 }
@@ -354,7 +354,7 @@ IssuanceParameter ConfidentialTransactionController::SetAssetReissuance(
     const Txid& txid, uint32_t vout, const Amount& amount,
     const Script& locking_script, const ByteData& asset_nonce,
     const BlindFactor& blind_factor, const BlindFactor& entropy,
-    bool is_randomize, bool is_remove_nonce) {
+    bool is_random_sort, bool is_remove_nonce) {
   uint32_t txin_index = transaction_.GetTxInIndex(txid, vout);
 
   ConfidentialNonce confidential_asset_nonce;
@@ -367,14 +367,14 @@ IssuanceParameter ConfidentialTransactionController::SetAssetReissuance(
       txin_index, amount, locking_script, confidential_asset_nonce,
       blind_factor, entropy);
 
-  if (is_randomize) {
-    RandomizeTxOut();
+  if (is_random_sort) {
+    RandomSortTxOut();
   }
   return param;
 }
 
-void ConfidentialTransactionController::RandomizeTxOut() {
-  transaction_.RandomizeTxOut();
+void ConfidentialTransactionController::RandomSortTxOut() {
+  transaction_.RandomSortTxOut();
 }
 
 void ConfidentialTransactionController::BlindTransaction(

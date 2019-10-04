@@ -689,7 +689,7 @@ BlindRawTransactionResponseStruct ElementsTransactionApi::BlindTransaction(
     uint32_t txin_count = tx.GetTxInCount();
     uint32_t txout_count = tx.GetTxOutCount();
     const std::vector<BlindTxInRequestStruct>& txins = request.txins;
-    const std::vector<std::string>& pubkeys = request.blind_pubkeys;
+    const std::vector<BlindTxOutRequestStruct>& txouts = request.txouts;
     if (txins.size() == 0) {
       warn(CFD_LOG_SOURCE, "Failed to txins empty.");
       throw CfdException(
@@ -726,16 +726,16 @@ BlindRawTransactionResponseStruct ElementsTransactionApi::BlindTransaction(
           CfdError::kCfdOutOfRangeError, "JSON value error. txouts fee only.");
     }
     uint32_t txout_value_count = txout_count - fee_count;
-    if (pubkeys.size() < txout_value_count) {
+    if (txouts.size() < txout_value_count) {
       warn(
-          CFD_LOG_SOURCE, "Failed to pubkey count. {} < {}", pubkeys.size(),
+          CFD_LOG_SOURCE, "Failed to pubkey count. {} < {}", txouts.size(),
           txout_value_count);
       throw CfdException(
           CfdError::kCfdOutOfRangeError,
           "JSON value error. Pubkey count not enough.");
     }
     bool is_insert_fee_key = false;
-    if ((!fee_indexes.empty()) && (pubkeys.size() == txout_value_count)) {
+    if ((!fee_indexes.empty()) && (txouts.size() == txout_value_count)) {
       // insert empty key (for fee)
       is_insert_fee_key = true;
     }
@@ -751,9 +751,10 @@ BlindRawTransactionResponseStruct ElementsTransactionApi::BlindTransaction(
     for (index = 0; index < txout_count; ++index) {
       if (is_insert_fee_key && (fee_indexes.count(index) > 0)) {
         // throuth
-      } else if (pubkeys.size() > pubkey_index) {
-        if (!pubkeys[pubkey_index].empty()) {
-          blind_pubkeys[index] = Pubkey(pubkeys[pubkey_index]);
+      } else if (txouts.size() > pubkey_index) {
+        // TODO(k-matsuzawa): 後で直す
+        if (!txouts[pubkey_index].blind_pubkey.empty()) {
+          blind_pubkeys[index] = Pubkey(txouts[pubkey_index].blind_pubkey);
         }
         ++pubkey_index;
       }
@@ -834,92 +835,23 @@ UnblindRawTransactionResponseStruct ElementsTransactionApi::UnblindTransaction(
     ConfidentialTransactionController ctxc(request.tx);
     const ConfidentialTransaction& tx = ctxc.GetTransaction();
 
-    bool unblind_single = false;
-    // fee count
-    uint32_t fee_count = 0;
-    uint32_t fee_index = 0;
-    std::set<uint32_t> fee_indexes;
-    for (const auto& txout : tx.GetTxOutList()) {
-      if (txout.GetLockingScript().IsEmpty()) {
-        ++fee_count;
-        fee_indexes.insert(fee_index);
-      }
-      ++fee_index;
-    }
-    bool is_insert_fee_key = false;
-    uint32_t txout_count = tx.GetTxOutCount();
-    const std::vector<std::string>& blinding_keys = request.blinding_keys;
+    if (!request.txouts.empty()) {
+      UnblindParameter unblind_param;
+      for (const auto& txout : request.txouts) {
+        // TxOutをUnblind
+        const Privkey blinding_key(txout.blinding_key);
+        unblind_param = ctxc.UnblindTxOut(txout.index, blinding_key);
 
-    int64_t target_output_index = request.target_output_index;
-    if (target_output_index >= 0) {
-      if (target_output_index > std::numeric_limits<uint32_t>::max()) {
-        warn(
-            CFD_LOG_SOURCE, "Invalid txout index. : target_output_index={}",
-            target_output_index);
-        throw CfdException(
-            CfdError::kCfdOutOfRangeError,
-            "target txout index error. Value out of range.");
-      }
-
-      if (blinding_keys.size() != 1) {
-        warn(
-            CFD_LOG_SOURCE,
-            "blindingKeys size is unmatch"
-            " target txout size.");
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "JSON value error. If set targetOutputIndex,"
-            " blindingKeys must set one blinding key.");
-      }
-      unblind_single = true;
-    } else {
-      uint32_t txout_value_count = txout_count - fee_count;
-      if (txout_value_count > blinding_keys.size()) {
-        // TxOutの数とBlindingkeyの数が不一致の場合はエラー
-        warn(CFD_LOG_SOURCE, "blindingKeys size is unmatch txout size.");
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "JSON value error. blindingKeys size is unmatch txout size.");
-      }
-
-      if ((!fee_indexes.empty()) &&
-          (blinding_keys.size() == txout_value_count)) {
-        // insert empty key (for fee)
-        is_insert_fee_key = true;
-      }
-    }
-
-    std::vector<Privkey> privkeys(txout_count);
-    uint32_t blindingkey_index = 0;
-    for (uint32_t index = 0; index < txout_count; ++index) {
-      if (is_insert_fee_key && (fee_indexes.count(index) > 0)) {
-        // throuth
-      } else if (blinding_keys.size() > blindingkey_index) {
-        if (!blinding_keys[blindingkey_index].empty()) {
-          privkeys[index] = Privkey(blinding_keys[blindingkey_index]);
+        if (!unblind_param.asset.GetHex().empty()) {
+          UnblindOutputStruct output;
+          output.index = txout.index;
+          output.asset = unblind_param.asset.GetHex();
+          output.blind_factor = unblind_param.vbf.GetHex();
+          output.asset_blind_factor = unblind_param.abf.GetHex();
+          output.amount = unblind_param.value.GetAmount().GetSatoshiValue();
+          response.outputs.push_back(output);
         }
-        ++blindingkey_index;
       }
-    }
-
-    // TxOutをUnblind
-    std::vector<UnblindParameter> unblind_params;
-    if (unblind_single) {
-      const Privkey blinding_key(privkeys[0]);
-      unblind_params.push_back(
-          ctxc.UnblindTxOut(target_output_index, blinding_key));
-    } else {
-      unblind_params = ctxc.UnblindTransaction(privkeys);
-    }
-    for (UnblindParameter unblind_param : unblind_params) {
-      UnblindOutputStruct output;
-      if (!unblind_param.asset.GetHex().empty()) {
-        output.asset = unblind_param.asset.GetHex();
-        output.blind_factor = unblind_param.vbf.GetHex();
-        output.asset_blind_factor = unblind_param.abf.GetHex();
-        output.amount = unblind_param.value.GetAmount().GetSatoshiValue();
-      }
-      response.outputs.push_back(output);
     }
 
     // TxIn Unblind(Issuanceの場合)
@@ -1033,9 +965,9 @@ SetRawIssueAssetResponseStruct ElementsTransactionApi::SetRawIssueAsset(
       response.issuances.push_back(res_issuance);
     }
 
-    // すべて設定後にTxoutのRandomize
-    if (request.is_randomize) {
-      ctxc.RandomizeTxOut();
+    // すべて設定後にTxoutのRandomSort
+    if (request.is_random_sort_tx_out) {
+      ctxc.RandomSortTxOut();
     }
     response.hex = ctxc.GetHex();
     return response;
@@ -1090,9 +1022,9 @@ SetRawReissueAssetResponseStruct ElementsTransactionApi::SetRawReissueAsset(
       response.issuances.push_back(res_issuance);
     }
 
-    // すべて設定後にTxoutのRandomize
-    if (request.is_randomize) {
-      ctxc.RandomizeTxOut();
+    // すべて設定後にTxoutのRandomSort
+    if (request.is_random_sort_tx_out) {
+      ctxc.RandomSortTxOut();
     }
     response.hex = ctxc.GetHex();
     return response;
@@ -1171,6 +1103,11 @@ ElementsTransactionApi::CreateRawPeginTransaction(  // NOLINT
     ctxc.AddTxOutFee(
         Amount::CreateBySatoshiAmount(fee_req.amount),
         ConfidentialAssetId(fee_req.asset));
+
+    // すべて設定後にTxoutのRandomSort
+    if (request.is_random_sort_tx_out) {
+      ctxc.RandomSortTxOut();
+    }
 
     response.hex = ctxc.GetHex();
     return response;

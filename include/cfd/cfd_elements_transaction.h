@@ -383,7 +383,7 @@ class CFD_EXPORT ConfidentialTransactionController
    * @param[in] token_nonce          token nonce
    * @param[in] is_blind             blinding issuance
    * @param[in] contract_hash        asset entropy
-   * @param[in] is_randomize         set txout randomize
+   * @param[in] is_random_sort       set txout randomize
    * @param[in] is_remove_nonce      nonceの強制削除フラグ
    * @return issuance entropy and asset parameter.
    */
@@ -392,7 +392,7 @@ class CFD_EXPORT ConfidentialTransactionController
       const Script& asset_locking_script, const ByteData& asset_nonce,
       const Amount& token_amount, const Script& token_locking_script,
       const ByteData& token_nonce, bool is_blind,
-      const ByteData256& contract_hash, bool is_randomize = false,
+      const ByteData256& contract_hash, bool is_random_sort = false,
       bool is_remove_nonce = false);
 
   /**
@@ -404,7 +404,7 @@ class CFD_EXPORT ConfidentialTransactionController
    * @param[in] asset_nonce             confidential key
    * @param[in] blind_factor      blind factor
    * @param[in] entropy           asset entropy
-   * @param[in] is_randomize      set txout randomize
+   * @param[in] is_random_sort    set txout randomize
    * @param[in] is_remove_nonce   nonceの強制削除フラグ
    * @return reissuance entropy and asset parameter.
    */
@@ -412,13 +412,13 @@ class CFD_EXPORT ConfidentialTransactionController
       const Txid& txid, uint32_t vout, const Amount& amount,
       const Script& locking_script, const ByteData& asset_nonce,
       const BlindFactor& blind_factor, const BlindFactor& entropy,
-      bool is_randomize = false, bool is_remove_nonce = false);
+      bool is_random_sort = false, bool is_remove_nonce = false);
 
   /**
    * @brief TxOutの順序をランダム化する.
    * @details ブラインド前のみ実施可能.
    */
-  void RandomizeTxOut();
+  void RandomSortTxOut();
 
   /**
    * @brief TrasnsactionをBlindする.
