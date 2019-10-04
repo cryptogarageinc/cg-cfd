@@ -177,6 +177,58 @@ struct BlindRawTransactionResponseStruct {
 };
 
 // ------------------------------------------------------------------------
+// ConvertEntropyToMnemonicRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ConvertEntropyToMnemonicRequestStruct 構造体
+ */
+struct ConvertEntropyToMnemonicRequestStruct {
+  std::string entropy = "";     //!< entropy  // NOLINT
+  std::string language = "en";  //!< language  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ConvertEntropyToMnemonicResponseStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ConvertEntropyToMnemonicResponseStruct 構造体
+ */
+struct ConvertEntropyToMnemonicResponseStruct {
+  std::vector<std::string> mnemonic;  //!< mnemonic  // NOLINT
+  InnerErrorResponseStruct error;       //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ConvertMnemonicToSeedRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ConvertMnemonicToSeedRequestStruct 構造体
+ */
+struct ConvertMnemonicToSeedRequestStruct {
+  std::vector<std::string> mnemonic;   //!< mnemonic  // NOLINT
+  std::string passphrase = "";         //!< passphrase  // NOLINT
+  bool strict_check = false;           //!< strict_check  // NOLINT
+  std::string language = "";           //!< language  // NOLINT
+  bool use_ideographic_space = false;  //!< use_ideographic_space  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// ConvertMnemonicToSeedResponseStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief ConvertMnemonicToSeedResponseStruct 構造体
+ */
+struct ConvertMnemonicToSeedResponseStruct {
+  std::string seed = "";     //!< seed  // NOLINT
+  std::string entropy = "";  //!< entropy  // NOLINT
+  InnerErrorResponseStruct error;       //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
 // CreateAddressRequestStruct
 // ------------------------------------------------------------------------
 /**
@@ -316,31 +368,6 @@ struct DecodeRawTransactionResponseStruct {
   uint32_t locktime = 0;                              //!< locktime  // NOLINT
   std::vector<DecodeRawTransactionTxInStruct> vin;    //!< vin  // NOLINT
   std::vector<DecodeRawTransactionTxOutStruct> vout;  //!< vout  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
-// CreateUnblindedAddressRequestStruct
-// ------------------------------------------------------------------------
-/**
- * @brief CreateUnblindedAddressRequestStruct 構造体
- */
-struct CreateUnblindedAddressRequestStruct {
-  std::string script_hex = "";                //!< script_hex  // NOLINT
-  std::string pubkey_hex = "";                //!< pubkey_hex  // NOLINT
-  std::string elements_network = "liquidv1";  //!< elements_network  // NOLINT
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
-// CreateUnblindedAddressResponseStruct
-// ------------------------------------------------------------------------
-/**
- * @brief CreateUnblindedAddressResponseStruct 構造体
- */
-struct CreateUnblindedAddressResponseStruct {
-  std::string unblinded_address = "";  //!< unblinded_address  // NOLINT
   InnerErrorResponseStruct error;       //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
