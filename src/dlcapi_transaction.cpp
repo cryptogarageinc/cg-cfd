@@ -43,7 +43,7 @@ AddCETxSignResponseStruct DlcTransactionApi::AddCETxSign(
   auto call_func = [](const AddCETxSignRequestStruct& request)
       -> AddCETxSignResponseStruct {
     AddCETxSignResponseStruct response;
-    const std::string& hex_string = request.tx_hex;
+    const std::string& hex_string = request.tx;
     if (hex_string.empty()) {
       warn(CFD_LOG_SOURCE, "Failed to AddCETxSignRequest. hex empty.");
       throw CfdException(

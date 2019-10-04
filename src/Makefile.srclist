@@ -18,7 +18,6 @@ CFD_SOURCES = \
   cfdapi_address.cpp \
   cfdapi_hdwallet.cpp \
   cfdapi_key.cpp \
-  cfdapi_sighash.cpp \
   cfdapi_utility.cpp \
   dlc_script.cpp \
   dlcapi_transaction.cpp \

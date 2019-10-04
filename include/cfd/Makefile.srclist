@@ -19,7 +19,6 @@ CFD_PKGINCLUDE_FILES = \
   cfdapi_address.h \
   cfdapi_hdwallet.h \
   cfdapi_key.h \
-  cfdapi_sighash.h \
   cfdapi_utility.h \
   dlc_script.h \
   dlcapi_transaction.h \

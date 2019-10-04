@@ -2,7 +2,8 @@
 	"namespace": ["cfd","api"],
 	"request": {
 		":class": "SetRawReissueAssetRequest",
-		"txHex": "",
+		"tx": "",
+		"tx:comment": "transaction hex",
 		"isRandomize": false,
 		"issuances": [
 			{

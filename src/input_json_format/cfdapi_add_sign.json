@@ -5,7 +5,8 @@
 	],
 	"request": {
 		":class": "AddSignRequest",
-		"txHex": "",
+		"tx": "",
+		"tx:comment": "transaction hex",
 		"isElements": false,
 		"txinTxid": "",
 		"txinVout": 0,

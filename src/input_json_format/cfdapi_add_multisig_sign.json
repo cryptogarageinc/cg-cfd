@@ -4,7 +4,8 @@
 		":class": "AddMultisigSignRequest",
 		":class:comment": "Add signatures to multisig input",
 		"isElements": false,
-		"txHex": "",
+		"tx": "",
+		"tx:comment": "transaction hex",
 		"txinTxid": "",
 		"txinVout": 0,
 		"txinVout:type": "uint32_t",
@@ -12,6 +13,8 @@
 			{
 				":class": "MultisigSignData",
 				"hex": "",
+				"type": "sign",
+				"type:hint": "sign only",
 				"derEncode": true,
 				"sighashType": "all",
 				"sighashType:hint": "all, none or single",
