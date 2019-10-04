@@ -62,7 +62,8 @@ ConvertMnemonicToSeedResponseStruct HDWalletStructApi::ConvertMnemonicToSeed(
     std::string passphrase = request.passphrase;
     bool strict_check = request.strict_check;
     std::string language = request.language;
-    bool use_ideographic_space = ((language == "jp") && request.use_ideographic_space);
+    bool use_ideographic_space =
+        ((language == "jp") && request.use_ideographic_space);
     ByteData entropy;
 
     // get bip39 wordlist
