@@ -13,7 +13,7 @@
 
 namespace cfd {
 
-using cfdcore::Amount;
+using cfd::core::Amount;
 
 Amount FeeCalculator::CalculateFee(  // Fee計算
     uint32_t size, uint32_t vsize, uint32_t rate) {

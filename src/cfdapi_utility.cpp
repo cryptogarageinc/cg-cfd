@@ -20,9 +20,9 @@ namespace api {
 
 using cfd::GetSupportedFunction;
 using cfd::LibraryFunction;
-using cfdcore::CfdError;
-using cfdcore::CfdException;
-using cfdcore::logger::warn;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::logger::warn;
 
 GetSupportedFunctionResponseStruct UtilApi::GetSupportedFunction() {
   auto call_func = []() -> GetSupportedFunctionResponseStruct {

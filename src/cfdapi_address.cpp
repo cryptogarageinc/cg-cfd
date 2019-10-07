@@ -25,16 +25,16 @@ namespace cfd {
 namespace api {
 
 using cfd::ScriptUtil;
-using cfdcore::Address;
-using cfdcore::AddressFormatData;
-using cfdcore::AddressType;
-using cfdcore::CfdError;
-using cfdcore::CfdException;
-using cfdcore::NetType;
-using cfdcore::Pubkey;
-using cfdcore::Script;
-using cfdcore::WitnessVersion;
-using cfdcore::logger::warn;
+using cfd::core::Address;
+using cfd::core::AddressFormatData;
+using cfd::core::AddressType;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::WitnessVersion;
+using cfd::core::logger::warn;
 
 CreateAddressResponseStruct AddressApi::CreateAddress(
     const CreateAddressRequestStruct& request) {
@@ -173,7 +173,7 @@ Address AddressDirectApi::CreateAddress(
   }
   std::vector<AddressFormatData> addr_prefixes;
   if (prefix_list == nullptr) {
-    addr_prefixes = cfdcore::GetBitcoinAddressFormatList();
+    addr_prefixes = cfd::core::GetBitcoinAddressFormatList();
   } else {
     addr_prefixes = *prefix_list;
   }
@@ -253,7 +253,7 @@ Address AddressDirectApi::CreateMultisig(
 
   std::vector<AddressFormatData> addr_prefixes;
   if (prefix_list == nullptr) {
-    addr_prefixes = cfdcore::GetBitcoinAddressFormatList();
+    addr_prefixes = cfd::core::GetBitcoinAddressFormatList();
   } else {
     addr_prefixes = *prefix_list;
   }

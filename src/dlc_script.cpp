@@ -14,13 +14,13 @@
 namespace dlc {
 
 using cfd::ScriptUtil;
-using cfdcore::CfdError;
-using cfdcore::CfdException;
-using cfdcore::Pubkey;
-using cfdcore::Script;
-using cfdcore::ScriptBuilder;
-using cfdcore::ScriptOperator;
-using cfdcore::logger::warn;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::ScriptBuilder;
+using cfd::core::ScriptOperator;
+using cfd::core::logger::warn;
 
 Script DlcScriptUtil::CreateCETxRedeemScript(
     const Pubkey& pubkey_a, const Pubkey& message_key, int64_t delay,

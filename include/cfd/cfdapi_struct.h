@@ -200,18 +200,6 @@ struct BlindRawTransactionResponseStruct {
 };
 
 // ------------------------------------------------------------------------
-// CreateAddressKeyDataStruct
-// ------------------------------------------------------------------------
-/**
- * @brief CreateAddressKeyDataStruct 構造体
- */
-struct CreateAddressKeyDataStruct {
-  std::string hex = "";         //!< hex  // NOLINT
-  std::string type = "pubkey";  //!< type  // NOLINT
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-  
-// ------------------------------------------------------------------------
 // ConvertEntropyToMnemonicRequestStruct
 // ------------------------------------------------------------------------
 /**
@@ -260,6 +248,18 @@ struct ConvertMnemonicToSeedResponseStruct {
   std::string seed = "";     //!< seed  // NOLINT
   std::string entropy = "";  //!< entropy  // NOLINT
   InnerErrorResponseStruct error;       //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// CreateAddressKeyDataStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief CreateAddressKeyDataStruct 構造体
+ */
+struct CreateAddressKeyDataStruct {
+  std::string hex = "";         //!< hex  // NOLINT
+  std::string type = "pubkey";  //!< type  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
