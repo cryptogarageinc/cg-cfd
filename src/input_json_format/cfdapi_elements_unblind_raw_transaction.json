@@ -2,7 +2,8 @@
 	"namespace": ["cfd","api"],
 	"request": {
 		":class": "UnblindRawTransactionRequest",
-		"txHex": "",
+		"tx": "",
+		"tx:comment": "transaction hex",
 		"targetOutputIndex": -1,
 		"blindingKeys": [
 			""
