@@ -20,12 +20,12 @@
  */
 namespace cfd {
 
-using cfdcore::BlockHash;
-using cfdcore::ByteData;
-using cfdcore::ByteData160;
-using cfdcore::ByteData256;
-using cfdcore::Pubkey;
-using cfdcore::Script;
+using cfd::core::BlockHash;
+using cfd::core::ByteData;
+using cfd::core::ByteData160;
+using cfd::core::ByteData256;
+using cfd::core::Pubkey;
+using cfd::core::Script;
 
 /**
  * @brief Scriptを作成する関数群クラス

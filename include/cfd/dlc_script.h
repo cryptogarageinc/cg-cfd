@@ -16,8 +16,8 @@
  */
 namespace dlc {
 
-using cfdcore::Pubkey;
-using cfdcore::Script;
+using cfd::core::Pubkey;
+using cfd::core::Script;
 
 /**
  * @brief DLCの取引に用いるScriptを生成するUtilクラス

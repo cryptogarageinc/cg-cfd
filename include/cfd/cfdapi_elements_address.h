@@ -76,7 +76,7 @@ class CFD_EXPORT ElementsAddressApi {
    * @return 引数に対応するElementsNetType構造体
    * @throws CfdException 指定文字列以外が渡された場合
    */
-  static cfdcore::ElementsNetType ConvertElementsNetType(
+  static cfd::core::ElementsNetType ConvertElementsNetType(
       const std::string& elements_net_type);
 
  private:

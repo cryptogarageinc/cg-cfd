@@ -21,15 +21,15 @@
 
 namespace cfd {
 
-using cfdcore::AbstractTransaction;
-using cfdcore::Address;
-using cfdcore::Amount;
-using cfdcore::ByteData;
-using cfdcore::NetType;
-using cfdcore::Pubkey;
-using cfdcore::Script;
-using cfdcore::SigHashType;
-using cfdcore::Txid;
+using cfd::core::AbstractTransaction;
+using cfd::core::Address;
+using cfd::core::Amount;
+using cfd::core::ByteData;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::SigHashType;
+using cfd::core::Txid;
 
 /**
  * @brief Transaction生成のためのController基底クラス

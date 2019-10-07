@@ -5,7 +5,7 @@
 #include "cfd/cfd_common.h"
 #include "cfd/cfd_fee.h"
 
-using cfdcore::Amount;
+using cfd::core::Amount;
 using cfd::FeeCalculator;
 
 TEST(FeeCalculator, CalculateFeeTest)

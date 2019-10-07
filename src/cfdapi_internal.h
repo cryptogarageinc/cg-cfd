@@ -17,8 +17,8 @@
 namespace cfd {
 namespace api {
 
-using cfdcore::CfdException;
-using cfdcore::logger::warn;
+using cfd::core::CfdException;
+using cfd::core::logger::warn;
 
 /**
  * @brief CfdExceptionをInnerErrorResponseStructに変換する.

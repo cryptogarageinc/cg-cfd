@@ -17,9 +17,9 @@ namespace cfd {
 namespace api {
 
 using cfd::api::AddressApi;
-using cfdcore::NetType;
-using cfdcore::Privkey;
-using cfdcore::Pubkey;
+using cfd::core::NetType;
+using cfd::core::Privkey;
+using cfd::core::Pubkey;
 
 CreateKeyPairResponseStruct KeyApi::CreateKeyPair(
     const CreateKeyPairRequestStruct& request) {

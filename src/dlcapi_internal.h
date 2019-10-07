@@ -18,8 +18,8 @@ namespace dlc {
 namespace api {
 
 using cfd::api::InnerErrorResponseStruct;
-using cfdcore::CfdException;
-using cfdcore::logger::warn;
+using cfd::core::CfdException;
+using cfd::core::logger::warn;
 
 /**
  * @brief CfdExceptionをInnerErrorResponseStructに変換する.
