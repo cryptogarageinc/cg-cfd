@@ -5,7 +5,8 @@
  */
 #ifndef CFD_INCLUDE_CFD_CFD_COMMON_H_
 #define CFD_INCLUDE_CFD_CFD_COMMON_H_
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 /**
  * @brief APIのDLLエクスポート定義
