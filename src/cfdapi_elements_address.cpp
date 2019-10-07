@@ -53,17 +53,14 @@ CreateAddressResponseStruct ElementsAddressApi::CreateAddress(
     Script script;
     Script locking_script;
     Script redeem_script;
-    std::string pubkey_hex = request.pubkey_hex;
-    std::string script_hex = request.script_hex;
     ElementsNetType net_type = ConvertElementsNetType(request.network);
     AddressType addr_type =
         AddressDirectApi::ConvertAddressType(request.hash_type);
 
-    if (!pubkey_hex.empty()) {
-      pubkey = Pubkey(pubkey_hex);
-    }
-    if (!script_hex.empty()) {
-      script = Script(script_hex);
+    if (request.key_data.type == "pubkey") {
+      pubkey = Pubkey(request.key_data.hex);
+    } else if (request.key_data.type == "redeem_script") {
+      script = Script(request.key_data.hex);
     }
     std::vector<AddressFormatData> prefix_list =
         cfdcore::GetElementsAddressFormatList();
@@ -104,7 +101,7 @@ CreateMultisigResponseStruct ElementsAddressApi::CreateMultisig(
     uint32_t req_sig_num = static_cast<uint32_t>(request.nrequired);
     ElementsNetType net_type = ConvertElementsNetType(request.network);
     AddressType addr_type =
-        AddressDirectApi::ConvertAddressType(request.address_type);
+        AddressDirectApi::ConvertAddressType(request.hash_type);
     Script witness_script;
     Script redeem_script;
     std::vector<AddressFormatData> prefix_list =

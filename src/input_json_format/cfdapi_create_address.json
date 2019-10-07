@@ -3,8 +3,12 @@
 	"request": {
 		":class": "CreateAddressRequest",
 		"isElements": false,
-		"scriptHex": "",
-		"pubkeyHex": "",
+		"keyData": {
+			":class": "CreateAddressKeyData",
+			"hex": "",
+			"type": "pubkey",
+			"type:hint": "pubkey, redeem_script"
+		},
 		"network": "mainnet",
 		"network:hint": "bitcoin:'mainnet, testnet, regtest'. elements:'liquidv1, regtest'",
 		"hashType": "p2wpkh",

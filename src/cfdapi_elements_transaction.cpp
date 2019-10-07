@@ -578,7 +578,7 @@ AddMultisigSignResponseStruct ElementsTransactionApi::AddMultisigSign(
     AddMultisigSignResponseStruct response;
     // レスポンスとなるモデルへ変換
     // validate request
-    if (request.txin_type == "p2wsh") {
+    if (request.txin.hash_type == "p2wsh") {
       throw CfdException(
           CfdError::kCfdOutOfRangeError,
           "Failed to AddMultisigSign. p2wsh is excluded.");
@@ -617,35 +617,41 @@ ElementsTransactionApi::CreateSignatureHash(  // NOLINT
       -> CreateElementsSignatureHashResponseStruct {  // NOLINT
     CreateElementsSignatureHashResponseStruct response;
     std::string sig_hash;
-    int64_t amount = request.amount;
-    const std::string& hashtype_str = request.hash_type;
-    const std::string& pubkey_hex = request.pubkey_hex;
-    const std::string& script_hex = request.script_hex;
-    const std::string& value_hex = request.confidential_value_hex;
-    const Txid& txid = Txid(request.txin_txid);
-    uint32_t vout = request.txin_vout;
-    ConfidentialTransactionController txc(request.tx_hex);
+    int64_t amount = request.txin.amount;
+    const std::string& hashtype_str = request.txin.hash_type;
+    const std::string& value_hex = request.txin.confidential_value_commitment;
+    const Txid& txid = Txid(request.txin.txid);
+    uint32_t vout = request.txin.vout;
+    ConfidentialTransactionController txc(request.tx);
     SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
-        request.sighash_type, request.sighash_anyone_can_pay);
+        request.txin.sighash_type, request.txin.sighash_anyone_can_pay);
+
+    Pubkey pubkey;
+    Script script;
+    if (request.txin.key_data.type == "pubkey") {
+      pubkey = Pubkey(request.txin.key_data.hex);
+    } else if (request.txin.key_data.type == "redeem_script") {
+      script = Script(request.txin.key_data.hex);
+    }
 
     if ((hashtype_str == "p2pkh") || (hashtype_str == "p2wpkh")) {
       if (value_hex.empty()) {
         sig_hash = txc.CreateSignatureHash(
-            txid, vout, Pubkey(pubkey_hex), sighashtype,
+            txid, vout, pubkey, sighashtype,
             Amount::CreateBySatoshiAmount(amount), (hashtype_str == "p2wpkh"));
       } else {
         sig_hash = txc.CreateSignatureHash(
-            txid, vout, Pubkey(pubkey_hex), sighashtype, ByteData(value_hex),
+            txid, vout, pubkey, sighashtype, ByteData(value_hex),
             (hashtype_str == "p2wpkh"));
       }
     } else if ((hashtype_str == "p2sh") || (hashtype_str == "p2wsh")) {
       if (value_hex.empty()) {
         sig_hash = txc.CreateSignatureHash(
-            txid, vout, Script(script_hex), sighashtype,
+            txid, vout, script, sighashtype,
             Amount::CreateBySatoshiAmount(amount), (hashtype_str == "p2wsh"));
       } else {
         sig_hash = txc.CreateSignatureHash(
-            txid, vout, Script(script_hex), sighashtype, ByteData(value_hex),
+            txid, vout, script, sighashtype, ByteData(value_hex),
             (hashtype_str == "p2wsh"));
       }
     } else {
@@ -677,7 +683,7 @@ BlindRawTransactionResponseStruct ElementsTransactionApi::BlindTransaction(
   auto call_func = [](const BlindRawTransactionRequestStruct& request)
       -> BlindRawTransactionResponseStruct {  // NOLINT
     BlindRawTransactionResponseStruct response;
-    ConfidentialTransactionController txc(request.tx_hex);
+    ConfidentialTransactionController txc(request.tx);
     const ConfidentialTransaction& tx = txc.GetTransaction();
 
     uint32_t txin_count = tx.GetTxInCount();
@@ -825,7 +831,7 @@ UnblindRawTransactionResponseStruct ElementsTransactionApi::UnblindTransaction(
   auto call_func = [](const UnblindRawTransactionRequestStruct& request)
       -> UnblindRawTransactionResponseStruct {
     UnblindRawTransactionResponseStruct response;
-    ConfidentialTransactionController ctxc(request.tx_hex);
+    ConfidentialTransactionController ctxc(request.tx);
     const ConfidentialTransaction& tx = ctxc.GetTransaction();
 
     bool unblind_single = false;
@@ -969,7 +975,7 @@ SetRawIssueAssetResponseStruct ElementsTransactionApi::SetRawIssueAsset(
   auto call_func = [](const SetRawIssueAssetRequestStruct& request)
       -> SetRawIssueAssetResponseStruct {  // NOLINT
     SetRawIssueAssetResponseStruct response;
-    ConfidentialTransactionController ctxc(request.tx_hex);
+    ConfidentialTransactionController ctxc(request.tx);
     ElementsAddressFactory address_factory;
 
     for (IssuanceDataRequestStruct req_issuance : request.issuances) {
@@ -1009,7 +1015,7 @@ SetRawIssueAssetResponseStruct ElementsTransactionApi::SetRawIssueAsset(
 
       // Txin1つずつissuanceの設定を行う
       IssuanceParameter issuance_param = ctxc.SetAssetIssuance(
-          Txid(req_issuance.txin_txid), req_issuance.txin_vout,
+          Txid(req_issuance.txid), req_issuance.vout,
           Amount::CreateBySatoshiAmount(req_issuance.asset_amount),
           asset_locking_script, asset_nonce,
           Amount::CreateBySatoshiAmount(req_issuance.token_amount),
@@ -1018,8 +1024,8 @@ SetRawIssueAssetResponseStruct ElementsTransactionApi::SetRawIssueAsset(
           req_issuance.is_remove_nonce);
 
       IssuanceDataResponseStruct res_issuance;
-      res_issuance.txin_txid = req_issuance.txin_txid;
-      res_issuance.txin_vout = req_issuance.txin_vout;
+      res_issuance.txid = req_issuance.txid;
+      res_issuance.vout = req_issuance.vout;
       res_issuance.asset = issuance_param.asset.GetHex();
       res_issuance.entropy = issuance_param.entropy.GetHex();
       res_issuance.token = issuance_param.token.GetHex();
@@ -1048,7 +1054,7 @@ SetRawReissueAssetResponseStruct ElementsTransactionApi::SetRawReissueAsset(
   auto call_func = [](const SetRawReissueAssetRequestStruct& request)
       -> SetRawReissueAssetResponseStruct {  // NOLINT
     SetRawReissueAssetResponseStruct response;
-    ConfidentialTransactionController ctxc(request.tx_hex);
+    ConfidentialTransactionController ctxc(request.tx);
     ElementsAddressFactory address_factory;
 
     for (ReissuanceDataRequestStruct req_issuance : request.issuances) {
@@ -1070,15 +1076,15 @@ SetRawReissueAssetResponseStruct ElementsTransactionApi::SetRawReissueAsset(
       }
 
       IssuanceParameter issuance_param = ctxc.SetAssetReissuance(
-          Txid(req_issuance.txin_txid), req_issuance.txin_vout,
+          Txid(req_issuance.txid), req_issuance.vout,
           Amount::CreateBySatoshiAmount(req_issuance.amount), locking_script,
           nonce, BlindFactor(req_issuance.asset_blinding_nonce),
           BlindFactor(req_issuance.asset_entropy), false,
           req_issuance.is_remove_nonce);
 
       ReissuanceDataResponseStruct res_issuance;
-      res_issuance.txin_txid = req_issuance.txin_txid;
-      res_issuance.txin_vout = req_issuance.txin_vout;
+      res_issuance.txid = req_issuance.txid;
+      res_issuance.vout = req_issuance.vout;
       res_issuance.asset = issuance_param.asset.GetHex();
       res_issuance.entropy = issuance_param.entropy.GetHex();
       response.issuances.push_back(res_issuance);
@@ -1334,6 +1340,75 @@ ElementsTransactionApi::GetIssuanceBlindingKey(
   result = ExecuteStructApi<
       GetIssuanceBlindingKeyRequestStruct,
       GetIssuanceBlindingKeyResponseStruct>(
+      request, call_func, std::string(__FUNCTION__));
+  return result;
+}
+
+ElementsCreateDestroyAmountResponseStruct
+ElementsTransactionApi::CreateDestroyAmountTransaction(
+    const ElementsCreateDestroyAmountRequestStruct& request) {
+  auto call_func = [](const ElementsCreateDestroyAmountRequestStruct& request)
+      -> ElementsCreateDestroyAmountResponseStruct {  // NOLINT
+    ElementsCreateDestroyAmountResponseStruct response;
+    // Transaction作成
+    ConfidentialTransactionController ctxc(request.version, request.locktime);
+    ElementsAddressFactory address_factory;
+
+    // TxInの追加
+    const uint32_t kLockTimeDisabledSequence =
+        ctxc.GetLockTimeDisabledSequence();
+    for (ElementsDestroyAmountTxInStruct txin_req : request.txins) {
+      Txid txid(txin_req.txid);
+      uint32_t vout = txin_req.vout;
+
+      // TxInのunlocking_scriptは空で作成
+      if (kLockTimeDisabledSequence == txin_req.sequence) {
+        ctxc.AddTxIn(txid, vout, ctxc.GetDefaultSequence());
+      } else {
+        ctxc.AddTxIn(txid, vout, txin_req.sequence);
+      }
+    }
+
+    // TxOutの追加
+    for (ElementsDestroyAmountTxOutStruct txout_req : request.txouts) {
+      const std::string addr = txout_req.address;
+      if (ElementsConfidentialAddress::IsConfidentialAddress(addr)) {
+        ctxc.AddTxOut(
+            ElementsConfidentialAddress(addr),
+            Amount::CreateBySatoshiAmount(txout_req.amount),
+            ConfidentialAssetId(txout_req.asset), txout_req.is_remove_nonce);
+      } else {
+        ctxc.AddTxOut(
+            address_factory.GetAddress(addr),
+            Amount::CreateBySatoshiAmount(txout_req.amount),
+            ConfidentialAssetId(txout_req.asset));
+      }
+    }
+
+    // DestroyのTxOut追加
+    // script作成
+    ScriptBuilder builder;
+    builder.AppendOperator(ScriptOperator::OP_RETURN);
+    Script locking_script = builder.Build();
+
+    ctxc.AddTxOut(
+        locking_script, Amount::CreateBySatoshiAmount(request.destroy.amount),
+        ConfidentialAssetId(request.destroy.asset));
+
+    // feeの追加
+    ElementsDestroyAmountFeeStruct fee_req = request.fee;
+    ctxc.AddTxOutFee(
+        Amount::CreateBySatoshiAmount(fee_req.amount),
+        ConfidentialAssetId(fee_req.asset));
+
+    response.hex = ctxc.GetHex();
+    return response;
+  };
+
+  ElementsCreateDestroyAmountResponseStruct result;
+  result = ExecuteStructApi<
+      ElementsCreateDestroyAmountRequestStruct,
+      ElementsCreateDestroyAmountResponseStruct>(
       request, call_func, std::string(__FUNCTION__));
   return result;
 }

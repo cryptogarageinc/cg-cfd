@@ -47,17 +47,14 @@ CreateAddressResponseStruct AddressApi::CreateAddress(
     Script script;
     Script locking_script;
     Script redeem_script;
-    std::string pubkey_hex = request.pubkey_hex;
-    std::string script_hex = request.script_hex;
     NetType net_type = ConvertNetType(request.network);
     AddressType addr_type =
         AddressDirectApi::ConvertAddressType(request.hash_type);
 
-    if (!pubkey_hex.empty()) {
-      pubkey = Pubkey(pubkey_hex);
-    }
-    if (!script_hex.empty()) {
-      script = Script(script_hex);
+    if (request.key_data.type == "pubkey") {
+      pubkey = Pubkey(request.key_data.hex);
+    } else if (request.key_data.type == "redeem_script") {
+      script = Script(request.key_data.hex);
     }
     addr = AddressDirectApi::CreateAddress(
         net_type, addr_type, &pubkey, &script, &locking_script,
@@ -96,7 +93,7 @@ CreateMultisigResponseStruct AddressApi::CreateMultisig(
     uint32_t req_sig_num = static_cast<uint32_t>(request.nrequired);
     NetType net_type = ConvertNetType(request.network);
     AddressType addr_type =
-        AddressDirectApi::ConvertAddressType(request.address_type);
+        AddressDirectApi::ConvertAddressType(request.hash_type);
     Script witness_script;
     Script redeem_script;
 
@@ -158,9 +155,9 @@ Address AddressDirectApi::CreateAddress(
         address_type == AddressType::kP2shP2wpkhAddress) {
       warn(
           CFD_LOG_SOURCE,
-          "Failed to CreateAddress. Invalid pubkey_hex: pubkey is empty.");
+          "Failed to CreateAddress. Invalid pubkey hex: pubkey is empty.");
       throw CfdException(
-          CfdError::kCfdIllegalArgumentError, "pubkey_hex is empty.");
+          CfdError::kCfdIllegalArgumentError, "pubkey hex is empty.");
     }
   }
   if ((script == nullptr) || (script->IsEmpty())) {
@@ -169,9 +166,9 @@ Address AddressDirectApi::CreateAddress(
         address_type == AddressType::kP2shP2wshAddress) {
       warn(
           CFD_LOG_SOURCE,
-          "Failed to CreateAddress. Invalid script_hex: script is empty.");
+          "Failed to CreateAddress. Invalid script hex: script is empty.");
       throw CfdException(
-          CfdError::kCfdIllegalArgumentError, "script_hex is empty.");
+          CfdError::kCfdIllegalArgumentError, "script hex is empty.");
     }
   }
   std::vector<AddressFormatData> addr_prefixes;

@@ -2,22 +2,26 @@
 	"namespace": ["cfd","api"],
 	"request": {
 		":class": "UpdateWitnessStackRequest",
-		"txHex": "",
+		"tx": "",
+		"tx:comment": "transaction hex",
 		"isElements": false,
-		"txinTxid": "",
-		"txinVout": 0,
-		"txinVout:type": "uint32_t",
-		"witnessStack": {
-			":class": "WitnessStackData",
-			"index": 0,
-			"index:type": "uint64_t",
-			"hex": "",
-			"type": "binary",
-			"type:hint": "binary, sign, pubkey, redeem_script",
-			"derEncode": false,
-			"sighashType": "all",
-			"sighashType:hint": "all, none, single",
-			"sighashAnyoneCanPay": false
+		"txin": {
+			":class": "UpdateWitnessStackTxInRequest",
+			"txid": "",
+			"vout": 0,
+			"vout:type": "uint32_t",
+			"witnessStack": {
+				":class": "WitnessStackData",
+				"index": 0,
+				"index:type": "uint64_t",
+				"hex": "",
+				"type": "binary",
+				"type:hint": "binary, sign, pubkey, redeem_script",
+				"derEncode": false,
+				"sighashType": "all",
+				"sighashType:hint": "all, none, single",
+				"sighashAnyoneCanPay": false
+			}
 		}
 	},
 	"response": {

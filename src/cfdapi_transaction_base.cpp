@@ -49,7 +49,7 @@ using cfdcore::logger::warn;
 static void ValidateAddMultisigSignRequest(  // linefeed
     AddMultisigSignRequestStruct req, AddressType addr_type) {
   // check txHex
-  if (req.tx_hex.empty()) {
+  if (req.tx.empty()) {
     warn(
         CFD_LOG_SOURCE,
         "Failed to AddSegwitMultisigSignRequest. Transaction hex empty.");
@@ -61,7 +61,7 @@ static void ValidateAddMultisigSignRequest(  // linefeed
   // check require script
   switch (addr_type) {
     case AddressType::kP2shAddress: {
-      if (req.redeem_script.empty()) {
+      if (req.txin.redeem_script.empty()) {
         warn(
             CFD_LOG_SOURCE,
             "Failed to AddSegwitMultisigSignRequest. redeem script empty.");
@@ -72,7 +72,7 @@ static void ValidateAddMultisigSignRequest(  // linefeed
       break;
     }
     case AddressType::kP2wshAddress: {
-      if (req.witness_script.empty()) {
+      if (req.txin.witness_script.empty()) {
         warn(
             CFD_LOG_SOURCE,
             "Failed to AddSegwitMultisigSignRequest. witness script empty.");
@@ -83,7 +83,7 @@ static void ValidateAddMultisigSignRequest(  // linefeed
       break;
     }
     case AddressType::kP2shP2wshAddress: {
-      if (req.redeem_script.empty()) {
+      if (req.txin.redeem_script.empty()) {
         warn(
             CFD_LOG_SOURCE,
             "Failed to AddSegwitMultisigSignRequest. redeem script empty.");
@@ -91,7 +91,7 @@ static void ValidateAddMultisigSignRequest(  // linefeed
             CfdError::kCfdIllegalArgumentError,
             "Invalid hex string. empty redeemScript.");
       }
-      if (req.witness_script.empty()) {
+      if (req.txin.witness_script.empty()) {
         warn(
             CFD_LOG_SOURCE,
             "Failed to AddSegwitMultisigSignRequest. witness script empty.");
@@ -112,7 +112,7 @@ static void ValidateAddMultisigSignRequest(  // linefeed
   }
 
   // check signData (not empty)
-  if (req.sign_params.empty()) {
+  if (req.txin.sign_params.empty()) {
     warn(
         CFD_LOG_SOURCE,
         "Failed to AddSegwitMultisigSignRequest. sign parameters empty.");
@@ -122,7 +122,7 @@ static void ValidateAddMultisigSignRequest(  // linefeed
   }
 
   // check signData (too much data)
-  if (req.sign_params.size() > 15) {
+  if (req.txin.sign_params.size() > 15) {
     warn(
         CFD_LOG_SOURCE,
         "Failed to AddSegwitMultisigSignRequest. sign array length over.");
@@ -195,7 +195,7 @@ AddSignResponseStruct TransactionApiBase::AddSign(
       [create_controller](
           const AddSignRequestStruct& request) -> AddSignResponseStruct {
     AddSignResponseStruct response;
-    const std::string& hex_string = request.tx_hex;
+    const std::string& hex_string = request.tx;
     if (hex_string.empty()) {
       warn(CFD_LOG_SOURCE, "Failed to AddSignRequest. hex empty.");
       throw CfdException(
@@ -206,30 +206,30 @@ AddSignResponseStruct TransactionApiBase::AddSign(
     // TransactionController作成
     T txc = create_controller(hex_string);
 
-    if (request.is_witness) {
+    if (request.txin.is_witness) {
       // Witnessの追加
-      Txid txid = Txid(request.txin_txid);
-      if (request.clear_stack) {
-        txc.RemoveWitnessStackAll(txid, request.txin_vout);
+      Txid txid = Txid(request.txin.txid);
+      if (request.txin.clear_stack) {
+        txc.RemoveWitnessStackAll(txid, request.txin.vout);
       }
       std::vector<ByteData> witness_datas;
-      for (const SignDataStruct& stack_req : request.sign_param) {
+      for (const SignDataStruct& stack_req : request.txin.sign_param) {
         ByteData byte_data = ConvertSignDataToSignature(
             stack_req.hex, (stack_req.type == "sign"), stack_req.der_encode,
             stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
         witness_datas.push_back(byte_data);
       }
-      txc.AddWitnessStack(txid, request.txin_vout, witness_datas);
+      txc.AddWitnessStack(txid, request.txin.vout, witness_datas);
     } else {
       std::vector<ByteData> unlock_script;
-      for (const SignDataStruct& stack_req : request.sign_param) {
+      for (const SignDataStruct& stack_req : request.txin.sign_param) {
         ByteData byte_data = ConvertSignDataToSignature(
             stack_req.hex, (stack_req.type == "sign"), stack_req.der_encode,
             stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
         unlock_script.push_back(byte_data);
       }
       txc.SetUnlockingScript(
-          Txid(request.txin_txid), request.txin_vout, unlock_script);
+          Txid(request.txin.txid), request.txin.vout, unlock_script);
     }
 
     response.hex = txc.GetHex();
@@ -250,7 +250,7 @@ GetWitnessStackNumResponseStruct TransactionApiBase::GetWitnessStackNum(
       [create_controller](const GetWitnessStackNumRequestStruct& request)
       -> GetWitnessStackNumResponseStruct {  // NOLINT
     GetWitnessStackNumResponseStruct response;
-    std::string hex_string = request.tx_hex;
+    std::string hex_string = request.tx;
     if (hex_string.empty()) {
       warn(CFD_LOG_SOURCE, "Failed to GetWitnessStackNum. hex empty.");
       throw CfdException(
@@ -262,7 +262,7 @@ GetWitnessStackNumResponseStruct TransactionApiBase::GetWitnessStackNum(
     T txc = create_controller(hex_string);
 
     uint32_t count =
-        txc.GetWitnessStackNum(Txid(request.txin_txid), request.txin_vout);
+        txc.GetWitnessStackNum(Txid(request.txin.txid), request.txin.vout);
 
     response.count = count;
     return response;
@@ -282,7 +282,7 @@ UpdateWitnessStackResponseStruct TransactionApiBase::UpdateWitnessStack(
       [create_controller](const UpdateWitnessStackRequestStruct& request)
       -> UpdateWitnessStackResponseStruct {  // NOLINT
     UpdateWitnessStackResponseStruct response;
-    const std::string& hex_string = request.tx_hex;
+    const std::string& hex_string = request.tx;
     if (hex_string.empty()) {
       warn(CFD_LOG_SOURCE, "Failed to UpdateWitnessStack. hex empty.");
       throw CfdException(
@@ -294,12 +294,12 @@ UpdateWitnessStackResponseStruct TransactionApiBase::UpdateWitnessStack(
     T txc = create_controller(hex_string);
 
     // Witnessの更新
-    const WitnessStackDataStruct& stack_req = request.witness_stack;
+    const WitnessStackDataStruct& stack_req = request.txin.witness_stack;
     ByteData byte_data = ConvertSignDataToSignature(
         stack_req.hex, (stack_req.type == "sign"), stack_req.der_encode,
         stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
     txc.SetWitnessStack(
-        Txid(request.txin_txid), request.txin_vout,
+        Txid(request.txin.txid), request.txin.vout,
         static_cast<uint32_t>(stack_req.index), byte_data);
 
     response.hex = txc.GetHex();
@@ -478,23 +478,23 @@ AddMultisigSignResponseStruct TransactionApiBase::AddMultisigSign(
     AddMultisigSignResponseStruct response;
     // validate request
     AddressType addr_type =
-        AddressDirectApi::ConvertAddressType(request.txin_type);
+        AddressDirectApi::ConvertAddressType(request.txin.hash_type);
     ValidateAddMultisigSignRequest(request, addr_type);
 
-    const std::string& hex_string = request.tx_hex;
+    const std::string& hex_string = request.tx;
     T txc = create_controller(hex_string);
 
     // extract pubkeys from redeem script
     // ValidateAddMultiSignRequest ensures that we have one of three correct
     // types.
     Script redeem_script = addr_type == AddressType::kP2shAddress
-                               ? Script(request.redeem_script)
-                               : Script(request.witness_script);
+                               ? Script(request.txin.redeem_script)
+                               : Script(request.txin.witness_script);
 
     std::vector<Pubkey> pubkeys =
         ExtractPubkeysFromMultisigScript(redeem_script);
     // get signParams from json request
-    std::vector<MultisigSignDataStruct> sign_params = request.sign_params;
+    std::vector<MultisigSignDataStruct> sign_params = request.txin.sign_params;
 
     // set signParam to signature_data (only contains relatedPubkey);
     std::vector<ByteData> signature_data;
@@ -535,23 +535,23 @@ AddMultisigSignResponseStruct TransactionApiBase::AddMultisigSign(
     }
 
     // set signatures to target input
-    Txid txid(request.txin_txid);
+    Txid txid(request.txin.txid);
     if (addr_type == AddressType::kP2shAddress) {
       SetP2shMultisigUnlockingScript(
-          signature_data, redeem_script, txid, request.txin_vout, &txc);
+          signature_data, redeem_script, txid, request.txin.vout, &txc);
     } else {
       SetP2wshMultisigWitnessStack(
-          signature_data, redeem_script, txid, request.txin_vout,
-          request.clear_stack, &txc);
+          signature_data, redeem_script, txid, request.txin.vout,
+          request.txin.clear_stack, &txc);
     }
 
     if (addr_type == AddressType::kP2shP2wshAddress) {
       // set p2sh redeem script to unlockking script
-      Script p2sh_redeem_script(request.redeem_script);
+      Script p2sh_redeem_script(request.txin.redeem_script);
       ScriptBuilder sb;
       sb.AppendData(p2sh_redeem_script);
       txc.SetUnlockingScript(
-          Txid(request.txin_txid), request.txin_vout, sb.Build());
+          Txid(request.txin.txid), request.txin.vout, sb.Build());
     }
 
     response.hex = txc.GetHex();
