@@ -1490,46 +1490,6 @@ namespace dlc {
 namespace api {
 
 // ------------------------------------------------------------------------
-// CombineKeysRequestStruct
-// ------------------------------------------------------------------------
-/**
- * @brief CombineKeysRequestStruct 構造体
- */
-struct CombineKeysRequestStruct {
-  std::string pubkey = "";          //!< pubkey  // NOLINT
-  std::string commitment_key = "";  //!< commitment_key  // NOLINT
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
-// CreateCETxAddressRequestStruct
-// ------------------------------------------------------------------------
-/**
- * @brief CreateCETxAddressRequestStruct 構造体
- */
-struct CreateCETxAddressRequestStruct {
-  std::string network = "mainnet";        //!< network  // NOLINT
-  CombineKeysRequestStruct combine_keys;  //!< combine_keys  // NOLINT
-  std::string counter_party_pubkey = "";  //!< counter_party_pubkey  // NOLINT
-  int64_t delay = 0;                      //!< delay  // NOLINT
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
-// CreateCETxAddressResponseStruct
-// ------------------------------------------------------------------------
-/**
- * @brief CreateCETxAddressResponseStruct 構造体
- */
-struct CreateCETxAddressResponseStruct {
-  std::string address = "";          //!< address  // NOLINT
-  std::string redeem_script = "";    //!< redeem_script  // NOLINT
-  std::string combined_pubkey = "";  //!< combined_pubkey  // NOLINT
-  cfd::api::InnerErrorResponseStruct error;   //!< error information
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
 // CETxSignDataStruct
 // ------------------------------------------------------------------------
 /**
@@ -1579,6 +1539,46 @@ struct AddCETxSignRequestStruct {
  */
 struct AddCETxSignResponseStruct {
   std::string hex = "";  //!< hex  // NOLINT
+  cfd::api::InnerErrorResponseStruct error;   //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// CombineKeysRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief CombineKeysRequestStruct 構造体
+ */
+struct CombineKeysRequestStruct {
+  std::string pubkey = "";          //!< pubkey  // NOLINT
+  std::string commitment_key = "";  //!< commitment_key  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// CreateCETxAddressRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief CreateCETxAddressRequestStruct 構造体
+ */
+struct CreateCETxAddressRequestStruct {
+  std::string network = "mainnet";        //!< network  // NOLINT
+  CombineKeysRequestStruct combine_keys;  //!< combine_keys  // NOLINT
+  std::string counter_party_pubkey = "";  //!< counter_party_pubkey  // NOLINT
+  int64_t delay = 0;                      //!< delay  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// CreateCETxAddressResponseStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief CreateCETxAddressResponseStruct 構造体
+ */
+struct CreateCETxAddressResponseStruct {
+  std::string address = "";          //!< address  // NOLINT
+  std::string redeem_script = "";    //!< redeem_script  // NOLINT
+  std::string combined_pubkey = "";  //!< combined_pubkey  // NOLINT
   cfd::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };

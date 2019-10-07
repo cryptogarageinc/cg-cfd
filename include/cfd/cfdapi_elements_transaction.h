@@ -23,8 +23,8 @@
 namespace cfd {
 namespace api {
 
-using cfdcore::Privkey;
-using cfdcore::Txid;
+using cfd::core::Privkey;
+using cfd::core::Txid;
 
 /**
  * @brief Elements用Transaction関連の関数群クラス

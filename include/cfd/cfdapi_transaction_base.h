@@ -28,9 +28,9 @@
 namespace cfd {
 namespace api {
 
-using cfdcore::ByteData;
-using cfdcore::Pubkey;
-using cfdcore::Script;
+using cfd::core::ByteData;
+using cfd::core::Pubkey;
+using cfd::core::Script;
 
 /**
  * @typedef LockingScriptType
@@ -123,7 +123,7 @@ class CFD_EXPORT TransactionApiBase {
    * @param[in] is_anyone_can_pay     whether or not anyone_can_pay is used
    * @return SigHashType object
    */
-  static cfdcore::SigHashType ConvertSigHashType(
+  static cfd::core::SigHashType ConvertSigHashType(
       const std::string& sighash_type_string, bool is_anyone_can_pay);
 
   /**

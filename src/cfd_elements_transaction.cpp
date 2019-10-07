@@ -26,18 +26,18 @@
 #include "cfdcore/cfdcore_transaction.h"
 
 namespace cfd {
-using cfdcore::AddressType;
-using cfdcore::Amount;
-using cfdcore::ByteData256;
-using cfdcore::CfdError;
-using cfdcore::CfdException;
-using cfdcore::ConfidentialNonce;
-using cfdcore::ElementsAddressType;
-using cfdcore::ElementsConfidentialAddress;
-using cfdcore::IssuanceParameter;
-using cfdcore::PegoutKeyData;
-using cfdcore::ScriptBuilder;
-using cfdcore::logger::warn;
+using cfd::core::AddressType;
+using cfd::core::Amount;
+using cfd::core::ByteData256;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::ConfidentialNonce;
+using cfd::core::ElementsAddressType;
+using cfd::core::ElementsConfidentialAddress;
+using cfd::core::IssuanceParameter;
+using cfd::core::PegoutKeyData;
+using cfd::core::ScriptBuilder;
+using cfd::core::logger::warn;
 
 // -----------------------------------------------------------------------------
 // Define

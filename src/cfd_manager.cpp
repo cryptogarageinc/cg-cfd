@@ -12,9 +12,9 @@
 
 #include "cfd_manager.h"  // NOLINT
 
-using cfdcore::CfdError;
-using cfdcore::CfdException;
-using cfdcore::logger::info;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::logger::info;
 
 // -----------------------------------------------------------------------------
 // API
@@ -43,7 +43,7 @@ void CfdManager::Initialize() {
 
   if (!initialized_) {
     // 初期化処理実施
-    cfdcore::Initialize(&handle_);
+    cfd::core::Initialize(&handle_);
     initialized_ = true;
     info(CFD_LOG_SOURCE, "cfd initialize.");
   }
@@ -54,7 +54,7 @@ void CfdManager::Finalize(bool is_finish_process) {
     if (!is_finish_process) {
       info(CFD_LOG_SOURCE, "cfd finalize.");
     }
-    cfdcore::Finalize(handle_, is_finish_process);
+    cfd::core::Finalize(handle_, is_finish_process);
     finalized_ = true;
     handle_ = nullptr;
   }
@@ -63,16 +63,16 @@ void CfdManager::Finalize(bool is_finish_process) {
 uint64_t CfdManager::GetSupportedFunction() {
   uint64_t support_function = 0;
   // cfdcoreとcfdの両方でサポートしている必要がある。
-  uint64_t core_functions = cfdcore::GetSupportedFunction();
+  uint64_t core_functions = cfd::core::GetSupportedFunction();
 
 #ifndef CFD_DISABLE_BITCOIN
-  if (core_functions & cfdcore::LibraryFunction::kEnableBitcoin) {
+  if (core_functions & cfd::core::LibraryFunction::kEnableBitcoin) {
     support_function |= LibraryFunction::kEnableBitcoin;
   }
 #endif  // CFD_DISABLE_BITCOIN
 
 #ifndef CFD_DISABLE_ELEMENTS
-  if (core_functions & cfdcore::LibraryFunction::kEnableElements) {
+  if (core_functions & cfd::core::LibraryFunction::kEnableElements) {
     support_function |= LibraryFunction::kEnableElements;
   }
 #endif  // CFD_DISABLE_ELEMENTS
@@ -87,7 +87,7 @@ CfdManager::CfdManager()
 
 CfdManager::~CfdManager() {
   if (initialized_ && (!finalized_)) {
-    cfdcore::Finalize(handle_, true);
+    cfd::core::Finalize(handle_, true);
   }
 }
 

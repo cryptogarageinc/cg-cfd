@@ -23,12 +23,12 @@
 namespace cfd {
 namespace api {
 
-using cfdcore::Address;
-using cfdcore::AddressFormatData;
-using cfdcore::AddressType;
-using cfdcore::NetType;
-using cfdcore::Pubkey;
-using cfdcore::Script;
+using cfd::core::Address;
+using cfd::core::AddressFormatData;
+using cfd::core::AddressType;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
 
 /**
  * @brief Address関連の関数群クラス
@@ -57,7 +57,7 @@ class CFD_EXPORT AddressApi {
    * @return 引数に対応するNetType構造体
    * @throws CfdException 指定文字列以外が渡された場合
    */
-  static cfdcore::NetType ConvertNetType(const std::string& network_type);
+  static cfd::core::NetType ConvertNetType(const std::string& network_type);
 
  private:
   AddressApi();

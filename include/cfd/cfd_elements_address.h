@@ -19,14 +19,14 @@
 
 namespace cfd {
 
-using cfdcore::Address;
-using cfdcore::ConfidentialKey;
-using cfdcore::ElementsConfidentialAddress;
-using cfdcore::ElementsNetType;
-using cfdcore::NetType;
-using cfdcore::Pubkey;
-using cfdcore::Script;
-using cfdcore::WitnessVersion;
+using cfd::core::Address;
+using cfd::core::ConfidentialKey;
+using cfd::core::ElementsConfidentialAddress;
+using cfd::core::ElementsNetType;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::WitnessVersion;
 
 /**
  * @brief Elements用Addressを生成するFactoryクラス
@@ -94,7 +94,7 @@ class CFD_EXPORT ElementsAddressFactory : public AddressFactory {
    * addressを作成する
    * @param[in] tweak_fedpegscript
    * fedpegscript内部のpubkeyをtweakと合成させたscript. (ref:
-   * cfdcore::ContractHashUtil)
+   * cfd::core::ContractHashUtil)
    * @return mainchain用peg-in address
    */
   Address CreatePegInAddress(const Script& tweak_fedpegscript) const;

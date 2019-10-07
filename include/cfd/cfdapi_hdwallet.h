@@ -22,7 +22,7 @@
 namespace cfd {
 namespace api {
 
-using cfdcore::ByteData;
+using cfd::core::ByteData;
 
 /**
  * @brief HDWallet構造体関数群クラス

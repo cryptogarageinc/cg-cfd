@@ -16,18 +16,18 @@
 
 namespace cfd {
 
-using cfdcore::BlockHash;
-using cfdcore::ByteData160;
-using cfdcore::ByteData256;
-using cfdcore::CfdError;
-using cfdcore::CfdException;
-using cfdcore::HashUtil;
-using cfdcore::Pubkey;
-using cfdcore::Script;
-using cfdcore::ScriptBuilder;
-using cfdcore::ScriptElement;
-using cfdcore::ScriptOperator;
-using cfdcore::logger::warn;
+using cfd::core::BlockHash;
+using cfd::core::ByteData160;
+using cfd::core::ByteData256;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::HashUtil;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::ScriptBuilder;
+using cfd::core::ScriptElement;
+using cfd::core::ScriptOperator;
+using cfd::core::logger::warn;
 
 // <pubkey> OP_CHECKSIG
 Script ScriptUtil::CreateP2pkLockingScript(const Pubkey& pubkey) {

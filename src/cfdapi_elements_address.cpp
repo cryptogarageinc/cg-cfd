@@ -29,18 +29,18 @@ namespace api {
 
 using cfd::ElementsAddressFactory;
 using cfd::ScriptUtil;
-using cfdcore::Address;
-using cfdcore::AddressFormatData;
-using cfdcore::CfdError;
-using cfdcore::CfdException;
-using cfdcore::ConfidentialKey;
-using cfdcore::ContractHashUtil;
-using cfdcore::ElementsConfidentialAddress;
-using cfdcore::ElementsNetType;
-using cfdcore::NetType;
-using cfdcore::Pubkey;
-using cfdcore::Script;
-using cfdcore::logger::warn;
+using cfd::core::Address;
+using cfd::core::AddressFormatData;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::ConfidentialKey;
+using cfd::core::ContractHashUtil;
+using cfd::core::ElementsConfidentialAddress;
+using cfd::core::ElementsNetType;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::logger::warn;
 
 CreateAddressResponseStruct ElementsAddressApi::CreateAddress(
     const CreateAddressRequestStruct& request) {
@@ -63,7 +63,7 @@ CreateAddressResponseStruct ElementsAddressApi::CreateAddress(
       script = Script(request.key_data.hex);
     }
     std::vector<AddressFormatData> prefix_list =
-        cfdcore::GetElementsAddressFormatList();
+        cfd::core::GetElementsAddressFormatList();
     addr = AddressDirectApi::CreateAddress(
         net_type, addr_type, &pubkey, &script, &locking_script, &redeem_script,
         &prefix_list);
@@ -105,7 +105,7 @@ CreateMultisigResponseStruct ElementsAddressApi::CreateMultisig(
     Script witness_script;
     Script redeem_script;
     std::vector<AddressFormatData> prefix_list =
-        cfdcore::GetElementsAddressFormatList();
+        cfd::core::GetElementsAddressFormatList();
 
     Address addr = AddressDirectApi::CreateMultisig(
         net_type, addr_type, req_sig_num, pubkeys, &redeem_script,

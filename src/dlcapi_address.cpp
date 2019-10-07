@@ -26,14 +26,14 @@ namespace api {
 
 using cfd::AddressFactory;
 using cfd::api::AddressApi;
-using cfdcore::Address;
-using cfdcore::CfdError;
-using cfdcore::CfdException;
-using cfdcore::NetType;
-using cfdcore::Pubkey;
-using cfdcore::Script;
-using cfdcore::WitnessVersion;
-using cfdcore::logger::warn;
+using cfd::core::Address;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::WitnessVersion;
+using cfd::core::logger::warn;
 using dlc::DlcScriptUtil;
 
 CreateCETxAddressResponseStruct DlcAddressApi::CreateCETxAddress(
