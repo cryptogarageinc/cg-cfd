@@ -16,6 +16,7 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::GetSupportedFunction;
@@ -56,4 +57,5 @@ InnerErrorResponseStruct ConvertCfdExceptionToStruct(
 }
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd

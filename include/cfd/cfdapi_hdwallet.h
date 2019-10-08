@@ -20,6 +20,7 @@
  * @brief cfdapi名前空間
  */
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::core::ByteData;
@@ -101,6 +102,7 @@ class CFD_EXPORT HDWalletApi {
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_INCLUDE_CFD_CFDAPI_HDWALLET_H_

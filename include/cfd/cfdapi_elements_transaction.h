@@ -21,6 +21,7 @@
  * @brief cfdapi名前空間
  */
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::core::Privkey;
@@ -171,6 +172,7 @@ class CFD_EXPORT ElementsTransactionApi {
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_DISABLE_ELEMENTS

@@ -17,6 +17,7 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::core::ByteData;
@@ -194,4 +195,5 @@ std::vector<std::string> HDWalletApi::ConvertEntropyToMnemonic(
 }
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd

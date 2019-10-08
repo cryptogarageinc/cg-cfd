@@ -14,12 +14,13 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
-using cfd::api::AddressApi;
 using cfd::core::NetType;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
+using cfd::js::api::AddressApi;
 
 CreateKeyPairResponseStruct KeyApi::CreateKeyPair(
     const CreateKeyPairRequestStruct& request) {
@@ -51,4 +52,5 @@ CreateKeyPairResponseStruct KeyApi::CreateKeyPair(
 }
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd

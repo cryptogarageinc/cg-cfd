@@ -18,6 +18,7 @@
  * @brief dlc_api名前空間
  */
 namespace dlc {
+namespace js {
 namespace api {
 
 /**
@@ -39,6 +40,7 @@ class CFD_EXPORT DlcAddressApi {
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace dlc
 
 #endif  // CFD_INCLUDE_CFD_DLCAPI_ADDRESS_H_

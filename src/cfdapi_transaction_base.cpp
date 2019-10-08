@@ -22,6 +22,7 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::TransactionController;
@@ -737,4 +738,5 @@ TransactionApiBase::AddMultisigSign<ConfidentialTransactionController>(
 #endif
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd

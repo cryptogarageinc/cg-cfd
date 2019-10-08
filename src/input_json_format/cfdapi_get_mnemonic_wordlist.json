@@ -1,5 +1,5 @@
 {
-	"namespace": ["cfd","api"],
+	"namespace": ["cfd","js","api","json"],
 	"request": {
 		":class": "GetMnemonicWordlistRequest",
 		"language": "en",

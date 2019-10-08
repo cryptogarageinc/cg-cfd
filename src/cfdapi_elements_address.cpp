@@ -25,6 +25,7 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::ElementsAddressFactory;
@@ -260,5 +261,6 @@ ElementsNetType ElementsAddressApi::ConvertElementsNetType(
 }
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 #endif  // CFD_DISABLE_ELEMENTS

@@ -22,6 +22,7 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::ScriptUtil;
@@ -327,4 +328,5 @@ AddressType AddressDirectApi::ConvertAddressType(
 }
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd

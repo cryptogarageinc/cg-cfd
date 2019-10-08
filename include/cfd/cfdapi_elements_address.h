@@ -20,6 +20,7 @@
  * @brief cfdapi名前空間
  */
 namespace cfd {
+namespace js {
 namespace api {
 
 /**
@@ -84,6 +85,7 @@ class CFD_EXPORT ElementsAddressApi {
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_DISABLE_ELEMENTS

@@ -21,6 +21,7 @@
  * @brief cfdapi名前空間
  */
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::core::Address;
@@ -116,6 +117,7 @@ class CFD_EXPORT AddressDirectApi {
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_INCLUDE_CFD_CFDAPI_ADDRESS_H_

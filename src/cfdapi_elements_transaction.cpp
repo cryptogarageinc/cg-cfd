@@ -37,13 +37,12 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::ConfidentialTransactionController;
 using cfd::ElementsAddressFactory;
 using cfd::ScriptUtil;
-using cfd::api::AddressApi;
-using cfd::api::TransactionApi;
 using cfd::core::Address;
 using cfd::core::AddressType;
 using cfd::core::Amount;
@@ -56,11 +55,15 @@ using cfd::core::ByteData256;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
 using cfd::core::ConfidentialAssetId;
+using cfd::core::ConfidentialNonce;
 using cfd::core::ConfidentialTransaction;
+using cfd::core::ConfidentialTxInReference;
 using cfd::core::ConfidentialTxOut;
+using cfd::core::ConfidentialTxOutReference;
 using cfd::core::ConfidentialValue;
 using cfd::core::ElementsAddressType;
 using cfd::core::ElementsConfidentialAddress;
+using cfd::core::ElementsNetType;
 using cfd::core::ExtKey;
 using cfd::core::HashUtil;
 using cfd::core::IssuanceBlindingKeyPair;
@@ -79,6 +82,8 @@ using cfd::core::UnblindParameter;
 using cfd::core::WitnessVersion;
 using cfd::core::logger::info;
 using cfd::core::logger::warn;
+using cfd::js::api::AddressApi;
+using cfd::js::api::TransactionApi;
 
 /**
  * @brief Issuance領域を表現する構造体
@@ -1351,5 +1356,6 @@ ElementsTransactionApi::CreateDestroyAmountTransaction(
 }
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 #endif  // CFD_DISABLE_ELEMENTS

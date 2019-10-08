@@ -31,14 +31,14 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
 #ifndef CFD_DISABLE_ELEMENTS
-using cfd::api::ElementsTransactionApi;
+using cfd::js::api::ElementsTransactionApi;
 #endif  // CFD_DISABLE_ELEMENTS
 using cfd::ScriptUtil;
 using cfd::TransactionController;
-using cfd::api::AddressApi;
 using cfd::core::Address;
 using cfd::core::AddressType;
 using cfd::core::Amount;
@@ -71,6 +71,7 @@ using cfd::core::TxInReference;
 using cfd::core::TxOutReference;
 using cfd::core::WitnessVersion;
 using cfd::core::logger::warn;
+using cfd::js::api::AddressApi;
 
 // -----------------------------------------------------------------------------
 // ファイル内関数
@@ -582,4 +583,5 @@ bool TransactionApi::CheckNullDataScript(const Script& script) {
 }
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd

@@ -26,17 +26,34 @@
 #include "cfdcore/cfdcore_transaction.h"
 
 namespace cfd {
+using cfd::core::Address;
 using cfd::core::AddressType;
 using cfd::core::Amount;
+using cfd::core::BlindFactor;
+using cfd::core::BlockHash;
+using cfd::core::ByteData;
 using cfd::core::ByteData256;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
+using cfd::core::ConfidentialAssetId;
 using cfd::core::ConfidentialNonce;
+using cfd::core::ConfidentialTransaction;
+using cfd::core::ConfidentialTxInReference;
+using cfd::core::ConfidentialTxOutReference;
 using cfd::core::ElementsAddressType;
 using cfd::core::ElementsConfidentialAddress;
+using cfd::core::IssuanceBlindingKeyPair;
 using cfd::core::IssuanceParameter;
+using cfd::core::NetType;
 using cfd::core::PegoutKeyData;
+using cfd::core::Privkey;
+using cfd::core::Pubkey;
+using cfd::core::Script;
 using cfd::core::ScriptBuilder;
+using cfd::core::SigHashType;
+using cfd::core::Txid;
+using cfd::core::UnblindParameter;
+using cfd::core::BlindParameter;
 using cfd::core::logger::warn;
 
 // -----------------------------------------------------------------------------
