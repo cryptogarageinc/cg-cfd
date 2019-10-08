@@ -542,7 +542,8 @@ ElementsTransactionStructApi::DecodeRawTransaction(  // NOLINT
   return result;
 }
 
-GetWitnessStackNumResponseStruct ElementsTransactionStructApi::GetWitnessStackNum(
+GetWitnessStackNumResponseStruct
+ElementsTransactionStructApi::GetWitnessStackNum(
     const GetWitnessStackNumRequestStruct& request) {
   auto call_func = [](const GetWitnessStackNumRequestStruct& request)
       -> GetWitnessStackNumResponseStruct {  // NOLINT
@@ -595,7 +596,8 @@ AddMultisigSignResponseStruct ElementsTransactionStructApi::AddMultisigSign(
   return result;
 }
 
-UpdateWitnessStackResponseStruct ElementsTransactionStructApi::UpdateWitnessStack(
+UpdateWitnessStackResponseStruct
+ElementsTransactionStructApi::UpdateWitnessStack(
     const UpdateWitnessStackRequestStruct& request) {
   auto call_func = [](const UpdateWitnessStackRequestStruct& request)
       -> UpdateWitnessStackResponseStruct {  // NOLINT
@@ -678,7 +680,8 @@ ElementsTransactionStructApi::CreateSignatureHash(  // NOLINT
   return result;
 }
 
-BlindRawTransactionResponseStruct ElementsTransactionStructApi::BlindTransaction(
+BlindRawTransactionResponseStruct
+ElementsTransactionStructApi::BlindTransaction(
     const BlindRawTransactionRequestStruct& request) {
   auto call_func = [](const BlindRawTransactionRequestStruct& request)
       -> BlindRawTransactionResponseStruct {  // NOLINT
@@ -827,7 +830,8 @@ BlindRawTransactionResponseStruct ElementsTransactionStructApi::BlindTransaction
   return result;
 }
 
-UnblindRawTransactionResponseStruct ElementsTransactionStructApi::UnblindTransaction(
+UnblindRawTransactionResponseStruct
+ElementsTransactionStructApi::UnblindTransaction(
     const UnblindRawTransactionRequestStruct& request) {
   auto call_func = [](const UnblindRawTransactionRequestStruct& request)
       -> UnblindRawTransactionResponseStruct {
@@ -981,7 +985,8 @@ SetRawIssueAssetResponseStruct ElementsTransactionStructApi::SetRawIssueAsset(
   return result;
 }
 
-SetRawReissueAssetResponseStruct ElementsTransactionStructApi::SetRawReissueAsset(
+SetRawReissueAssetResponseStruct
+ElementsTransactionStructApi::SetRawReissueAsset(
     const SetRawReissueAssetRequestStruct& request) {
   auto call_func = [](const SetRawReissueAssetRequestStruct& request)
       -> SetRawReissueAssetResponseStruct {  // NOLINT
@@ -1164,7 +1169,8 @@ ElementsTransactionStructApi::CreateRawPegoutTransaction(  // NOLINT
 
     // PegoutのTxOut追加
     const std::string pegout_address = request.pegout.btc_address;
-    NetType net_type = AddressStructApi::ConvertNetType(request.pegout.network);
+    NetType net_type =
+        AddressStructApi::ConvertNetType(request.pegout.network);
 
     if (!request.pegout.online_pubkey.empty() &&
         !request.pegout.master_online_key.empty()) {

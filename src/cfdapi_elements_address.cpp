@@ -173,7 +173,8 @@ ElementsAddressStructApi::GetConfidentialAddress(
   return result;
 }
 
-GetUnblindedAddressResponseStruct ElementsAddressStructApi::GetUnblindedAddress(
+GetUnblindedAddressResponseStruct
+ElementsAddressStructApi::GetUnblindedAddress(
     const GetUnblindedAddressRequestStruct& request) {
   auto call_func = [](const GetUnblindedAddressRequestStruct& request)
       -> GetUnblindedAddressResponseStruct {  // NOLINT
