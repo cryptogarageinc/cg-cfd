@@ -30,6 +30,7 @@ using cfd::core::Address;
 using cfd::core::AddressType;
 using cfd::core::Amount;
 using cfd::core::BlindFactor;
+using cfd::core::BlindParameter;
 using cfd::core::BlockHash;
 using cfd::core::ByteData;
 using cfd::core::ByteData256;
@@ -53,7 +54,6 @@ using cfd::core::ScriptBuilder;
 using cfd::core::SigHashType;
 using cfd::core::Txid;
 using cfd::core::UnblindParameter;
-using cfd::core::BlindParameter;
 using cfd::core::logger::warn;
 
 // -----------------------------------------------------------------------------
