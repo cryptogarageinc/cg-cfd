@@ -16,12 +16,12 @@
 namespace cfd {
 namespace api {
 
-using cfd::api::AddressApi;
+using cfd::api::AddressStructApi;
 using cfd::core::NetType;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
 
-CreateKeyPairResponseStruct KeyApi::CreateKeyPair(
+CreateKeyPairResponseStruct KeyStructApi::CreateKeyPair(
     const CreateKeyPairRequestStruct& request) {
   auto call_func = [](const CreateKeyPairRequestStruct& request)
       -> CreateKeyPairResponseStruct {  // NOLINT
@@ -36,7 +36,7 @@ CreateKeyPairResponseStruct KeyApi::CreateKeyPair(
 
     // convert parameters to response struct
     const bool is_wif = request.wif;
-    const NetType net_type = AddressApi::ConvertNetType(request.network);
+    const NetType net_type = AddressStructApi::ConvertNetType(request.network);
     response.privkey = is_wif ? privkey.ConvertWif(net_type, is_compressed)
                               : privkey.GetHex();  // NOLINT
     response.pubkey = pubkey.GetHex();

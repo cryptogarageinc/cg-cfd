@@ -60,7 +60,7 @@ struct ExtractScriptData {
 };
 
 /**
- * @brief Class providing common functionalities to TransactionApi and
+ * @brief Class providing common functionalities to TransactionStructApi and
  * ConfidentialTransactionApi.
  */
 class CFD_EXPORT TransactionApiBase {

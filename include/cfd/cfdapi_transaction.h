@@ -28,7 +28,7 @@ namespace api {
 /**
  * @brief Transaction関連のJSON APIクラス
  */
-class CFD_EXPORT TransactionApi {
+class CFD_EXPORT TransactionStructApi {
  public:
   /**
    * @brief JSONパラメータの情報を元に、Transactionを作成する.
@@ -91,7 +91,7 @@ class CFD_EXPORT TransactionApi {
       const CreateSignatureHashRequestStruct& request);
 
  private:
-  TransactionApi();
+  TransactionStructApi();
 
   /**
    * @brief MultiSigスクリプトかどうかをチェックする。
