@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "cfd/cfd_address.h"
-#include "cfd/cfd_script.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_bytedata.h"
 #include "cfdcore/cfdcore_key.h"
@@ -26,6 +25,7 @@ using cfd::core::GetBitcoinAddressFormatList;
 using cfd::core::NetType;
 using cfd::core::Pubkey;
 using cfd::core::Script;
+using cfd::core::ScriptUtil;
 using cfd::core::WitnessVersion;
 
 AddressFactory::AddressFactory()

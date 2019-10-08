@@ -27,7 +27,6 @@
 
 #include "cfd/cfd_address.h"
 #include "cfd/cfd_elements_address.h"
-#include "cfd/cfd_script.h"
 #include "cfd/cfdapi_address.h"
 #include "cfd/cfdapi_elements_address.h"
 #include "cfd/cfdapi_elements_transaction.h"
@@ -42,7 +41,7 @@ namespace api {
 
 using cfd::ConfidentialTransactionController;
 using cfd::ElementsAddressFactory;
-using cfd::ScriptUtil;
+using cfd::api::AddressApi;
 using cfd::core::Address;
 using cfd::core::AddressType;
 using cfd::core::Amount;
@@ -75,6 +74,7 @@ using cfd::core::Script;
 using cfd::core::ScriptBuilder;
 using cfd::core::ScriptElement;
 using cfd::core::ScriptOperator;
+using cfd::core::ScriptUtil;
 using cfd::core::SigHashType;
 using cfd::core::Transaction;
 using cfd::core::Txid;

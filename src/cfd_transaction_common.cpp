@@ -10,7 +10,6 @@
 #include <string>
 #include <vector>
 
-#include "cfd/cfd_script.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_amount.h"
 #include "cfdcore/cfdcore_coin.h"
@@ -35,12 +34,11 @@ using cfd::core::Pubkey;
 using cfd::core::Script;
 using cfd::core::ScriptBuilder;
 using cfd::core::ScriptOperator;
+using cfd::core::ScriptUtil;
 using cfd::core::SigHashType;
 using cfd::core::SignatureUtil;
 using cfd::core::Txid;
 using cfd::core::logger::warn;
-
-using cfd::ScriptUtil;
 
 // -----------------------------------------------------------------------------
 // Define

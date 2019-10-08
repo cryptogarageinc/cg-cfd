@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "cfd/cfd_address.h"
-#include "cfd/cfd_script.h"
 #include "cfd_manager.h"  // NOLINT
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_exception.h"
@@ -187,6 +186,7 @@ using cfd::core::CfdException;
 using cfd::core::NetType;
 using cfd::core::Pubkey;
 using cfd::core::Script;
+using cfd::core::ScriptUtil;
 using cfd::core::WitnessVersion;
 using cfd::core::logger::warn;
 
