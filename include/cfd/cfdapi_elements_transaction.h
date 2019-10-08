@@ -21,6 +21,7 @@
  * @brief cfdapi名前空間
  */
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::core::Privkey;
@@ -29,7 +30,7 @@ using cfd::core::Txid;
 /**
  * @brief Elements用Transaction関連の関数群クラス
  */
-class CFD_EXPORT ElementsTransactionApi {
+class CFD_EXPORT ElementsTransactionStructApi {
  public:
   /**
    * @brief パラメータの情報を元に、Elements用のRaw Transactionを作成する.
@@ -171,6 +172,7 @@ class CFD_EXPORT ElementsTransactionApi {
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_DISABLE_ELEMENTS

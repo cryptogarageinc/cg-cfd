@@ -22,9 +22,10 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
-using cfd::ScriptUtil;
+using cfd::api::AddressApi;
 using cfd::core::Address;
 using cfd::core::AddressFormatData;
 using cfd::core::AddressType;
@@ -33,10 +34,8 @@ using cfd::core::CfdException;
 using cfd::core::NetType;
 using cfd::core::Pubkey;
 using cfd::core::Script;
-using cfd::core::WitnessVersion;
-using cfd::core::logger::warn;
 
-CreateAddressResponseStruct AddressApi::CreateAddress(
+CreateAddressResponseStruct AddressStructApi::CreateAddress(
     const CreateAddressRequestStruct& request) {
   auto call_func = [](const CreateAddressRequestStruct& request)
       -> CreateAddressResponseStruct {  // NOLINT
@@ -48,15 +47,14 @@ CreateAddressResponseStruct AddressApi::CreateAddress(
     Script locking_script;
     Script redeem_script;
     NetType net_type = ConvertNetType(request.network);
-    AddressType addr_type =
-        AddressDirectApi::ConvertAddressType(request.hash_type);
+    AddressType addr_type = ConvertAddressType(request.hash_type);
 
     if (request.key_data.type == "pubkey") {
       pubkey = Pubkey(request.key_data.hex);
     } else if (request.key_data.type == "redeem_script") {
       script = Script(request.key_data.hex);
     }
-    addr = AddressDirectApi::CreateAddress(
+    addr = AddressApi::CreateAddress(
         net_type, addr_type, &pubkey, &script, &locking_script,
         &redeem_script);
 
@@ -79,7 +77,7 @@ CreateAddressResponseStruct AddressApi::CreateAddress(
   return result;
 }
 
-CreateMultisigResponseStruct AddressApi::CreateMultisig(
+CreateMultisigResponseStruct AddressStructApi::CreateMultisig(
     const CreateMultisigRequestStruct& request) {
   auto call_func = [](const CreateMultisigRequestStruct& request)
       -> CreateMultisigResponseStruct {  // NOLINT
@@ -92,12 +90,11 @@ CreateMultisigResponseStruct AddressApi::CreateMultisig(
 
     uint32_t req_sig_num = static_cast<uint32_t>(request.nrequired);
     NetType net_type = ConvertNetType(request.network);
-    AddressType addr_type =
-        AddressDirectApi::ConvertAddressType(request.hash_type);
+    AddressType addr_type = ConvertAddressType(request.hash_type);
     Script witness_script;
     Script redeem_script;
 
-    Address addr = AddressDirectApi::CreateMultisig(
+    Address addr = AddressApi::CreateMultisig(
         net_type, addr_type, req_sig_num, pubkeys, &redeem_script,
         &witness_script);
 
@@ -123,7 +120,7 @@ CreateMultisigResponseStruct AddressApi::CreateMultisig(
   return result;
 }
 
-NetType AddressApi::ConvertNetType(const std::string& network_type) {
+NetType AddressStructApi::ConvertNetType(const std::string& network_type) {
   NetType net_type;
   if (network_type == "mainnet") {
     net_type = NetType::kMainnet;
@@ -145,7 +142,55 @@ NetType AddressApi::ConvertNetType(const std::string& network_type) {
   return net_type;
 }
 
-Address AddressDirectApi::CreateAddress(
+AddressType AddressStructApi::ConvertAddressType(
+    const std::string& address_type) {
+  AddressType addr_type;
+  if (address_type == "p2pkh") {
+    addr_type = AddressType::kP2pkhAddress;
+  } else if (address_type == "p2sh") {
+    addr_type = AddressType::kP2shAddress;
+  } else if (address_type == "p2wpkh") {
+    addr_type = AddressType::kP2wpkhAddress;
+  } else if (address_type == "p2wsh") {
+    addr_type = AddressType::kP2wshAddress;
+  } else if (address_type == "p2sh-p2wpkh") {
+    addr_type = AddressType::kP2shP2wpkhAddress;
+  } else if (address_type == "p2sh-p2wsh") {
+    addr_type = AddressType::kP2shP2wshAddress;
+  } else {
+    warn(
+        CFD_LOG_SOURCE,
+        "Failed to ConvertAddress Type. "
+        "Invalid address_type passed:  address_type={}",
+        address_type);
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
+        "Invalid address_type passed. address_type must be"
+        " \"p2pkh\", \"p2sh\", \"p2wpkh\", \"p2wsh\", \"p2sh-p2wpkh\", or "
+        "\"p2sh-p2wsh\".");
+  }
+  return addr_type;
+}
+
+}  // namespace api
+}  // namespace js
+}  // namespace cfd
+
+namespace cfd {
+namespace api {
+
+using cfd::core::Address;
+using cfd::core::AddressFormatData;
+using cfd::core::AddressType;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::WitnessVersion;
+using cfd::core::logger::warn;
+
+Address AddressApi::CreateAddress(
     NetType net_type, AddressType address_type, const Pubkey* pubkey,
     const Script* script, Script* locking_script, Script* redeem_script,
     std::vector<AddressFormatData>* prefix_list) {
@@ -243,7 +288,7 @@ Address AddressDirectApi::CreateAddress(
   return addr;
 }
 
-Address AddressDirectApi::CreateMultisig(
+Address AddressApi::CreateMultisig(
     NetType net_type, AddressType address_type, uint32_t req_sig_num,
     const std::vector<Pubkey>& pubkeys, Script* redeem_script,
     Script* witness_script, std::vector<AddressFormatData>* prefix_list) {
@@ -294,36 +339,6 @@ Address AddressDirectApi::CreateMultisig(
         "\"p2wsh\" or \"p2sh-p2wsh\".");  // NOLINT
   }
   return addr;
-}
-
-AddressType AddressDirectApi::ConvertAddressType(
-    const std::string& address_type) {
-  AddressType addr_type;
-  if (address_type == "p2pkh") {
-    addr_type = AddressType::kP2pkhAddress;
-  } else if (address_type == "p2sh") {
-    addr_type = AddressType::kP2shAddress;
-  } else if (address_type == "p2wpkh") {
-    addr_type = AddressType::kP2wpkhAddress;
-  } else if (address_type == "p2wsh") {
-    addr_type = AddressType::kP2wshAddress;
-  } else if (address_type == "p2sh-p2wpkh") {
-    addr_type = AddressType::kP2shP2wpkhAddress;
-  } else if (address_type == "p2sh-p2wsh") {
-    addr_type = AddressType::kP2shP2wshAddress;
-  } else {
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to ConvertAddress Type. "
-        "Invalid address_type passed:  address_type={}",
-        address_type);
-    throw CfdException(
-        CfdError::kCfdIllegalArgumentError,
-        "Invalid address_type passed. address_type must be"
-        " \"p2pkh\", \"p2sh\", \"p2wpkh\", \"p2wsh\", \"p2sh-p2wpkh\", or "
-        "\"p2sh-p2wsh\".");
-  }
-  return addr_type;
 }
 
 }  // namespace api

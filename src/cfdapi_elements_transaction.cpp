@@ -37,13 +37,12 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::ConfidentialTransactionController;
 using cfd::ElementsAddressFactory;
 using cfd::ScriptUtil;
-using cfd::api::AddressApi;
-using cfd::api::TransactionApi;
 using cfd::core::Address;
 using cfd::core::AddressType;
 using cfd::core::Amount;
@@ -56,11 +55,15 @@ using cfd::core::ByteData256;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
 using cfd::core::ConfidentialAssetId;
+using cfd::core::ConfidentialNonce;
 using cfd::core::ConfidentialTransaction;
+using cfd::core::ConfidentialTxInReference;
 using cfd::core::ConfidentialTxOut;
+using cfd::core::ConfidentialTxOutReference;
 using cfd::core::ConfidentialValue;
 using cfd::core::ElementsAddressType;
 using cfd::core::ElementsConfidentialAddress;
+using cfd::core::ElementsNetType;
 using cfd::core::ExtKey;
 using cfd::core::HashUtil;
 using cfd::core::IssuanceBlindingKeyPair;
@@ -79,6 +82,8 @@ using cfd::core::UnblindParameter;
 using cfd::core::WitnessVersion;
 using cfd::core::logger::info;
 using cfd::core::logger::warn;
+using cfd::js::api::AddressStructApi;
+using cfd::js::api::TransactionStructApi;
 
 /**
  * @brief Issuance領域を表現する構造体
@@ -134,10 +139,10 @@ static ConfidentialTransactionController CreateController(
 }
 
 // -----------------------------------------------------------------------------
-// ElementsTransactionApiクラス
+// ElementsTransactionStructApiクラス
 // -----------------------------------------------------------------------------
 ElementsCreateRawTransactionResponseStruct
-ElementsTransactionApi::CreateRawTransaction(  // NOLINT
+ElementsTransactionStructApi::CreateRawTransaction(  // NOLINT
     const ElementsCreateRawTransactionRequestStruct& request) {
   auto call_func = [](const ElementsCreateRawTransactionRequestStruct& request)
       -> ElementsCreateRawTransactionResponseStruct {  // NOLINT
@@ -196,7 +201,7 @@ ElementsTransactionApi::CreateRawTransaction(  // NOLINT
 }
 
 ElementsDecodeRawTransactionResponseStruct
-ElementsTransactionApi::DecodeRawTransaction(  // NOLINT
+ElementsTransactionStructApi::DecodeRawTransaction(  // NOLINT
     const ElementsDecodeRawTransactionRequestStruct& request) {
   auto call_func = [](const ElementsDecodeRawTransactionRequestStruct& request)
       -> ElementsDecodeRawTransactionResponseStruct {  // NOLINT
@@ -420,7 +425,7 @@ ElementsTransactionApi::DecodeRawTransaction(  // NOLINT
       script_pub_key_res.req_sigs = extract_data.pushed_datas.size();
 
       ElementsNetType elements_net_type =
-          ElementsAddressApi::ConvertElementsNetType(request.network);
+          ElementsAddressStructApi::ConvertElementsNetType(request.network);
       ElementsAddressFactory addr_factory(elements_net_type);
       Address address;
       if (type == LockingScriptType::kMultisig) {
@@ -481,7 +486,7 @@ ElementsTransactionApi::DecodeRawTransaction(  // NOLINT
             pegout_extract_data.pushed_datas.size();
 
         const NetType net_type =
-            AddressApi::ConvertNetType(request.mainchain_network);
+            AddressStructApi::ConvertNetType(request.mainchain_network);
         AddressFactory btcaddr_factory(net_type);
         if (pegout_type == LockingScriptType::kMultisig) {
           script_pub_key_res.pegout_req_sigs = pegout_extract_data.req_sigs;
@@ -542,7 +547,8 @@ ElementsTransactionApi::DecodeRawTransaction(  // NOLINT
   return result;
 }
 
-GetWitnessStackNumResponseStruct ElementsTransactionApi::GetWitnessStackNum(
+GetWitnessStackNumResponseStruct
+ElementsTransactionStructApi::GetWitnessStackNum(
     const GetWitnessStackNumRequestStruct& request) {
   auto call_func = [](const GetWitnessStackNumRequestStruct& request)
       -> GetWitnessStackNumResponseStruct {  // NOLINT
@@ -557,7 +563,7 @@ GetWitnessStackNumResponseStruct ElementsTransactionApi::GetWitnessStackNum(
   return result;
 }
 
-AddSignResponseStruct ElementsTransactionApi::AddSign(
+AddSignResponseStruct ElementsTransactionStructApi::AddSign(
     const AddSignRequestStruct& request) {
   auto call_func =
       [](const AddSignRequestStruct& request) -> AddSignResponseStruct {
@@ -571,7 +577,7 @@ AddSignResponseStruct ElementsTransactionApi::AddSign(
   return result;
 }
 
-AddMultisigSignResponseStruct ElementsTransactionApi::AddMultisigSign(
+AddMultisigSignResponseStruct ElementsTransactionStructApi::AddMultisigSign(
     const AddMultisigSignRequestStruct& request) {
   auto call_func = [](const AddMultisigSignRequestStruct& request)
       -> AddMultisigSignResponseStruct {  // NOLINT
@@ -595,7 +601,8 @@ AddMultisigSignResponseStruct ElementsTransactionApi::AddMultisigSign(
   return result;
 }
 
-UpdateWitnessStackResponseStruct ElementsTransactionApi::UpdateWitnessStack(
+UpdateWitnessStackResponseStruct
+ElementsTransactionStructApi::UpdateWitnessStack(
     const UpdateWitnessStackRequestStruct& request) {
   auto call_func = [](const UpdateWitnessStackRequestStruct& request)
       -> UpdateWitnessStackResponseStruct {  // NOLINT
@@ -611,7 +618,7 @@ UpdateWitnessStackResponseStruct ElementsTransactionApi::UpdateWitnessStack(
 }
 
 CreateElementsSignatureHashResponseStruct
-ElementsTransactionApi::CreateSignatureHash(  // NOLINT
+ElementsTransactionStructApi::CreateSignatureHash(  // NOLINT
     const CreateElementsSignatureHashRequestStruct& request) {
   auto call_func = [](const CreateElementsSignatureHashRequestStruct& request)
       -> CreateElementsSignatureHashResponseStruct {  // NOLINT
@@ -678,7 +685,8 @@ ElementsTransactionApi::CreateSignatureHash(  // NOLINT
   return result;
 }
 
-BlindRawTransactionResponseStruct ElementsTransactionApi::BlindTransaction(
+BlindRawTransactionResponseStruct
+ElementsTransactionStructApi::BlindTransaction(
     const BlindRawTransactionRequestStruct& request) {
   auto call_func = [](const BlindRawTransactionRequestStruct& request)
       -> BlindRawTransactionResponseStruct {  // NOLINT
@@ -827,7 +835,8 @@ BlindRawTransactionResponseStruct ElementsTransactionApi::BlindTransaction(
   return result;
 }
 
-UnblindRawTransactionResponseStruct ElementsTransactionApi::UnblindTransaction(
+UnblindRawTransactionResponseStruct
+ElementsTransactionStructApi::UnblindTransaction(
     const UnblindRawTransactionRequestStruct& request) {
   auto call_func = [](const UnblindRawTransactionRequestStruct& request)
       -> UnblindRawTransactionResponseStruct {
@@ -902,7 +911,7 @@ UnblindRawTransactionResponseStruct ElementsTransactionApi::UnblindTransaction(
   return result;
 }
 
-SetRawIssueAssetResponseStruct ElementsTransactionApi::SetRawIssueAsset(
+SetRawIssueAssetResponseStruct ElementsTransactionStructApi::SetRawIssueAsset(
     const SetRawIssueAssetRequestStruct& request) {
   auto call_func = [](const SetRawIssueAssetRequestStruct& request)
       -> SetRawIssueAssetResponseStruct {  // NOLINT
@@ -981,7 +990,8 @@ SetRawIssueAssetResponseStruct ElementsTransactionApi::SetRawIssueAsset(
   return result;
 }
 
-SetRawReissueAssetResponseStruct ElementsTransactionApi::SetRawReissueAsset(
+SetRawReissueAssetResponseStruct
+ElementsTransactionStructApi::SetRawReissueAsset(
     const SetRawReissueAssetRequestStruct& request) {
   auto call_func = [](const SetRawReissueAssetRequestStruct& request)
       -> SetRawReissueAssetResponseStruct {  // NOLINT
@@ -1039,7 +1049,7 @@ SetRawReissueAssetResponseStruct ElementsTransactionApi::SetRawReissueAsset(
 }
 
 ElementsCreateRawPeginResponseStruct
-ElementsTransactionApi::CreateRawPeginTransaction(  // NOLINT
+ElementsTransactionStructApi::CreateRawPeginTransaction(  // NOLINT
     const ElementsCreateRawPeginRequestStruct& request) {
   auto call_func = [](const ElementsCreateRawPeginRequestStruct& request)
       -> ElementsCreateRawPeginResponseStruct {  // NOLINT
@@ -1122,7 +1132,7 @@ ElementsTransactionApi::CreateRawPeginTransaction(  // NOLINT
 }
 
 ElementsCreateRawPegoutResponseStruct
-ElementsTransactionApi::CreateRawPegoutTransaction(  // NOLINT
+ElementsTransactionStructApi::CreateRawPegoutTransaction(  // NOLINT
     const ElementsCreateRawPegoutRequestStruct& request) {
   auto call_func = [](const ElementsCreateRawPegoutRequestStruct& request)
       -> ElementsCreateRawPegoutResponseStruct {  // NOLINT
@@ -1164,7 +1174,8 @@ ElementsTransactionApi::CreateRawPegoutTransaction(  // NOLINT
 
     // PegoutのTxOut追加
     const std::string pegout_address = request.pegout.btc_address;
-    NetType net_type = AddressApi::ConvertNetType(request.pegout.network);
+    NetType net_type =
+        AddressStructApi::ConvertNetType(request.pegout.network);
 
     if (!request.pegout.online_pubkey.empty() &&
         !request.pegout.master_online_key.empty()) {
@@ -1261,7 +1272,7 @@ ElementsTransactionApi::CreateRawPegoutTransaction(  // NOLINT
 }
 
 GetIssuanceBlindingKeyResponseStruct
-ElementsTransactionApi::GetIssuanceBlindingKey(
+ElementsTransactionStructApi::GetIssuanceBlindingKey(
     const GetIssuanceBlindingKeyRequestStruct& request) {
   auto call_func = [](const GetIssuanceBlindingKeyRequestStruct& request)
       -> GetIssuanceBlindingKeyResponseStruct {  // NOLINT
@@ -1282,7 +1293,7 @@ ElementsTransactionApi::GetIssuanceBlindingKey(
 }
 
 ElementsCreateDestroyAmountResponseStruct
-ElementsTransactionApi::CreateDestroyAmountTransaction(
+ElementsTransactionStructApi::CreateDestroyAmountTransaction(
     const ElementsCreateDestroyAmountRequestStruct& request) {
   auto call_func = [](const ElementsCreateDestroyAmountRequestStruct& request)
       -> ElementsCreateDestroyAmountResponseStruct {  // NOLINT
@@ -1351,5 +1362,6 @@ ElementsTransactionApi::CreateDestroyAmountTransaction(
 }
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 #endif  // CFD_DISABLE_ELEMENTS

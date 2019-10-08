@@ -18,12 +18,13 @@
  * @brief cfdapi名前空間
  */
 namespace cfd {
+namespace js {
 namespace api {
 
 /**
  * @brief 共通系の関数群クラス
  */
-class CFD_EXPORT UtilApi {
+class CFD_EXPORT UtilStructApi {
  public:
   /**
    * @brief サポート機能情報を取得する。
@@ -32,10 +33,11 @@ class CFD_EXPORT UtilApi {
   static GetSupportedFunctionResponseStruct GetSupportedFunction();
 
  private:
-  UtilApi();
+  UtilStructApi();
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_INCLUDE_CFD_CFDAPI_UTILITY_H_

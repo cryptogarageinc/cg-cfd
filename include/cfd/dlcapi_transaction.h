@@ -18,12 +18,13 @@
  * @brief dlc_api名前空間
  */
 namespace dlc {
+namespace js {
 namespace api {
 
 /**
  * @brief DLCの取引に用いるTransaction関連のJOSN-APIクラス
  */
-class CFD_EXPORT DlcTransactionApi {
+class CFD_EXPORT DlcTransactionStructApi {
  public:
   /**
    * @brief
@@ -36,10 +37,11 @@ class CFD_EXPORT DlcTransactionApi {
       const AddCETxSignRequestStruct& request);
 
  private:
-  DlcTransactionApi();
+  DlcTransactionStructApi();
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace dlc
 
 #endif  // CFD_INCLUDE_CFD_DLCAPI_TRANSACTION_H_

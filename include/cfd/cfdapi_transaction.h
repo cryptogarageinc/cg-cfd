@@ -23,12 +23,13 @@
  * @brief cfdapi名前空間
  */
 namespace cfd {
+namespace js {
 namespace api {
 
 /**
  * @brief Transaction関連のJSON APIクラス
  */
-class CFD_EXPORT TransactionApi {
+class CFD_EXPORT TransactionStructApi {
  public:
   /**
    * @brief JSONパラメータの情報を元に、Transactionを作成する.
@@ -91,7 +92,7 @@ class CFD_EXPORT TransactionApi {
       const CreateSignatureHashRequestStruct& request);
 
  private:
-  TransactionApi();
+  TransactionStructApi();
 
   /**
    * @brief MultiSigスクリプトかどうかをチェックする。
@@ -131,6 +132,7 @@ class CFD_EXPORT TransactionApi {
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_INCLUDE_CFD_CFDAPI_TRANSACTION_H_

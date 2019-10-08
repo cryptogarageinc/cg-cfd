@@ -26,6 +26,7 @@
  * @brief cfdapi namespace
  */
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::core::ByteData;
@@ -60,7 +61,7 @@ struct ExtractScriptData {
 };
 
 /**
- * @brief Class providing common functionalities to TransactionApi and
+ * @brief Class providing common functionalities to TransactionStructApi and
  * ConfidentialTransactionApi.
  */
 class CFD_EXPORT TransactionApiBase {
@@ -143,6 +144,7 @@ class CFD_EXPORT TransactionApiBase {
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_INCLUDE_CFD_CFDAPI_TRANSACTION_BASE_H_
