@@ -15,8 +15,13 @@
 				"amount": 0
 			}
 		],
-		"blindPubkeys": [
-			""
+		"txouts": [
+			{
+				":class": "BlindTxOutRequest",
+				"index": 0,
+				"index:type": "uint32_t",
+				"blindPubkey": ""
+			}
 		],
 		"issuances":[
 			{

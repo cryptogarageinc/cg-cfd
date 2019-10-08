@@ -160,6 +160,18 @@ struct BlindTxInRequestStruct {
 };
 
 // ------------------------------------------------------------------------
+// BlindTxOutRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief BlindTxOutRequestStruct 構造体
+ */
+struct BlindTxOutRequestStruct {
+  uint32_t index = 0;             //!< index  // NOLINT
+  std::string blind_pubkey = "";  //!< blind_pubkey  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
 // BlindIssuanceRequestStruct
 // ------------------------------------------------------------------------
 /**
@@ -182,7 +194,7 @@ struct BlindIssuanceRequestStruct {
 struct BlindRawTransactionRequestStruct {
   std::string tx = "";                                //!< tx  // NOLINT
   std::vector<BlindTxInRequestStruct> txins;          //!< txins  // NOLINT
-  std::vector<std::string> blind_pubkeys;             //!< blind_pubkeys  // NOLINT
+  std::vector<BlindTxOutRequestStruct> txouts;        //!< txouts  // NOLINT
   std::vector<BlindIssuanceRequestStruct> issuances;  //!< issuances  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
@@ -582,6 +594,7 @@ struct ElementsCreateRawPeginRequestStruct {
   std::vector<ElementsPeginTxInStruct> txins;    //!< txins  // NOLINT
   std::vector<ElementsPeginTxOutStruct> txouts;  //!< txouts  // NOLINT
   ElementsPeginTxOutFeeStruct fee;               //!< fee  // NOLINT
+  bool is_random_sort_tx_out = false;            //!< is_random_sort_tx_out  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -955,7 +968,7 @@ struct IssuanceDataRequestStruct {
  */
 struct SetRawIssueAssetRequestStruct {
   std::string tx = "";                               //!< tx  // NOLINT
-  bool is_randomize = false;                         //!< is_randomize  // NOLINT
+  bool is_random_sort_tx_out = false;                //!< is_random_sort_tx_out  // NOLINT
   std::vector<IssuanceDataRequestStruct> issuances;  //!< issuances  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
@@ -1014,7 +1027,7 @@ struct ReissuanceDataRequestStruct {
  */
 struct SetRawReissueAssetRequestStruct {
   std::string tx = "";                                 //!< tx  // NOLINT
-  bool is_randomize = false;                           //!< is_randomize  // NOLINT
+  bool is_random_sort_tx_out = false;                  //!< is_random_sort_tx_out  // NOLINT
   std::vector<ReissuanceDataRequestStruct> issuances;  //!< issuances  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
@@ -1048,6 +1061,18 @@ struct SetRawReissueAssetResponseStruct {
 };
 
 // ------------------------------------------------------------------------
+// UnblindTxOutStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief UnblindTxOutStruct 構造体
+ */
+struct UnblindTxOutStruct {
+  uint32_t index = 0;             //!< index  // NOLINT
+  std::string blinding_key = "";  //!< blinding_key  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
 // UnblindIssuanceStruct
 // ------------------------------------------------------------------------
 /**
@@ -1069,8 +1094,7 @@ struct UnblindIssuanceStruct {
  */
 struct UnblindRawTransactionRequestStruct {
   std::string tx = "";                           //!< tx  // NOLINT
-  int64_t target_output_index = -1;              //!< target_output_index  // NOLINT
-  std::vector<std::string> blinding_keys;        //!< blinding_keys  // NOLINT
+  std::vector<UnblindTxOutStruct> txouts;        //!< txouts  // NOLINT
   std::vector<UnblindIssuanceStruct> issuances;  //!< issuances  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
@@ -1082,6 +1106,7 @@ struct UnblindRawTransactionRequestStruct {
  * @brief UnblindOutputStruct 構造体
  */
 struct UnblindOutputStruct {
+  uint32_t index = 0;                   //!< index  // NOLINT
   std::string asset = "";               //!< asset  // NOLINT
   std::string blind_factor = "";        //!< blind_factor  // NOLINT
   std::string asset_blind_factor = "";  //!< asset_blind_factor  // NOLINT
@@ -1299,12 +1324,12 @@ struct ElementsSignatureHashKeyDataStruct {
 };
 
 // ------------------------------------------------------------------------
-// CreateElementsSignatureHashTxInRequestStruct
+// CreateElementsSignatureHashTxInStruct
 // ------------------------------------------------------------------------
 /**
- * @brief CreateElementsSignatureHashTxInRequestStruct 構造体
+ * @brief CreateElementsSignatureHashTxInStruct 構造体
  */
-struct CreateElementsSignatureHashTxInRequestStruct {
+struct CreateElementsSignatureHashTxInStruct {
   std::string txid = "";                           //!< txid  // NOLINT
   uint32_t vout = 0;                               //!< vout  // NOLINT
   ElementsSignatureHashKeyDataStruct key_data;     //!< key_data  // NOLINT
@@ -1323,8 +1348,8 @@ struct CreateElementsSignatureHashTxInRequestStruct {
  * @brief CreateElementsSignatureHashRequestStruct 構造体
  */
 struct CreateElementsSignatureHashRequestStruct {
-  std::string tx = "";                                //!< tx  // NOLINT
-  CreateElementsSignatureHashTxInRequestStruct txin;  //!< txin  // NOLINT
+  std::string tx = "";                         //!< tx  // NOLINT
+  CreateElementsSignatureHashTxInStruct txin;  //!< txin  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 

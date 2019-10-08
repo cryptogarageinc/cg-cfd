@@ -4,9 +4,13 @@
 		":class": "UnblindRawTransactionRequest",
 		"tx": "",
 		"tx:comment": "transaction hex",
-		"targetOutputIndex": -1,
-		"blindingKeys": [
-			""
+		"txouts": [
+			{
+				":class": "UnblindTxOut",
+				"index": 0,
+				"index:type": "uint32_t",
+				"blindingKey": ""
+			}
 		],
 		"issuances": [
 			{
@@ -24,6 +28,8 @@
 		"outputs": [
 			{
 				":class": "UnblindOutput",
+				"index": 0,
+				"index:type": "uint32_t",
 				"asset": "",
 				"blindFactor": "",
 				"assetBlindFactor": "",

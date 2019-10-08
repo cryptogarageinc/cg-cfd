@@ -280,10 +280,10 @@ const generateSource = (filename, headerName, req, res, json_setting) => {
   }
 
   const source_file_header2 = `
-using cfdcore::JsonClassBase;
-using cfdcore::JsonObjectVector;
-using cfdcore::JsonValueVector;
-using cfdcore::JsonVector;
+using cfd::core::JsonClassBase;
+using cfd::core::JsonObjectVector;
+using cfd::core::JsonValueVector;
+using cfd::core::JsonVector;
 // clang-format off
 // @formatter:off\
 `
@@ -309,7 +309,7 @@ using cfdcore::JsonVector;
 // ------------------------------------------------------------------------
 // ${map_data.type}
 // ------------------------------------------------------------------------
-cfdcore::JsonTableMap<${map_data.type}>
+cfd::core::JsonTableMap<${map_data.type}>
   ${map_data.type}::json_mapper;
 std::vector<std::string> ${map_data.type}::item_list;
 
@@ -317,7 +317,7 @@ void ${map_data.type}::CollectFieldName() {
   if (!json_mapper.empty()) {
     return;
   }
-  cfdcore::CLASS_FUNCTION_TABLE<${map_data.type}> func_table;  // NOLINT
+  cfd::core::CLASS_FUNCTION_TABLE<${map_data.type}> func_table;  // NOLINT
 `
         result.push(source_class_header)
 
@@ -401,7 +401,7 @@ const generateClassHeader = (map_data, export_define) => {
  * @brief JSON-API（${map_data.type}）クラス
  */
 class ${export_define}${map_data.type}
-  : public cfdcore::JsonClassBase<${map_data.type}> {
+  : public cfd::core::JsonClassBase<${map_data.type}> {
  public:
   ${map_data.type}() {
     CollectFieldName();
@@ -508,7 +508,7 @@ const generateValueFunctionByHeader = (map_data, child_data) => {
    */
   static std::string Get${child_data.method_name}String(  // line separate
       const ${map_data.type}& obj) {  // NOLINT
-    return cfdcore::ConvertToString(obj.${child_data.variable_name}_);
+    return cfd::core::ConvertToString(obj.${child_data.variable_name}_);
   }
   /**
    * @brief ${child_data.name} フィールドへのJSON情報設定処理
@@ -518,7 +518,7 @@ const generateValueFunctionByHeader = (map_data, child_data) => {
   static void Set${child_data.method_name}String(  // line separate
       ${map_data.type}& obj,  // NOLINT
       const UniValue& json_value) {
-    cfdcore::ConvertFromUniValue(  // line separate
+    cfd::core::ConvertFromUniValue(  // line separate
       obj.${child_data.variable_name}_, json_value);
   }
 `
@@ -562,12 +562,12 @@ ${struct_convert_function}
    * @brief Mapテーブルの型名定義
    */
   using ${map_data.type}MapTable =
-    cfdcore::JsonTableMap<${map_data.type}>;
+    cfd::core::JsonTableMap<${map_data.type}>;
 
   /**
    * @brief JSONマッピングオブジェクトを取得する。
    * @return JSONマッピングオブジェクト
-   * @see cfdcore::JsonClassBase::GetJsonMapper()
+   * @see cfd::core::JsonClassBase::GetJsonMapper()
    */
   virtual const ${map_data.type}MapTable& GetJsonMapper() const {  // NOLINT
     return json_mapper;
@@ -576,7 +576,7 @@ ${struct_convert_function}
    * @brief JSONマッピングのアイテム一覧を取得する。
    * 対象の変数名を、定義順序に従い一覧取得する。
    * @return JSONマッピングのアイテム一覧
-   * @see cfdcore::JsonClassBase::GetJsonItemList()
+   * @see cfd::core::JsonClassBase::GetJsonItemList()
    */
   virtual const std::vector<std::string>& GetJsonItemList() const {
     return item_list;
@@ -585,7 +585,7 @@ ${struct_convert_function}
    * @brief JSONマッピング時に無視するアイテム一覧を取得する。
    * Serialize時に対象の変数を無視する。
    * @return JSONマッピング時に無視するアイテム一覧
-   * @see cfdcore::JsonClassBase::GetIgnoreItem()
+   * @see cfd::core::JsonClassBase::GetIgnoreItem()
    */
   virtual const std::set<std::string>& GetIgnoreItem() const {
     return ignore_items;
@@ -648,6 +648,7 @@ const generateHeader = (filename, dirname, req, res, json_setting, append_header
   const include_header = (json_setting.common_header) ? `#include "${json_setting.common_header}"\n` : '';
   const include_header2 = (append_header_name.length > 0) ? `#include "${append_header_name}"\n` : '';
 
+
   // header
   const header_file_header = `// Copyright 2019 CryptoGarage
 /**
@@ -677,10 +678,10 @@ ${include_header2}`
   }
 
   const header_file_header2 = `
-using cfdcore::JsonClassBase;
-using cfdcore::JsonObjectVector;
-using cfdcore::JsonValueVector;
-using cfdcore::JsonVector;
+using cfd::core::JsonClassBase;
+using cfd::core::JsonObjectVector;
+using cfd::core::JsonValueVector;
+using cfd::core::JsonVector;
 // clang-format off
 // @formatter:off\
 `

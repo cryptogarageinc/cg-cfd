@@ -41,7 +41,8 @@
 			":class": "ElementsPeginTxOutFee",
 			"amount": 0,
 			"asset": ""
-		}
+		},
+		"isRandomSortTxOut": false
 	},
 	"response": {
 		":class": "ElementsCreateRawPeginResponse",

@@ -50,8 +50,8 @@ class CfdManager {
 
  private:
   cfd::core::CfdCoreHandle handle_;  ///< ハンドル
-  bool initialized_;               ///< 初期化済みフラグ
-  bool finalized_;                 ///< 終了済みフラグ
+  bool initialized_;                 ///< 初期化済みフラグ
+  bool finalized_;                   ///< 終了済みフラグ
 };
 
 }  // namespace cfd
