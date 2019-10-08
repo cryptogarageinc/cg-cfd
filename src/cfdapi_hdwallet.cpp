@@ -16,18 +16,15 @@
 #include "cfd/cfdapi_hdwallet.h"
 #include "cfdapi_internal.h"  // NOLINT
 
-namespace cfd {
-namespace api {
-
-using cfd::core::ByteData;
-using cfd::core::CfdError;
-using cfd::core::CfdException;
-using cfd::core::HDWallet;
-using cfd::core::logger::warn;
-
 //////////////////////////////////
 /// HDWalletStructApi
 //////////////////////////////////
+namespace cfd {
+namespace js {
+namespace api {
+
+using cfd::api::HDWalletApi;
+using cfd::core::ByteData;
 
 GetMnemonicWordlistResponseStruct HDWalletStructApi::GetMnemonicWordlist(
     const GetMnemonicWordlistRequestStruct& request) {
@@ -112,9 +109,21 @@ HDWalletStructApi::ConvertEntropyToMnemonic(
   return result;
 }
 
+}  // namespace api
+}  // namespace js
+}  // namespace cfd
+
 //////////////////////////////////
 /// HDWalletApi
 //////////////////////////////////
+namespace cfd {
+namespace api {
+
+using cfd::core::ByteData;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::HDWallet;
+using cfd::core::logger::warn;
 
 std::vector<std::string> HDWalletApi::GetMnemonicWordlist(
     const std::string& language) {

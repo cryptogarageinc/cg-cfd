@@ -21,19 +21,15 @@
  * @brief cfdapi名前空間
  */
 namespace cfd {
+namespace js {
 namespace api {
 
-using cfd::core::Address;
-using cfd::core::AddressFormatData;
 using cfd::core::AddressType;
-using cfd::core::NetType;
-using cfd::core::Pubkey;
-using cfd::core::Script;
 
 /**
  * @brief Address関連の関数群クラス
  */
-class CFD_EXPORT AddressApi {
+class CFD_EXPORT AddressStructApi {
  public:
   /**
    * @brief JSONパラメータの情報を元に、Addressを作成する
@@ -59,15 +55,37 @@ class CFD_EXPORT AddressApi {
    */
   static cfd::core::NetType ConvertNetType(const std::string& network_type);
 
+  /**
+   * @brief Convert address type from string to AddressType.
+   * @param[in] address_type the address type as a string.
+   * @return the converted AddressType.
+   * @throws CfdException if address_type does not match any known AddressType.
+   */
+  static AddressType ConvertAddressType(const std::string& address_type);
+
  private:
-  AddressApi();
+  AddressStructApi();
 };
+
+}  // namespace api
+}  // namespace js
+}  // namespace cfd
+
+namespace cfd {
+namespace api {
+
+using cfd::core::Address;
+using cfd::core::AddressFormatData;
+using cfd::core::AddressType;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
 
 /**
  * @brief Address関連の関数群クラス
  * @details 現状は内部クラス扱い。あとで名称変更予定.
  */
-class CFD_EXPORT AddressDirectApi {
+class CFD_EXPORT AddressApi {
  public:
   /**
    * @brief Addressを作成する
@@ -103,16 +121,8 @@ class CFD_EXPORT AddressDirectApi {
       Script* witness_script = nullptr,
       std::vector<AddressFormatData>* prefix_list = nullptr);
 
-  /**
-   * @brief Convert address type from string to AddressType.
-   * @param[in] address_type the address type as a string.
-   * @return the converted AddressType.
-   * @throws CfdException if address_type does not match any known AddressType.
-   */
-  static AddressType ConvertAddressType(const std::string& address_type);
-
  private:
-  AddressDirectApi();
+  AddressApi();
 };
 
 }  // namespace api

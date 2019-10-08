@@ -22,6 +22,7 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::TransactionController;
@@ -478,7 +479,7 @@ AddMultisigSignResponseStruct TransactionApiBase::AddMultisigSign(
     AddMultisigSignResponseStruct response;
     // validate request
     AddressType addr_type =
-        AddressDirectApi::ConvertAddressType(request.txin.hash_type);
+        AddressStructApi::ConvertAddressType(request.txin.hash_type);
     ValidateAddMultisigSignRequest(request, addr_type);
 
     const std::string& hex_string = request.tx;
@@ -737,4 +738,5 @@ TransactionApiBase::AddMultisigSign<ConfidentialTransactionController>(
 #endif
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd

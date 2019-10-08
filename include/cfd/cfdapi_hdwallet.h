@@ -20,9 +20,8 @@
  * @brief cfdapi名前空間
  */
 namespace cfd {
+namespace js {
 namespace api {
-
-using cfd::core::ByteData;
 
 /**
  * @brief HDWallet構造体関数群クラス
@@ -57,6 +56,14 @@ class CFD_EXPORT HDWalletStructApi {
   HDWalletStructApi();
 };
 
+}  // namespace api
+}  // namespace js
+}  // namespace cfd
+
+namespace cfd {
+namespace api {
+
+using cfd::core::ByteData;
 /**
  * @brief HDWallet関数群クラス
  */
@@ -99,8 +106,6 @@ class CFD_EXPORT HDWalletApi {
  private:
   HDWalletApi();
 };
-
 }  // namespace api
 }  // namespace cfd
-
 #endif  // CFD_INCLUDE_CFD_CFDAPI_HDWALLET_H_

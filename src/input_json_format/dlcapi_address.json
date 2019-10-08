@@ -1,5 +1,5 @@
 {
-	"namespace": ["dlc","api"],
+	"namespace": ["dlc","js","api","json"],
 	"request": {
 		":class": "CreateCETxAddressRequest",
 		"network": "mainnet",

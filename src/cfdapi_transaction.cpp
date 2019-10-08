@@ -30,13 +30,13 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
 #ifndef CFD_DISABLE_ELEMENTS
-using cfd::api::ElementsTransactionApi;
+using cfd::js::api::ElementsTransactionStructApi;
 #endif  // CFD_DISABLE_ELEMENTS
 using cfd::TransactionController;
-using cfd::api::AddressApi;
 using cfd::core::Address;
 using cfd::core::AddressType;
 using cfd::core::Amount;
@@ -70,6 +70,7 @@ using cfd::core::TxInReference;
 using cfd::core::TxOutReference;
 using cfd::core::WitnessVersion;
 using cfd::core::logger::warn;
+using cfd::js::api::AddressStructApi;
 
 // -----------------------------------------------------------------------------
 // ファイル内関数
@@ -86,9 +87,9 @@ static TransactionController CreateController(const std::string& hex) {
 }
 
 // -----------------------------------------------------------------------------
-// TransactionApiクラス
+// TransactionStructApiクラス
 // -----------------------------------------------------------------------------
-CreateRawTransactionResponseStruct TransactionApi::CreateRawTransaction(
+CreateRawTransactionResponseStruct TransactionStructApi::CreateRawTransaction(
     const CreateRawTransactionRequestStruct& request) {
   auto call_func = [](const CreateRawTransactionRequestStruct& request)
       -> CreateRawTransactionResponseStruct {  // NOLINT
@@ -143,7 +144,7 @@ CreateRawTransactionResponseStruct TransactionApi::CreateRawTransaction(
   return result;
 }
 
-DecodeRawTransactionResponseStruct TransactionApi::DecodeRawTransaction(
+DecodeRawTransactionResponseStruct TransactionStructApi::DecodeRawTransaction(
     const DecodeRawTransactionRequestStruct& request) {
   auto call_func = [](const DecodeRawTransactionRequestStruct& request)
       -> DecodeRawTransactionResponseStruct {  // NOLINT
@@ -160,7 +161,7 @@ DecodeRawTransactionResponseStruct TransactionApi::DecodeRawTransaction(
     // TODO(k-matsuzawa): 引数のiswitness未使用。bitcoincoreの指定方法が不明瞭
     // // NOLINT
 
-    NetType net_type = AddressApi::ConvertNetType(request.network);
+    NetType net_type = AddressStructApi::ConvertNetType(request.network);
 
     // TransactionController作成
     TransactionController txc(hex_string);
@@ -321,7 +322,7 @@ DecodeRawTransactionResponseStruct TransactionApi::DecodeRawTransaction(
   return result;
 }
 
-GetWitnessStackNumResponseStruct TransactionApi::GetWitnessStackNum(
+GetWitnessStackNumResponseStruct TransactionStructApi::GetWitnessStackNum(
     const GetWitnessStackNumRequestStruct& request) {
   auto call_func = [](const GetWitnessStackNumRequestStruct& request)
       -> GetWitnessStackNumResponseStruct {  // NOLINT
@@ -336,7 +337,7 @@ GetWitnessStackNumResponseStruct TransactionApi::GetWitnessStackNum(
   return result;
 }
 
-AddSignResponseStruct TransactionApi::AddSign(
+AddSignResponseStruct TransactionStructApi::AddSign(
     const AddSignRequestStruct& request) {
   auto call_func =
       [](const AddSignRequestStruct& request) -> AddSignResponseStruct {
@@ -350,7 +351,7 @@ AddSignResponseStruct TransactionApi::AddSign(
   return result;
 }
 
-UpdateWitnessStackResponseStruct TransactionApi::UpdateWitnessStack(
+UpdateWitnessStackResponseStruct TransactionStructApi::UpdateWitnessStack(
     const UpdateWitnessStackRequestStruct& request) {
   auto call_func = [](const UpdateWitnessStackRequestStruct& request)
       -> UpdateWitnessStackResponseStruct {  // NOLINT
@@ -365,7 +366,7 @@ UpdateWitnessStackResponseStruct TransactionApi::UpdateWitnessStack(
   return result;
 }
 
-AddMultisigSignResponseStruct TransactionApi::AddMultisigSign(
+AddMultisigSignResponseStruct TransactionStructApi::AddMultisigSign(
     const AddMultisigSignRequestStruct& request) {
   auto call_func = [](const AddMultisigSignRequestStruct& request)
       -> AddMultisigSignResponseStruct {  // NOLINT
@@ -380,7 +381,7 @@ AddMultisigSignResponseStruct TransactionApi::AddMultisigSign(
   return result;
 }
 
-CreateSignatureHashResponseStruct TransactionApi::CreateSignatureHash(
+CreateSignatureHashResponseStruct TransactionStructApi::CreateSignatureHash(
     const CreateSignatureHashRequestStruct& request) {
   auto call_func = [](const CreateSignatureHashRequestStruct& request)
       -> CreateSignatureHashResponseStruct {  // NOLINT
@@ -440,7 +441,7 @@ CreateSignatureHashResponseStruct TransactionApi::CreateSignatureHash(
   return result;
 }
 
-bool TransactionApi::CheckMultiSigScript(const Script& script) {
+bool TransactionStructApi::CheckMultiSigScript(const Script& script) {
   bool is_match = false;
   std::vector<ScriptElement> script_element = script.GetElementList();
 
@@ -478,7 +479,7 @@ bool TransactionApi::CheckMultiSigScript(const Script& script) {
   return is_match;
 }
 
-bool TransactionApi::CheckP2pkhScript(const Script& script) {
+bool TransactionStructApi::CheckP2pkhScript(const Script& script) {
   // OP_DUP OP_HASH160 [HASH160] OP_EQUALVERIFY OP_CHECKSIG
   bool is_match = false;
   std::vector<ScriptElement> script_element = script.GetElementList();
@@ -505,7 +506,7 @@ bool TransactionApi::CheckP2pkhScript(const Script& script) {
   return is_match;
 }
 
-bool TransactionApi::CheckP2shScript(const Script& script) {
+bool TransactionStructApi::CheckP2shScript(const Script& script) {
   // OP_HASH160 [HASH160] OP_EQUAL
   bool is_match = false;
   std::vector<ScriptElement> script_element = script.GetElementList();
@@ -528,7 +529,7 @@ bool TransactionApi::CheckP2shScript(const Script& script) {
   return is_match;
 }
 
-bool TransactionApi::CheckPubkeyScript(const Script& script) {
+bool TransactionStructApi::CheckPubkeyScript(const Script& script) {
   // <pubkey> OP_CHECKSIG
   bool is_match = false;
   std::vector<ScriptElement> script_element = script.GetElementList();
@@ -549,7 +550,7 @@ bool TransactionApi::CheckPubkeyScript(const Script& script) {
   return is_match;
 }
 
-bool TransactionApi::CheckNullDataScript(const Script& script) {
+bool TransactionStructApi::CheckNullDataScript(const Script& script) {
   // OP_RETURN <0 to 40 bytes of data>
   static constexpr uint32_t kNullDataMaxSize = 40 + 1 + 1;
   bool is_match = false;
@@ -581,4 +582,5 @@ bool TransactionApi::CheckNullDataScript(const Script& script) {
 }
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
