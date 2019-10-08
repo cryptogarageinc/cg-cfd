@@ -39,7 +39,7 @@ using cfd::core::logger::warn;
 using cfd::js::api::TransactionApiBase;
 using dlc::DlcScriptUtil;
 
-AddCETxSignResponseStruct DlcTransactionApi::AddCETxSign(
+AddCETxSignResponseStruct DlcTransactionStructApi::AddCETxSign(
     const AddCETxSignRequestStruct& request) {
   auto call_func = [](const AddCETxSignRequestStruct& request)
       -> AddCETxSignResponseStruct {

@@ -34,10 +34,10 @@ using cfd::core::Pubkey;
 using cfd::core::Script;
 using cfd::core::WitnessVersion;
 using cfd::core::logger::warn;
-using cfd::js::api::AddressApi;
+using cfd::js::api::AddressStructApi;
 using dlc::DlcScriptUtil;
 
-CreateCETxAddressResponseStruct DlcAddressApi::CreateCETxAddress(
+CreateCETxAddressResponseStruct DlcAddressStructApi::CreateCETxAddress(
     const CreateCETxAddressRequestStruct& request) {
   auto call_func = [](const CreateCETxAddressRequestStruct& request)
       -> CreateCETxAddressResponseStruct {  // NOLINT
@@ -65,7 +65,7 @@ CreateCETxAddressResponseStruct DlcAddressApi::CreateCETxAddress(
 
     // アドレスの生成
     // WitnessVersionは0のみサポート
-    NetType net_type = AddressApi::ConvertNetType(request.network);
+    NetType net_type = AddressStructApi::ConvertNetType(request.network);
     Address cetx_addr;
     cetx_addr = AddressFactory(net_type).CreateP2wshAddress(redeem_script);
 

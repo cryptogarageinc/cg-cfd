@@ -26,7 +26,7 @@ namespace api {
 /**
  * @brief ElementsAddress関連の関数群クラス
  */
-class CFD_EXPORT ElementsAddressApi {
+class CFD_EXPORT ElementsAddressStructApi {
  public:
   /**
    * @brief JSONパラメータの情報を元に、Addressを作成する
@@ -81,7 +81,7 @@ class CFD_EXPORT ElementsAddressApi {
       const std::string& elements_net_type);
 
  private:
-  ElementsAddressApi();
+  ElementsAddressStructApi();
 };
 
 }  // namespace api

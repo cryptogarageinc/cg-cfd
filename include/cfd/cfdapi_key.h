@@ -22,7 +22,7 @@ namespace api {
 /**
  * @brief 鍵情報関連の関数群クラス
  */
-class CFD_EXPORT KeyApi {
+class CFD_EXPORT KeyStructApi {
  public:
   /**
    *  @brief
@@ -33,7 +33,7 @@ class CFD_EXPORT KeyApi {
       const CreateKeyPairRequestStruct& request);
 
  private:
-  KeyApi();
+  KeyStructApi();
 };
 
 }  // namespace api

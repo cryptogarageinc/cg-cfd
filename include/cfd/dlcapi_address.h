@@ -24,7 +24,7 @@ namespace api {
 /**
  * @brief DLCの取引に用いるAddress関連のJSON APIクラス
  */
-class CFD_EXPORT DlcAddressApi {
+class CFD_EXPORT DlcAddressStructApi {
  public:
   /**
    * @brief JSONパラメータの情報を元に、CETxに用いるAddressを作成する
@@ -36,7 +36,7 @@ class CFD_EXPORT DlcAddressApi {
       const CreateCETxAddressRequestStruct& request);
 
  private:
-  DlcAddressApi();
+  DlcAddressStructApi();
 };
 
 }  // namespace api

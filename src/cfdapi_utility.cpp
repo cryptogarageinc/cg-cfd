@@ -25,7 +25,7 @@ using cfd::core::CfdError;
 using cfd::core::CfdException;
 using cfd::core::logger::warn;
 
-GetSupportedFunctionResponseStruct UtilApi::GetSupportedFunction() {
+GetSupportedFunctionResponseStruct UtilStructApi::GetSupportedFunction() {
   auto call_func = []() -> GetSupportedFunctionResponseStruct {
     GetSupportedFunctionResponseStruct result;
     uint64_t support_function = cfd::GetSupportedFunction();

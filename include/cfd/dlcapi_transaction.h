@@ -24,7 +24,7 @@ namespace api {
 /**
  * @brief DLCの取引に用いるTransaction関連のJOSN-APIクラス
  */
-class CFD_EXPORT DlcTransactionApi {
+class CFD_EXPORT DlcTransactionStructApi {
  public:
   /**
    * @brief
@@ -37,7 +37,7 @@ class CFD_EXPORT DlcTransactionApi {
       const AddCETxSignRequestStruct& request);
 
  private:
-  DlcTransactionApi();
+  DlcTransactionStructApi();
 };
 
 }  // namespace api

@@ -479,7 +479,7 @@ AddMultisigSignResponseStruct TransactionApiBase::AddMultisigSign(
     AddMultisigSignResponseStruct response;
     // validate request
     AddressType addr_type =
-        AddressDirectApi::ConvertAddressType(request.txin.hash_type);
+        AddressStructApi::ConvertAddressType(request.txin.hash_type);
     ValidateAddMultisigSignRequest(request, addr_type);
 
     const std::string& hex_string = request.tx;
