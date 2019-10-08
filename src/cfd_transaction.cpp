@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "cfd/cfd_address.h"
-#include "cfd/cfd_script.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_amount.h"
 #include "cfdcore/cfdcore_coin.h"
@@ -29,6 +28,7 @@ using cfd::core::Address;
 using cfd::core::AddressType;
 using cfd::core::Amount;
 using cfd::core::ByteData;
+using cfd::core::ByteData256;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
 using cfd::core::HashType;
@@ -37,6 +37,7 @@ using cfd::core::Pubkey;
 using cfd::core::Script;
 using cfd::core::ScriptBuilder;
 using cfd::core::ScriptOperator;
+using cfd::core::ScriptUtil;
 using cfd::core::SigHashType;
 using cfd::core::SignatureUtil;
 using cfd::core::Transaction;
@@ -47,7 +48,6 @@ using cfd::core::TxOut;
 using cfd::core::TxOutReference;
 using cfd::core::logger::warn;
 
-using cfd::ScriptUtil;
 using cfd::TransactionController;
 
 // -----------------------------------------------------------------------------

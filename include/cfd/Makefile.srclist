@@ -10,7 +10,6 @@ CFD_ELEMENTS_PKGINCLUDE_FILES = \
 CFD_PKGINCLUDE_FILES = \
   cfd_common.h \
   cfd_fee.h \
-  cfd_script.h \
   cfd_transaction_common.h \
   cfd_transaction.h \
   cfd_address.h \

@@ -14,7 +14,6 @@
 #include "cfd/cfd_address.h"
 #include "cfd/cfd_elements_address.h"
 #include "cfd/cfd_fee.h"
-#include "cfd/cfd_script.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_amount.h"
 #include "cfdcore/cfdcore_coin.h"
@@ -37,6 +36,7 @@ using cfd::core::ElementsConfidentialAddress;
 using cfd::core::IssuanceParameter;
 using cfd::core::PegoutKeyData;
 using cfd::core::ScriptBuilder;
+using cfd::core::ScriptUtil;
 using cfd::core::logger::warn;
 
 // -----------------------------------------------------------------------------

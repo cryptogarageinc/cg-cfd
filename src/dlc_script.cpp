@@ -8,18 +8,17 @@
 #include "cfdcore/cfdcore_logger.h"
 #include "cfdcore/cfdcore_script.h"
 
-#include "cfd/cfd_script.h"
 #include "cfd/dlc_script.h"
 
 namespace dlc {
 
-using cfd::ScriptUtil;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
 using cfd::core::Pubkey;
 using cfd::core::Script;
 using cfd::core::ScriptBuilder;
 using cfd::core::ScriptOperator;
+using cfd::core::ScriptUtil;
 using cfd::core::logger::warn;
 
 Script DlcScriptUtil::CreateCETxRedeemScript(

@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "cfd/cfd_elements_address.h"
-#include "cfd/cfd_script.h"
 #include "cfd_manager.h"  // NOLINT
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_elements_address.h"
@@ -28,7 +27,6 @@ namespace cfd {
 namespace api {
 
 using cfd::ElementsAddressFactory;
-using cfd::ScriptUtil;
 using cfd::core::Address;
 using cfd::core::AddressFormatData;
 using cfd::core::CfdError;
@@ -40,6 +38,7 @@ using cfd::core::ElementsNetType;
 using cfd::core::NetType;
 using cfd::core::Pubkey;
 using cfd::core::Script;
+using cfd::core::ScriptUtil;
 using cfd::core::logger::warn;
 
 CreateAddressResponseStruct ElementsAddressApi::CreateAddress(

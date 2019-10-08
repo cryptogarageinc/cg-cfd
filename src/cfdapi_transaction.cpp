@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "cfd/cfd_address.h"
-#include "cfd/cfd_script.h"
 #include "cfd/cfd_transaction.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_coin.h"
@@ -36,7 +35,6 @@ namespace api {
 #ifndef CFD_DISABLE_ELEMENTS
 using cfd::api::ElementsTransactionApi;
 #endif  // CFD_DISABLE_ELEMENTS
-using cfd::ScriptUtil;
 using cfd::TransactionController;
 using cfd::api::AddressApi;
 using cfd::core::Address;
@@ -59,6 +57,7 @@ using cfd::core::ScriptBuilder;
 using cfd::core::ScriptElement;
 using cfd::core::ScriptElementType;
 using cfd::core::ScriptOperator;
+using cfd::core::ScriptUtil;
 using cfd::core::ScriptType;
 using cfd::core::ScriptWitness;
 using cfd::core::SigHashAlgorithm;

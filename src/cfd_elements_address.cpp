@@ -9,7 +9,6 @@
 #include <string>
 #include "cfd/cfd_common.h"
 
-#include "cfd/cfd_script.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_elements_address.h"
 #include "cfdcore/cfdcore_elements_script.h"
@@ -18,7 +17,6 @@
 
 namespace cfd {
 
-using cfd::ScriptUtil;
 using cfd::core::Address;
 using cfd::core::ConfidentialKey;
 using cfd::core::ContractHashUtil;
@@ -28,6 +26,7 @@ using cfd::core::ElementsNetType;
 using cfd::core::GetElementsAddressFormatList;
 using cfd::core::Pubkey;
 using cfd::core::Script;
+using cfd::core::ScriptUtil;
 
 ElementsAddressFactory::ElementsAddressFactory()
     : AddressFactory(NetType::kMainnet, GetElementsAddressFormatList()) {
