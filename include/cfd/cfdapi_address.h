@@ -24,12 +24,7 @@ namespace cfd {
 namespace js {
 namespace api {
 
-using cfd::core::Address;
-using cfd::core::AddressFormatData;
 using cfd::core::AddressType;
-using cfd::core::NetType;
-using cfd::core::Pubkey;
-using cfd::core::Script;
 
 /**
  * @brief Address関連の関数群クラス
@@ -71,6 +66,20 @@ class CFD_EXPORT AddressStructApi {
  private:
   AddressStructApi();
 };
+
+}  // namespace api
+}  // namespace js
+}  // namespace cfd
+
+namespace cfd {
+namespace api {
+
+using cfd::core::Address;
+using cfd::core::AddressFormatData;
+using cfd::core::AddressType;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
 
 /**
  * @brief Address関連の関数群クラス
@@ -117,7 +126,6 @@ class CFD_EXPORT AddressApi {
 };
 
 }  // namespace api
-}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_INCLUDE_CFD_CFDAPI_ADDRESS_H_

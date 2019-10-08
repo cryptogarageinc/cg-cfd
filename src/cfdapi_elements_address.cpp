@@ -30,6 +30,7 @@ namespace api {
 
 using cfd::ElementsAddressFactory;
 using cfd::ScriptUtil;
+using cfd::api::AddressApi;
 using cfd::core::Address;
 using cfd::core::AddressFormatData;
 using cfd::core::CfdError;

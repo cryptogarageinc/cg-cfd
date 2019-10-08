@@ -25,7 +25,7 @@ namespace cfd {
 namespace js {
 namespace api {
 
-using cfd::ScriptUtil;
+using cfd::api::AddressApi;
 using cfd::core::Address;
 using cfd::core::AddressFormatData;
 using cfd::core::AddressType;
@@ -34,8 +34,6 @@ using cfd::core::CfdException;
 using cfd::core::NetType;
 using cfd::core::Pubkey;
 using cfd::core::Script;
-using cfd::core::WitnessVersion;
-using cfd::core::logger::warn;
 
 CreateAddressResponseStruct AddressStructApi::CreateAddress(
     const CreateAddressRequestStruct& request) {
@@ -173,6 +171,24 @@ AddressType AddressStructApi::ConvertAddressType(
   }
   return addr_type;
 }
+
+}  // namespace api
+}  // namespace js
+}  // namespace cfd
+
+namespace cfd {
+namespace api {
+
+using cfd::core::Address;
+using cfd::core::AddressFormatData;
+using cfd::core::AddressType;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::WitnessVersion;
+using cfd::core::logger::warn;
 
 Address AddressApi::CreateAddress(
     NetType net_type, AddressType address_type, const Pubkey* pubkey,
@@ -326,5 +342,4 @@ Address AddressApi::CreateMultisig(
 }
 
 }  // namespace api
-}  // namespace js
 }  // namespace cfd
