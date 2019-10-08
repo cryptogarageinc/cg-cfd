@@ -811,7 +811,9 @@ const generateStructItemData = (text_array, req, res, json_data, last_namespaces
         text_array.push('')
         if (isArray(last_namespaces)) {
           for (let idx = last_namespaces.length - 1; idx >= 0; --idx) {
+            if (last_namespaces[idx] != "json") {
             text_array.push(`}  // namespace ${last_namespaces[idx]}`)
+          }
           }
         } else {
           text_array.push(`}  // namespace ${last_namespace}`)
@@ -821,7 +823,9 @@ const generateStructItemData = (text_array, req, res, json_data, last_namespaces
 
       if (isArray(json_data.namespace)) {
         for (let idx = 0; idx < json_data.namespace.length; ++idx) {
+          if (json_data.namespace[idx] != "json") {
           text_array.push(`namespace ${json_data.namespace[idx]} {`)
+        }
         }
       } else {
         text_array.push(`namespace ${namespace} {`)
@@ -895,11 +899,11 @@ const generateStructItemData = (text_array, req, res, json_data, last_namespaces
         }
 
         if (has_error_output && (map_data.struct_type.indexOf('ResponseStruct') >= 0)) {
-          if (namespace == 'cfd::api') {
+          if (namespace == 'cfd::js::api') {
             text_array.push(`  InnerErrorResponseStruct error;       //!< error information`)
           }
           else {
-            text_array.push(`  cfd::api::InnerErrorResponseStruct error;   //!< error information`)
+            text_array.push(`  cfd::js::api::InnerErrorResponseStruct error;   //!< error information`)
           }
         }
         text_array.push(`  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.`)
@@ -969,7 +973,7 @@ const generateStructHeader = (dirname, filename, json_list) => {
 `
   result.push(header_file_header)
 
-  let last_namespace = ''
+  let last_namespace = ""
   for (const json_data_index in json_list) {
     if (('priority' in json_list[json_data_index].json_data) &&
       (json_list[json_data_index].json_data['priority'] == 'high')) {
@@ -997,7 +1001,9 @@ const generateStructHeader = (dirname, filename, json_list) => {
   result.push('')
   if (isArray(last_namespace)) {
     for (let idx = last_namespace.length - 1; idx >= 0; --idx) {
+      if (last_namespace[idx] != "json") {
       result.push(`}  // namespace ${last_namespace[idx]}`)
+    }
     }
   } else {
     result.push(`}  // namespace ${last_namespace}`)
