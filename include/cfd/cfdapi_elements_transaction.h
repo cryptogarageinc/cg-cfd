@@ -13,19 +13,115 @@
 #include <string>
 
 #include "cfd/cfd_common.h"
+#include "cfd/cfd_elements_transaction.h"
 #include "cfd/cfdapi_struct.h"
 #include "cfdcore/cfdcore_coin.h"
+#include "cfdcore/cfdcore_elements_transaction.h"
 #include "cfdcore/cfdcore_key.h"
+#include "cfdcore/cfdcore_transaction_common.h"
+#include "cfdcore/cfdcore_util.h"
 
 /**
  * @brief cfdapi名前空間
  */
 namespace cfd {
-namespace js {
 namespace api {
 
+using cfd::ConfidentialTransactionController;
+using cfd::core::ConfidentialTxIn;
+using cfd::core::ConfidentialTxOut;
+using cfd::core::ConfidentialValue;
+using cfd::core::HashType;
 using cfd::core::Privkey;
+using cfd::core::SigHashType;
 using cfd::core::Txid;
+
+/**
+ * @brief Elements用Transaction関連の関数群クラス
+ */
+class CFD_EXPORT ElementsTransactionApi {
+ public:
+  /**
+   * @brief constructor.
+   */
+  ElementsTransactionApi() {}
+
+  /**
+   * @brief Elements用のRaw Transactionを作成する.
+   * @param[in] version     tx version
+   * @param[in] locktime    lock time
+   * @param[in] txins       tx input list
+   * @param[in] txouts      tx output list
+   * @param[in] txout_fee   tx output fee
+   * @return Transaction
+   */
+  ConfidentialTransactionController CreateRawTransaction(
+      uint32_t version, uint32_t locktime,
+      const std::vector<ConfidentialTxIn>& txins,
+      const std::vector<ConfidentialTxOut>& txouts,
+      const ConfidentialTxOut& txout_fee) const;
+
+  /**
+   * @brief tx情報およびパラメータから、SigHashを作成する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] pubkey          public key
+   * @param[in] value           value (amount or commitment)
+   * @param[in] hash_type       hash type
+   * @param[in] sighash_type    sighash type
+   * @return sighash
+   */
+  ByteData CreateSignatureHash(
+      const std::string& tx_hex, const ConfidentialTxIn& txin,
+      const Pubkey& pubkey, const ConfidentialValue& value, HashType hash_type,
+      const SigHashType& sighash_type) const;
+  /**
+   * @brief tx情報およびパラメータから、SigHashを作成する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] redeem_script   redeem script
+   * @param[in] value           value (amount or commitment)
+   * @param[in] hash_type       hash type
+   * @param[in] sighash_type    sighash type
+   * @return sighash
+   */
+  ByteData CreateSignatureHash(
+      const std::string& tx_hex, const ConfidentialTxIn& txin,
+      const Script& redeem_script, const ConfidentialValue& value,
+      HashType hash_type, const SigHashType& sighash_type) const;
+  /**
+   * @brief tx情報およびパラメータから、SigHashを作成する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] key_data        key data (pubkey or redeem script)
+   * @param[in] value           value (amount or commitment)
+   * @param[in] hash_type       hash type
+   * @param[in] sighash_type    sighash type
+   * @return sighash
+   */
+  ByteData CreateSignatureHash(
+      const std::string& tx_hex, const ConfidentialTxIn& txin,
+      const ByteData& key_data, const ConfidentialValue& value,
+      HashType hash_type, const SigHashType& sighash_type) const;
+
+  /*
+   * @brief Issue用BlindingKeyを作成する.
+   * @param[in] master_blinding_key master blindingKey
+   * @param[in] txid                issuance utxo txid
+   * @param[in] vout                issuance utxo vout
+   * @return blinding key
+   */
+  // 別クラスに分ける。Struct系のAPIを ～StructApi というクラスにした方が良い
+  // Privkey GetIssuanceBlindingKey(const Privkey& master_blinding_key,
+  //     const Txid& txid, int32_t vout);
+};
+
+}  // namespace api
+}  // namespace cfd
+
+namespace cfd {
+namespace js {
+namespace api {
 
 /**
  * @brief Elements用Transaction関連の関数群クラス
@@ -149,17 +245,6 @@ class CFD_EXPORT ElementsTransactionStructApi {
    */
   static GetIssuanceBlindingKeyResponseStruct GetIssuanceBlindingKey(
       const GetIssuanceBlindingKeyRequestStruct& request);
-
-  /*
-   * @brief Issue用BlindingKeyを作成する.
-   * @param[in] master_blinding_key master blindingKey
-   * @param[in] txid                issuance utxo txid
-   * @param[in] vout                issuance utxo vout
-   * @return blinding key
-   */
-  // 別クラスに分ける。Struct系のAPIを ～StructApi というクラスにした方が良い
-  // Privkey GetIssuanceBlindingKey(const Privkey& master_blinding_key,
-  //     const Txid& txid, int32_t vout);
 
   /**
    * @brief パラメータの情報を元に、Elements DestroyAmount用のRaw Transactionを作成する.
