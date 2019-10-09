@@ -15,11 +15,12 @@
 #include "cfdcore/cfdcore_logger.h"
 
 namespace dlc {
+namespace js {
 namespace api {
 
-using cfd::api::InnerErrorResponseStruct;
-using cfdcore::CfdException;
-using cfdcore::logger::warn;
+using cfd::core::CfdException;
+using cfd::core::logger::warn;
+using cfd::js::api::InnerErrorResponseStruct;
 
 /**
  * @brief CfdExceptionをInnerErrorResponseStructに変換する.
@@ -57,22 +58,23 @@ ResponseStructType ExecuteStructApi(
         CFD_LOG_SOURCE,
         "Failed to {}. CfdException occurred:  code={}, message={}",
         fuction_name, cfde.GetErrorCode(), cfde.what());
-    response.error = dlc::api::ConvertCfdExceptionToStruct(cfde);
+    response.error = dlc::js::api::ConvertCfdExceptionToStruct(cfde);
   } catch (const std::exception& except) {
     warn(
         CFD_LOG_SOURCE, "Failed to {}. Exception occurred: message={}",
         fuction_name, except.what());
-    response.error = dlc::api::ConvertCfdExceptionToStruct(CfdException());
+    response.error = dlc::js::api::ConvertCfdExceptionToStruct(CfdException());
   } catch (...) {
     warn(
         CFD_LOG_SOURCE, "Failed to {}. Unknown exception occurred.",
         fuction_name);
-    response.error = dlc::api::ConvertCfdExceptionToStruct(CfdException());
+    response.error = dlc::js::api::ConvertCfdExceptionToStruct(CfdException());
   }
   return response;
 }
 
 }  // namespace api
+}  // namespace js
 }  // namespace dlc
 
 #endif  // CFD_SRC_DLCAPI_INTERNAL_H_

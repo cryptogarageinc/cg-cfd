@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "cfd/cfd_elements_address.h"
-#include "cfd/cfd_script.h"
 #include "cfd_manager.h"  // NOLINT
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_elements_address.h"
@@ -25,24 +24,26 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::ElementsAddressFactory;
-using cfd::ScriptUtil;
-using cfdcore::Address;
-using cfdcore::AddressFormatData;
-using cfdcore::CfdError;
-using cfdcore::CfdException;
-using cfdcore::ConfidentialKey;
-using cfdcore::ContractHashUtil;
-using cfdcore::ElementsConfidentialAddress;
-using cfdcore::ElementsNetType;
-using cfdcore::NetType;
-using cfdcore::Pubkey;
-using cfdcore::Script;
-using cfdcore::logger::warn;
+using cfd::api::AddressApi;
+using cfd::core::Address;
+using cfd::core::AddressFormatData;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::ConfidentialKey;
+using cfd::core::ContractHashUtil;
+using cfd::core::ElementsConfidentialAddress;
+using cfd::core::ElementsNetType;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::ScriptUtil;
+using cfd::core::logger::warn;
 
-CreateAddressResponseStruct ElementsAddressApi::CreateAddress(
+CreateAddressResponseStruct ElementsAddressStructApi::CreateAddress(
     const CreateAddressRequestStruct& request) {
   auto call_func = [](const CreateAddressRequestStruct& request)
       -> CreateAddressResponseStruct {  // NOLINT
@@ -55,7 +56,7 @@ CreateAddressResponseStruct ElementsAddressApi::CreateAddress(
     Script redeem_script;
     ElementsNetType net_type = ConvertElementsNetType(request.network);
     AddressType addr_type =
-        AddressDirectApi::ConvertAddressType(request.hash_type);
+        AddressStructApi::ConvertAddressType(request.hash_type);
 
     if (request.key_data.type == "pubkey") {
       pubkey = Pubkey(request.key_data.hex);
@@ -63,8 +64,8 @@ CreateAddressResponseStruct ElementsAddressApi::CreateAddress(
       script = Script(request.key_data.hex);
     }
     std::vector<AddressFormatData> prefix_list =
-        cfdcore::GetElementsAddressFormatList();
-    addr = AddressDirectApi::CreateAddress(
+        cfd::core::GetElementsAddressFormatList();
+    addr = AddressApi::CreateAddress(
         net_type, addr_type, &pubkey, &script, &locking_script, &redeem_script,
         &prefix_list);
 
@@ -87,7 +88,7 @@ CreateAddressResponseStruct ElementsAddressApi::CreateAddress(
   return result;
 }
 
-CreateMultisigResponseStruct ElementsAddressApi::CreateMultisig(
+CreateMultisigResponseStruct ElementsAddressStructApi::CreateMultisig(
     const CreateMultisigRequestStruct& request) {
   auto call_func = [](const CreateMultisigRequestStruct& request)
       -> CreateMultisigResponseStruct {  // NOLINT
@@ -101,13 +102,13 @@ CreateMultisigResponseStruct ElementsAddressApi::CreateMultisig(
     uint32_t req_sig_num = static_cast<uint32_t>(request.nrequired);
     ElementsNetType net_type = ConvertElementsNetType(request.network);
     AddressType addr_type =
-        AddressDirectApi::ConvertAddressType(request.hash_type);
+        AddressStructApi::ConvertAddressType(request.hash_type);
     Script witness_script;
     Script redeem_script;
     std::vector<AddressFormatData> prefix_list =
-        cfdcore::GetElementsAddressFormatList();
+        cfd::core::GetElementsAddressFormatList();
 
-    Address addr = AddressDirectApi::CreateMultisig(
+    Address addr = AddressApi::CreateMultisig(
         net_type, addr_type, req_sig_num, pubkeys, &redeem_script,
         &witness_script, &prefix_list);
 
@@ -134,7 +135,7 @@ CreateMultisigResponseStruct ElementsAddressApi::CreateMultisig(
 }
 
 GetConfidentialAddressResponseStruct
-ElementsAddressApi::GetConfidentialAddress(
+ElementsAddressStructApi::GetConfidentialAddress(
     const GetConfidentialAddressRequestStruct& request) {
   auto call_func = [](const GetConfidentialAddressRequestStruct& request)
       -> GetConfidentialAddressResponseStruct {  // NOLINT
@@ -173,7 +174,8 @@ ElementsAddressApi::GetConfidentialAddress(
   return result;
 }
 
-GetUnblindedAddressResponseStruct ElementsAddressApi::GetUnblindedAddress(
+GetUnblindedAddressResponseStruct
+ElementsAddressStructApi::GetUnblindedAddress(
     const GetUnblindedAddressRequestStruct& request) {
   auto call_func = [](const GetUnblindedAddressRequestStruct& request)
       -> GetUnblindedAddressResponseStruct {  // NOLINT
@@ -202,7 +204,7 @@ GetUnblindedAddressResponseStruct ElementsAddressApi::GetUnblindedAddress(
 }
 
 ElementsCreatePegInAddressResponseStruct
-ElementsAddressApi::CreatePegInAddress(
+ElementsAddressStructApi::CreatePegInAddress(
     const ElementsCreatePegInAddressRequestStruct& request) {
   auto call_func = [](const ElementsCreatePegInAddressRequestStruct& request)
       -> ElementsCreatePegInAddressResponseStruct {  // NOLINT
@@ -219,7 +221,7 @@ ElementsAddressApi::CreatePegInAddress(
         ContractHashUtil::GetContractScript(claim_script, fedpegscript);
 
     // create peg-in address(P2CH = P2SH-P2WSH)
-    NetType net_type = AddressApi::ConvertNetType(request.network);
+    NetType net_type = AddressStructApi::ConvertNetType(request.network);
     Address p2ch = ElementsAddressFactory(net_type).CreatePegInAddress(
         sidechain_pubkey, fedpegscript);
 
@@ -238,7 +240,7 @@ ElementsAddressApi::CreatePegInAddress(
   return result;
 }
 
-ElementsNetType ElementsAddressApi::ConvertElementsNetType(
+ElementsNetType ElementsAddressStructApi::ConvertElementsNetType(
     const std::string& elements_net_type) {
   ElementsNetType net_type;
   if (elements_net_type == "liquidv1") {
@@ -260,5 +262,6 @@ ElementsNetType ElementsAddressApi::ConvertElementsNetType(
 }
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 #endif  // CFD_DISABLE_ELEMENTS

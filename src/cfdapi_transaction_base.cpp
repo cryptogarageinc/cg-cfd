@@ -22,24 +22,25 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::TransactionController;
-using cfdcore::AddressType;
-using cfdcore::ByteData;
-using cfdcore::CfdError;
-using cfdcore::CfdException;
-using cfdcore::CryptoUtil;
-using cfdcore::IteratorWrapper;
-using cfdcore::Pubkey;
-using cfdcore::Script;
-using cfdcore::ScriptBuilder;
-using cfdcore::ScriptElement;
-using cfdcore::ScriptOperator;
-using cfdcore::SigHashAlgorithm;
-using cfdcore::SigHashType;
-using cfdcore::Txid;
-using cfdcore::logger::warn;
+using cfd::core::AddressType;
+using cfd::core::ByteData;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::CryptoUtil;
+using cfd::core::IteratorWrapper;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::ScriptBuilder;
+using cfd::core::ScriptElement;
+using cfd::core::ScriptOperator;
+using cfd::core::SigHashAlgorithm;
+using cfd::core::SigHashType;
+using cfd::core::Txid;
+using cfd::core::logger::warn;
 
 /**
  * @brief Validate the request for AddMultisigSign.
@@ -478,7 +479,7 @@ AddMultisigSignResponseStruct TransactionApiBase::AddMultisigSign(
     AddMultisigSignResponseStruct response;
     // validate request
     AddressType addr_type =
-        AddressDirectApi::ConvertAddressType(request.txin.hash_type);
+        AddressStructApi::ConvertAddressType(request.txin.hash_type);
     ValidateAddMultisigSignRequest(request, addr_type);
 
     const std::string& hex_string = request.tx;
@@ -737,4 +738,5 @@ TransactionApiBase::AddMultisigSign<ConfidentialTransactionController>(
 #endif
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd

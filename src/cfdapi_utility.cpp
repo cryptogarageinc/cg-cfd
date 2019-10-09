@@ -16,15 +16,16 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
 using cfd::GetSupportedFunction;
 using cfd::LibraryFunction;
-using cfdcore::CfdError;
-using cfdcore::CfdException;
-using cfdcore::logger::warn;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::logger::warn;
 
-GetSupportedFunctionResponseStruct UtilApi::GetSupportedFunction() {
+GetSupportedFunctionResponseStruct UtilStructApi::GetSupportedFunction() {
   auto call_func = []() -> GetSupportedFunctionResponseStruct {
     GetSupportedFunctionResponseStruct result;
     uint64_t support_function = cfd::GetSupportedFunction();
@@ -56,4 +57,5 @@ InnerErrorResponseStruct ConvertCfdExceptionToStruct(
 }
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd

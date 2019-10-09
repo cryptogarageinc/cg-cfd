@@ -20,12 +20,13 @@
  * @brief cfdapi名前空間
  */
 namespace cfd {
+namespace js {
 namespace api {
 
 /**
  * @brief ElementsAddress関連の関数群クラス
  */
-class CFD_EXPORT ElementsAddressApi {
+class CFD_EXPORT ElementsAddressStructApi {
  public:
   /**
    * @brief JSONパラメータの情報を元に、Addressを作成する
@@ -76,14 +77,15 @@ class CFD_EXPORT ElementsAddressApi {
    * @return 引数に対応するElementsNetType構造体
    * @throws CfdException 指定文字列以外が渡された場合
    */
-  static cfdcore::ElementsNetType ConvertElementsNetType(
+  static cfd::core::ElementsNetType ConvertElementsNetType(
       const std::string& elements_net_type);
 
  private:
-  ElementsAddressApi();
+  ElementsAddressStructApi();
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_DISABLE_ELEMENTS

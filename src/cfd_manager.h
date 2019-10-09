@@ -49,9 +49,9 @@ class CfdManager {
   uint64_t GetSupportedFunction();
 
  private:
-  cfdcore::CfdCoreHandle handle_;  ///< ハンドル
-  bool initialized_;               ///< 初期化済みフラグ
-  bool finalized_;                 ///< 終了済みフラグ
+  cfd::core::CfdCoreHandle handle_;  ///< ハンドル
+  bool initialized_;                 ///< 初期化済みフラグ
+  bool finalized_;                   ///< 終了済みフラグ
 };
 
 }  // namespace cfd

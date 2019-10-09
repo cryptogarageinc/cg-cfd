@@ -15,6 +15,7 @@
 // clang-format off
 // @formatter:off
 namespace cfd {
+namespace js {
 namespace api {
 
 // ------------------------------------------------------------------------
@@ -84,7 +85,7 @@ struct AddMultisigSignRequestStruct {
  */
 struct AddMultisigSignResponseStruct {
   std::string hex = "";  //!< hex  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -139,7 +140,7 @@ struct AddSignRequestStruct {
  */
 struct AddSignResponseStruct {
   std::string hex = "";  //!< hex  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -156,6 +157,18 @@ struct BlindTxInRequestStruct {
   std::string blind_factor = "";        //!< blind_factor  // NOLINT
   std::string asset_blind_factor = "";  //!< asset_blind_factor  // NOLINT
   int64_t amount = 0;                   //!< amount  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// BlindTxOutRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief BlindTxOutRequestStruct 構造体
+ */
+struct BlindTxOutRequestStruct {
+  uint32_t index = 0;             //!< index  // NOLINT
+  std::string blind_pubkey = "";  //!< blind_pubkey  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -182,7 +195,7 @@ struct BlindIssuanceRequestStruct {
 struct BlindRawTransactionRequestStruct {
   std::string tx = "";                                //!< tx  // NOLINT
   std::vector<BlindTxInRequestStruct> txins;          //!< txins  // NOLINT
-  std::vector<std::string> blind_pubkeys;             //!< blind_pubkeys  // NOLINT
+  std::vector<BlindTxOutRequestStruct> txouts;        //!< txouts  // NOLINT
   std::vector<BlindIssuanceRequestStruct> issuances;  //!< issuances  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
@@ -195,7 +208,7 @@ struct BlindRawTransactionRequestStruct {
  */
 struct BlindRawTransactionResponseStruct {
   std::string hex = "";  //!< hex  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -219,7 +232,7 @@ struct ConvertEntropyToMnemonicRequestStruct {
  */
 struct ConvertEntropyToMnemonicResponseStruct {
   std::vector<std::string> mnemonic;  //!< mnemonic  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -247,7 +260,7 @@ struct ConvertMnemonicToSeedRequestStruct {
 struct ConvertMnemonicToSeedResponseStruct {
   std::string seed = "";     //!< seed  // NOLINT
   std::string entropy = "";  //!< entropy  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -287,7 +300,7 @@ struct CreateAddressResponseStruct {
   std::string address = "";         //!< address  // NOLINT
   std::string locking_script = "";  //!< locking_script  // NOLINT
   std::string redeem_script = "";   //!< redeem_script  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -313,7 +326,7 @@ struct CreateKeyPairRequestStruct {
 struct CreateKeyPairResponseStruct {
   std::string privkey = "";  //!< privkey  // NOLINT
   std::string pubkey = "";   //!< pubkey  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -402,7 +415,7 @@ struct DecodeRawTransactionResponseStruct {
   uint32_t locktime = 0;                              //!< locktime  // NOLINT
   std::vector<DecodeRawTransactionTxInStruct> vin;    //!< vin  // NOLINT
   std::vector<DecodeRawTransactionTxOutStruct> vout;  //!< vout  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -481,7 +494,7 @@ struct ElementsCreateDestroyAmountRequestStruct {
  */
 struct ElementsCreateDestroyAmountResponseStruct {
   std::string hex = "";  //!< hex  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -508,7 +521,7 @@ struct ElementsCreatePegInAddressResponseStruct {
   std::string mainchain_address = "";   //!< mainchain_address  // NOLINT
   std::string claim_script = "";        //!< claim_script  // NOLINT
   std::string tweak_fedpegscript = "";  //!< tweak_fedpegscript  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -582,6 +595,7 @@ struct ElementsCreateRawPeginRequestStruct {
   std::vector<ElementsPeginTxInStruct> txins;    //!< txins  // NOLINT
   std::vector<ElementsPeginTxOutStruct> txouts;  //!< txouts  // NOLINT
   ElementsPeginTxOutFeeStruct fee;               //!< fee  // NOLINT
+  bool is_random_sort_tx_out = false;            //!< is_random_sort_tx_out  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -593,7 +607,7 @@ struct ElementsCreateRawPeginRequestStruct {
  */
 struct ElementsCreateRawPeginResponseStruct {
   std::string hex = "";  //!< hex  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -681,7 +695,7 @@ struct ElementsCreateRawPegoutRequestStruct {
 struct ElementsCreateRawPegoutResponseStruct {
   std::string hex = "";          //!< hex  // NOLINT
   std::string btc_address = "";  //!< btc_address  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -747,7 +761,7 @@ struct ElementsCreateRawTransactionRequestStruct {
  */
 struct ElementsCreateRawTransactionResponseStruct {
   std::string hex = "";  //!< hex  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -877,7 +891,7 @@ struct ElementsDecodeRawTransactionResponseStruct {
   uint32_t locktime = 0;                                      //!< locktime  // NOLINT
   std::vector<ElementsDecodeRawTransactionTxInStruct> vin;    //!< vin  // NOLINT
   std::vector<ElementsDecodeRawTransactionTxOutStruct> vout;  //!< vout  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -901,7 +915,7 @@ struct GetConfidentialAddressRequestStruct {
  */
 struct GetConfidentialAddressResponseStruct {
   std::string confidential_address = "";  //!< confidential_address  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -924,7 +938,7 @@ struct GetUnblindedAddressRequestStruct {
  */
 struct GetUnblindedAddressResponseStruct {
   std::string unblinded_address = "";  //!< unblinded_address  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -955,7 +969,7 @@ struct IssuanceDataRequestStruct {
  */
 struct SetRawIssueAssetRequestStruct {
   std::string tx = "";                               //!< tx  // NOLINT
-  bool is_randomize = false;                         //!< is_randomize  // NOLINT
+  bool is_random_sort_tx_out = false;                //!< is_random_sort_tx_out  // NOLINT
   std::vector<IssuanceDataRequestStruct> issuances;  //!< issuances  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
@@ -972,7 +986,7 @@ struct IssuanceDataResponseStruct {
   std::string asset = "";    //!< asset  // NOLINT
   std::string entropy = "";  //!< entropy  // NOLINT
   std::string token = "";    //!< token  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -985,7 +999,7 @@ struct IssuanceDataResponseStruct {
 struct SetRawIssueAssetResponseStruct {
   std::string hex = "";                               //!< hex  // NOLINT
   std::vector<IssuanceDataResponseStruct> issuances;  //!< issuances  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -1014,7 +1028,7 @@ struct ReissuanceDataRequestStruct {
  */
 struct SetRawReissueAssetRequestStruct {
   std::string tx = "";                                 //!< tx  // NOLINT
-  bool is_randomize = false;                           //!< is_randomize  // NOLINT
+  bool is_random_sort_tx_out = false;                  //!< is_random_sort_tx_out  // NOLINT
   std::vector<ReissuanceDataRequestStruct> issuances;  //!< issuances  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
@@ -1030,7 +1044,7 @@ struct ReissuanceDataResponseStruct {
   uint32_t vout = 0;         //!< vout  // NOLINT
   std::string asset = "";    //!< asset  // NOLINT
   std::string entropy = "";  //!< entropy  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -1043,7 +1057,19 @@ struct ReissuanceDataResponseStruct {
 struct SetRawReissueAssetResponseStruct {
   std::string hex = "";                                 //!< hex  // NOLINT
   std::vector<ReissuanceDataResponseStruct> issuances;  //!< issuances  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// UnblindTxOutStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief UnblindTxOutStruct 構造体
+ */
+struct UnblindTxOutStruct {
+  uint32_t index = 0;             //!< index  // NOLINT
+  std::string blinding_key = "";  //!< blinding_key  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -1069,8 +1095,7 @@ struct UnblindIssuanceStruct {
  */
 struct UnblindRawTransactionRequestStruct {
   std::string tx = "";                           //!< tx  // NOLINT
-  int64_t target_output_index = -1;              //!< target_output_index  // NOLINT
-  std::vector<std::string> blinding_keys;        //!< blinding_keys  // NOLINT
+  std::vector<UnblindTxOutStruct> txouts;        //!< txouts  // NOLINT
   std::vector<UnblindIssuanceStruct> issuances;  //!< issuances  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
@@ -1082,6 +1107,7 @@ struct UnblindRawTransactionRequestStruct {
  * @brief UnblindOutputStruct 構造体
  */
 struct UnblindOutputStruct {
+  uint32_t index = 0;                   //!< index  // NOLINT
   std::string asset = "";               //!< asset  // NOLINT
   std::string blind_factor = "";        //!< blind_factor  // NOLINT
   std::string asset_blind_factor = "";  //!< asset_blind_factor  // NOLINT
@@ -1115,7 +1141,7 @@ struct UnblindRawTransactionResponseStruct {
   std::string hex = "";                                       //!< hex  // NOLINT
   std::vector<UnblindOutputStruct> outputs;                   //!< outputs  // NOLINT
   std::vector<UnblindIssuanceOutputStruct> issuance_outputs;  //!< issuance_outputs  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -1140,7 +1166,7 @@ struct GetIssuanceBlindingKeyRequestStruct {
  */
 struct GetIssuanceBlindingKeyResponseStruct {
   std::string blinding_key = "";  //!< blinding_key  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -1163,7 +1189,7 @@ struct GetMnemonicWordlistRequestStruct {
  */
 struct GetMnemonicWordlistResponseStruct {
   std::vector<std::string> wordlist;  //!< wordlist  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -1200,7 +1226,7 @@ struct GetWitnessStackNumRequestStruct {
  */
 struct GetWitnessStackNumResponseStruct {
   int64_t count = 0;  //!< count  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -1229,7 +1255,7 @@ struct CreateMultisigResponseStruct {
   std::string address = "";         //!< address  // NOLINT
   std::string redeem_script = "";   //!< redeem_script  // NOLINT
   std::string witness_script = "";  //!< witness_script  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -1282,7 +1308,7 @@ struct CreateSignatureHashRequestStruct {
  */
 struct CreateSignatureHashResponseStruct {
   std::string sighash = "";  //!< sighash  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -1299,12 +1325,12 @@ struct ElementsSignatureHashKeyDataStruct {
 };
 
 // ------------------------------------------------------------------------
-// CreateElementsSignatureHashTxInRequestStruct
+// CreateElementsSignatureHashTxInStruct
 // ------------------------------------------------------------------------
 /**
- * @brief CreateElementsSignatureHashTxInRequestStruct 構造体
+ * @brief CreateElementsSignatureHashTxInStruct 構造体
  */
-struct CreateElementsSignatureHashTxInRequestStruct {
+struct CreateElementsSignatureHashTxInStruct {
   std::string txid = "";                           //!< txid  // NOLINT
   uint32_t vout = 0;                               //!< vout  // NOLINT
   ElementsSignatureHashKeyDataStruct key_data;     //!< key_data  // NOLINT
@@ -1323,8 +1349,8 @@ struct CreateElementsSignatureHashTxInRequestStruct {
  * @brief CreateElementsSignatureHashRequestStruct 構造体
  */
 struct CreateElementsSignatureHashRequestStruct {
-  std::string tx = "";                                //!< tx  // NOLINT
-  CreateElementsSignatureHashTxInRequestStruct txin;  //!< txin  // NOLINT
+  std::string tx = "";                         //!< tx  // NOLINT
+  CreateElementsSignatureHashTxInStruct txin;  //!< txin  // NOLINT
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -1336,7 +1362,7 @@ struct CreateElementsSignatureHashRequestStruct {
  */
 struct CreateElementsSignatureHashResponseStruct {
   std::string sighash = "";  //!< sighash  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -1349,7 +1375,7 @@ struct CreateElementsSignatureHashResponseStruct {
 struct GetSupportedFunctionResponseStruct {
   bool bitcoin = false;   //!< bitcoin  // NOLINT
   bool elements = false;  //!< elements  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -1400,7 +1426,7 @@ struct CreateRawTransactionRequestStruct {
  */
 struct CreateRawTransactionResponseStruct {
   std::string hex = "";  //!< hex  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
@@ -1454,15 +1480,57 @@ struct UpdateWitnessStackRequestStruct {
  */
 struct UpdateWitnessStackResponseStruct {
   std::string hex = "";  //!< hex  // NOLINT
-  InnerErrorResponseStruct error;       //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 
 namespace dlc {
+namespace js {
 namespace api {
+
+// ------------------------------------------------------------------------
+// CombineKeysRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief CombineKeysRequestStruct 構造体
+ */
+struct CombineKeysRequestStruct {
+  std::string pubkey = "";          //!< pubkey  // NOLINT
+  std::string commitment_key = "";  //!< commitment_key  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// CreateCETxAddressRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief CreateCETxAddressRequestStruct 構造体
+ */
+struct CreateCETxAddressRequestStruct {
+  std::string network = "mainnet";        //!< network  // NOLINT
+  CombineKeysRequestStruct combine_keys;  //!< combine_keys  // NOLINT
+  std::string counter_party_pubkey = "";  //!< counter_party_pubkey  // NOLINT
+  int64_t delay = 0;                      //!< delay  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// CreateCETxAddressResponseStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief CreateCETxAddressResponseStruct 構造体
+ */
+struct CreateCETxAddressResponseStruct {
+  std::string address = "";          //!< address  // NOLINT
+  std::string redeem_script = "";    //!< redeem_script  // NOLINT
+  std::string combined_pubkey = "";  //!< combined_pubkey  // NOLINT
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
 
 // ------------------------------------------------------------------------
 // CETxSignDataStruct
@@ -1514,51 +1582,12 @@ struct AddCETxSignRequestStruct {
  */
 struct AddCETxSignResponseStruct {
   std::string hex = "";  //!< hex  // NOLINT
-  cfd::api::InnerErrorResponseStruct error;   //!< error information
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
-// CombineKeysRequestStruct
-// ------------------------------------------------------------------------
-/**
- * @brief CombineKeysRequestStruct 構造体
- */
-struct CombineKeysRequestStruct {
-  std::string pubkey = "";          //!< pubkey  // NOLINT
-  std::string commitment_key = "";  //!< commitment_key  // NOLINT
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
-// CreateCETxAddressRequestStruct
-// ------------------------------------------------------------------------
-/**
- * @brief CreateCETxAddressRequestStruct 構造体
- */
-struct CreateCETxAddressRequestStruct {
-  std::string network = "mainnet";        //!< network  // NOLINT
-  CombineKeysRequestStruct combine_keys;  //!< combine_keys  // NOLINT
-  std::string counter_party_pubkey = "";  //!< counter_party_pubkey  // NOLINT
-  int64_t delay = 0;                      //!< delay  // NOLINT
-  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
-};
-
-// ------------------------------------------------------------------------
-// CreateCETxAddressResponseStruct
-// ------------------------------------------------------------------------
-/**
- * @brief CreateCETxAddressResponseStruct 構造体
- */
-struct CreateCETxAddressResponseStruct {
-  std::string address = "";          //!< address  // NOLINT
-  std::string redeem_script = "";    //!< redeem_script  // NOLINT
-  std::string combined_pubkey = "";  //!< combined_pubkey  // NOLINT
-  cfd::api::InnerErrorResponseStruct error;   //!< error information
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
   std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace dlc
 
 // @formatter:on

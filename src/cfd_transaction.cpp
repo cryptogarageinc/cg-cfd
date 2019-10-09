@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "cfd/cfd_address.h"
-#include "cfd/cfd_script.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_amount.h"
 #include "cfdcore/cfdcore_coin.h"
@@ -25,29 +24,30 @@
 
 namespace cfd {
 
-using cfdcore::Address;
-using cfdcore::AddressType;
-using cfdcore::Amount;
-using cfdcore::ByteData;
-using cfdcore::CfdError;
-using cfdcore::CfdException;
-using cfdcore::HashType;
-using cfdcore::NetType;
-using cfdcore::Pubkey;
-using cfdcore::Script;
-using cfdcore::ScriptBuilder;
-using cfdcore::ScriptOperator;
-using cfdcore::SigHashType;
-using cfdcore::SignatureUtil;
-using cfdcore::Transaction;
-using cfdcore::Txid;
-using cfdcore::TxIn;
-using cfdcore::TxInReference;
-using cfdcore::TxOut;
-using cfdcore::TxOutReference;
-using cfdcore::logger::warn;
+using cfd::core::Address;
+using cfd::core::AddressType;
+using cfd::core::Amount;
+using cfd::core::ByteData;
+using cfd::core::ByteData256;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::HashType;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::ScriptBuilder;
+using cfd::core::ScriptOperator;
+using cfd::core::ScriptUtil;
+using cfd::core::SigHashType;
+using cfd::core::SignatureUtil;
+using cfd::core::Transaction;
+using cfd::core::Txid;
+using cfd::core::TxIn;
+using cfd::core::TxInReference;
+using cfd::core::TxOut;
+using cfd::core::TxOutReference;
+using cfd::core::logger::warn;
 
-using cfd::ScriptUtil;
 using cfd::TransactionController;
 
 // -----------------------------------------------------------------------------

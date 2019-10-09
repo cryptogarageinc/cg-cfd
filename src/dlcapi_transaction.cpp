@@ -24,21 +24,22 @@
 #include "dlcapi_internal.h"  // NOLINT
 
 namespace dlc {
+namespace js {
 namespace api {
 
 using cfd::TransactionController;
-using cfd::api::TransactionApiBase;
-using cfdcore::ByteData;
-using cfdcore::CfdError;
-using cfdcore::CfdException;
-using cfdcore::CryptoUtil;
-using cfdcore::Script;
-using cfdcore::SigHashType;
-using cfdcore::Txid;
-using cfdcore::logger::warn;
+using cfd::core::ByteData;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::CryptoUtil;
+using cfd::core::Script;
+using cfd::core::SigHashType;
+using cfd::core::Txid;
+using cfd::core::logger::warn;
+using cfd::js::api::TransactionApiBase;
 using dlc::DlcScriptUtil;
 
-AddCETxSignResponseStruct DlcTransactionApi::AddCETxSign(
+AddCETxSignResponseStruct DlcTransactionStructApi::AddCETxSign(
     const AddCETxSignRequestStruct& request) {
   auto call_func = [](const AddCETxSignRequestStruct& request)
       -> AddCETxSignResponseStruct {
@@ -108,4 +109,5 @@ AddCETxSignResponseStruct DlcTransactionApi::AddCETxSign(
 }
 
 }  // namespace api
+}  // namespace js
 }  // namespace dlc

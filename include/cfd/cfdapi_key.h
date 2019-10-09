@@ -16,12 +16,13 @@
  * @brief cfdapi名前空間
  */
 namespace cfd {
+namespace js {
 namespace api {
 
 /**
  * @brief 鍵情報関連の関数群クラス
  */
-class CFD_EXPORT KeyApi {
+class CFD_EXPORT KeyStructApi {
  public:
   /**
    *  @brief
@@ -32,10 +33,11 @@ class CFD_EXPORT KeyApi {
       const CreateKeyPairRequestStruct& request);
 
  private:
-  KeyApi();
+  KeyStructApi();
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_INCLUDE_CFD_CFDAPI_KEY_H_

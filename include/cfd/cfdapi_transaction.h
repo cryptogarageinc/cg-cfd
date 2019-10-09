@@ -23,12 +23,13 @@
  * @brief cfdapi名前空間
  */
 namespace cfd {
+namespace js {
 namespace api {
 
 /**
  * @brief Transaction関連のJSON APIクラス
  */
-class CFD_EXPORT TransactionApi {
+class CFD_EXPORT TransactionStructApi {
  public:
   /**
    * @brief JSONパラメータの情報を元に、Transactionを作成する.
@@ -91,7 +92,7 @@ class CFD_EXPORT TransactionApi {
       const CreateSignatureHashRequestStruct& request);
 
  private:
-  TransactionApi();
+  TransactionStructApi();
 
   /**
    * @brief MultiSigスクリプトかどうかをチェックする。
@@ -99,38 +100,39 @@ class CFD_EXPORT TransactionApi {
    * @retval true   MultiSig
    * @retval false  その他のスクリプト
    */
-  static bool CheckMultiSigScript(const cfdcore::Script& script);
+  static bool CheckMultiSigScript(const cfd::core::Script& script);
   /**
    * @brief P2PKHスクリプトかどうかをチェックする。
    * @param[in] script    スクリプト
    * @retval true   P2PKH
    * @retval false  その他のスクリプト
    */
-  static bool CheckP2pkhScript(const cfdcore::Script& script);
+  static bool CheckP2pkhScript(const cfd::core::Script& script);
   /**
    * @brief P2SHスクリプトかどうかをチェックする。
    * @param[in] script    スクリプト
    * @retval true   P2SH
    * @retval false  その他のスクリプト
    */
-  static bool CheckP2shScript(const cfdcore::Script& script);
+  static bool CheckP2shScript(const cfd::core::Script& script);
   /**
    * @brief Pubkeyスクリプトかどうかをチェックする。
    * @param[in] script    スクリプト
    * @retval true   Pubkeyスクリプト
    * @retval false  その他のスクリプト
    */
-  static bool CheckPubkeyScript(const cfdcore::Script& script);
+  static bool CheckPubkeyScript(const cfd::core::Script& script);
   /**
    * @brief NullDataスクリプトかどうかをチェックする。
    * @param[in] script    スクリプト
    * @retval true   NullDataスクリプト
    * @retval false  その他のスクリプト
    */
-  static bool CheckNullDataScript(const cfdcore::Script& script);
+  static bool CheckNullDataScript(const cfd::core::Script& script);
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_INCLUDE_CFD_CFDAPI_TRANSACTION_H_

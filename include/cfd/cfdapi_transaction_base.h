@@ -26,11 +26,12 @@
  * @brief cfdapi namespace
  */
 namespace cfd {
+namespace js {
 namespace api {
 
-using cfdcore::ByteData;
-using cfdcore::Pubkey;
-using cfdcore::Script;
+using cfd::core::ByteData;
+using cfd::core::Pubkey;
+using cfd::core::Script;
 
 /**
  * @typedef LockingScriptType
@@ -60,7 +61,7 @@ struct ExtractScriptData {
 };
 
 /**
- * @brief Class providing common functionalities to TransactionApi and
+ * @brief Class providing common functionalities to TransactionStructApi and
  * ConfidentialTransactionApi.
  */
 class CFD_EXPORT TransactionApiBase {
@@ -123,7 +124,7 @@ class CFD_EXPORT TransactionApiBase {
    * @param[in] is_anyone_can_pay     whether or not anyone_can_pay is used
    * @return SigHashType object
    */
-  static cfdcore::SigHashType ConvertSigHashType(
+  static cfd::core::SigHashType ConvertSigHashType(
       const std::string& sighash_type_string, bool is_anyone_can_pay);
 
   /**
@@ -143,6 +144,7 @@ class CFD_EXPORT TransactionApiBase {
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_INCLUDE_CFD_CFDAPI_TRANSACTION_BASE_H_

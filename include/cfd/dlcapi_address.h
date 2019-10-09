@@ -18,12 +18,13 @@
  * @brief dlc_api名前空間
  */
 namespace dlc {
+namespace js {
 namespace api {
 
 /**
  * @brief DLCの取引に用いるAddress関連のJSON APIクラス
  */
-class CFD_EXPORT DlcAddressApi {
+class CFD_EXPORT DlcAddressStructApi {
  public:
   /**
    * @brief JSONパラメータの情報を元に、CETxに用いるAddressを作成する
@@ -35,10 +36,11 @@ class CFD_EXPORT DlcAddressApi {
       const CreateCETxAddressRequestStruct& request);
 
  private:
-  DlcAddressApi();
+  DlcAddressStructApi();
 };
 
 }  // namespace api
+}  // namespace js
 }  // namespace dlc
 
 #endif  // CFD_INCLUDE_CFD_DLCAPI_ADDRESS_H_

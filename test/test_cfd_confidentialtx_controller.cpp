@@ -11,23 +11,23 @@
 #include "cfd/cfd_elements_address.h"
 #include "cfdcore/cfdcore_address.h"
 
-using cfdcore::Amount;
-using cfdcore::Address;
-using cfdcore::ByteData;
-using cfdcore::ByteData256;
-using cfdcore::IssuanceParameter;
-using cfdcore::Pubkey;
-using cfdcore::Privkey;
-using cfdcore::Txid;
-using cfdcore::UnblindParameter;
+using cfd::core::Amount;
+using cfd::core::Address;
+using cfd::core::ByteData;
+using cfd::core::ByteData256;
+using cfd::core::IssuanceParameter;
+using cfd::core::Pubkey;
+using cfd::core::Privkey;
+using cfd::core::Txid;
+using cfd::core::UnblindParameter;
 using cfd::ConfidentialTransactionController;
-using cfdcore::BlindFactor;
-using cfdcore::ElementsConfidentialAddress;
-using cfdcore::ConfidentialAssetId;
-using cfdcore::BlockHash;
-using cfdcore::Address;
-using cfdcore::NetType;
-using cfdcore::AddressFormatData;
+using cfd::core::BlindFactor;
+using cfd::core::ElementsConfidentialAddress;
+using cfd::core::ConfidentialAssetId;
+using cfd::core::BlockHash;
+using cfd::core::Address;
+using cfd::core::NetType;
+using cfd::core::AddressFormatData;
 
 TEST(ConfidentialTransactionController, CalculateSimpleFeeTest)
 {
@@ -53,8 +53,8 @@ TEST(ConfidentialTransactionController, SetAssetIssuanceTest1)
     Txid txid("c678107274b4d235d0e587194914b72b37b6ccd268cffad3a40194db65a33d7f");
     Amount asset_amount = Amount::CreateByCoinAmount(100.0);
     Amount token_amount = Amount::CreateByCoinAmount(10.0);
-    Address asset_address("2dbH8YS7rqRDM1F7EXrGBXvZywXxuEQtZ2z", cfdcore::GetElementsAddressFormatList());
-    Address token_address("2dqLgUheB1R4gw7G2DKuxBeMr1jdgxECAoG", cfdcore::GetElementsAddressFormatList());
+    Address asset_address("2dbH8YS7rqRDM1F7EXrGBXvZywXxuEQtZ2z", cfd::core::GetElementsAddressFormatList());
+    Address token_address("2dqLgUheB1R4gw7G2DKuxBeMr1jdgxECAoG", cfd::core::GetElementsAddressFormatList());
     ByteData256 contract_hash;
     bool is_blind = false;
     IssuanceParameter param;
@@ -122,7 +122,7 @@ TEST(ConfidentialTransactionController, RandomizeTxOutTest)
         "0200000001017f3da365db9401a4d3facf68d2ccb6372bb714491987e5d035d2b474721078c601000000171600149a417c11cb67e1dc522997f07e1ff89e960d5ff1fdffffff020135e7a177b434ee0799be6dcffc945a1d892f2e0fdfc5975ba0f80d3bdbab9c84010000000002f9c1ec0017a914c9cbab5b0f3430e824b1961bf8e876be43d3fee0870135e7a177b434ee0799be6dcffc945a1d892f2e0fdfc5975ba0f80d3bdbab9c8401000000000000e07400000000000000000247304402207ab059e55e3e4337e88e1a6db00b7549110065eb5770880b1081dcdcdcf1c9a402207a3a0bc7d0d40661f54eff63c67838260a489984138d24eeee04b689f393bf2e012103753cff6c6123d25d99a3d02dc050a2c6b3ea40bcc04029c4330a4d30cb5390770000000000");
     // out: fee, value
 
-    EXPECT_NO_THROW((tx.RandomizeTxOut()));
+    EXPECT_NO_THROW((tx.RandomSortTxOut()));
 }
 
 TEST(ConfidentialTransactionController, UnblindTxOutTest)
@@ -169,7 +169,7 @@ TEST(ConfidentialTransactionController, AddPegoutTxOut)
     ConfidentialTransactionController txc(2, 0);
     txc.AddTxIn(Txid("4aa201f333e80b8f62ba5b593edb47b4730212e2917b21279f389ba1c14588a3"), 0, 4294967293);
     txc.AddTxOut(
-        Address("XBMr6srTXmWuHifFd8gs54xYfiCBsvrksA", cfdcore::GetElementsAddressFormatList()),
+        Address("XBMr6srTXmWuHifFd8gs54xYfiCBsvrksA", cfd::core::GetElementsAddressFormatList()),
         Amount::CreateBySatoshiAmount(209998999992700),
         ConfidentialAssetId("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"));
     txc.AddPegoutTxOut(
@@ -196,7 +196,7 @@ TEST(ConfidentialTransactionController, AddPegoutTxOut2)
     ConfidentialTransactionController txc(2, 0);
     txc.AddTxIn(Txid("4aa201f333e80b8f62ba5b593edb47b4730212e2917b21279f389ba1c14588a3"), 0, 4294967293);
     txc.AddTxOut(
-        Address("XBMr6srTXmWuHifFd8gs54xYfiCBsvrksA", cfdcore::GetElementsAddressFormatList()),
+        Address("XBMr6srTXmWuHifFd8gs54xYfiCBsvrksA", cfd::core::GetElementsAddressFormatList()),
         Amount::CreateBySatoshiAmount(209998999992700),
         ConfidentialAssetId("5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"));
     txc.AddPegoutTxOut(

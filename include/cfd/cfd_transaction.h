@@ -23,19 +23,19 @@
 
 namespace cfd {
 
-using cfdcore::Address;
-using cfdcore::Amount;
-using cfdcore::ByteData;
-using cfdcore::NetType;
-using cfdcore::Pubkey;
-using cfdcore::Script;
-using cfdcore::SigHashType;
-using cfdcore::Transaction;
-using cfdcore::Txid;
-using cfdcore::TxIn;
-using cfdcore::TxInReference;
-using cfdcore::TxOut;
-using cfdcore::TxOutReference;
+using cfd::core::Address;
+using cfd::core::Amount;
+using cfd::core::ByteData;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::SigHashType;
+using cfd::core::Transaction;
+using cfd::core::Txid;
+using cfd::core::TxIn;
+using cfd::core::TxInReference;
+using cfd::core::TxOut;
+using cfd::core::TxOutReference;
 
 /**
  * @brief Transaction生成のためのControllerクラス

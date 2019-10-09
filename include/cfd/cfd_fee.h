@@ -15,7 +15,7 @@
 
 namespace cfd {
 
-using cfdcore::Amount;
+using cfd::core::Amount;
 
 /**
  * @brief Fee計算を行うクラス

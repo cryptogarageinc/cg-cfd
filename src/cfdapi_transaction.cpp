@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "cfd/cfd_address.h"
-#include "cfd/cfd_script.h"
 #include "cfd/cfd_transaction.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_coin.h"
@@ -31,46 +30,47 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace js {
 namespace api {
 
 #ifndef CFD_DISABLE_ELEMENTS
-using cfd::api::ElementsTransactionApi;
+using cfd::js::api::ElementsTransactionStructApi;
 #endif  // CFD_DISABLE_ELEMENTS
-using cfd::ScriptUtil;
 using cfd::TransactionController;
-using cfd::api::AddressApi;
-using cfdcore::Address;
-using cfdcore::AddressType;
-using cfdcore::Amount;
-using cfdcore::ByteData;
-using cfdcore::ByteData160;
-using cfdcore::CfdError;
-using cfdcore::CfdException;
-using cfdcore::CryptoUtil;
-using cfdcore::IteratorWrapper;
-using cfdcore::kByteData160Length;
-using cfdcore::kByteData256Length;
-using cfdcore::kScriptHashP2pkhLength;
-using cfdcore::kScriptHashP2shLength;
-using cfdcore::NetType;
-using cfdcore::Pubkey;
-using cfdcore::Script;
-using cfdcore::ScriptBuilder;
-using cfdcore::ScriptElement;
-using cfdcore::ScriptElementType;
-using cfdcore::ScriptOperator;
-using cfdcore::ScriptType;
-using cfdcore::ScriptWitness;
-using cfdcore::SigHashAlgorithm;
-using cfdcore::SigHashType;
-using cfdcore::StringUtil;
-using cfdcore::Transaction;
-using cfdcore::Txid;
-using cfdcore::TxIn;
-using cfdcore::TxInReference;
-using cfdcore::TxOutReference;
-using cfdcore::WitnessVersion;
-using cfdcore::logger::warn;
+using cfd::core::Address;
+using cfd::core::AddressType;
+using cfd::core::Amount;
+using cfd::core::ByteData;
+using cfd::core::ByteData160;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::CryptoUtil;
+using cfd::core::IteratorWrapper;
+using cfd::core::kByteData160Length;
+using cfd::core::kByteData256Length;
+using cfd::core::kScriptHashP2pkhLength;
+using cfd::core::kScriptHashP2shLength;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::ScriptBuilder;
+using cfd::core::ScriptElement;
+using cfd::core::ScriptElementType;
+using cfd::core::ScriptOperator;
+using cfd::core::ScriptType;
+using cfd::core::ScriptUtil;
+using cfd::core::ScriptWitness;
+using cfd::core::SigHashAlgorithm;
+using cfd::core::SigHashType;
+using cfd::core::StringUtil;
+using cfd::core::Transaction;
+using cfd::core::Txid;
+using cfd::core::TxIn;
+using cfd::core::TxInReference;
+using cfd::core::TxOutReference;
+using cfd::core::WitnessVersion;
+using cfd::core::logger::warn;
+using cfd::js::api::AddressStructApi;
 
 // -----------------------------------------------------------------------------
 // ファイル内関数
@@ -87,9 +87,9 @@ static TransactionController CreateController(const std::string& hex) {
 }
 
 // -----------------------------------------------------------------------------
-// TransactionApiクラス
+// TransactionStructApiクラス
 // -----------------------------------------------------------------------------
-CreateRawTransactionResponseStruct TransactionApi::CreateRawTransaction(
+CreateRawTransactionResponseStruct TransactionStructApi::CreateRawTransaction(
     const CreateRawTransactionRequestStruct& request) {
   auto call_func = [](const CreateRawTransactionRequestStruct& request)
       -> CreateRawTransactionResponseStruct {  // NOLINT
@@ -144,7 +144,7 @@ CreateRawTransactionResponseStruct TransactionApi::CreateRawTransaction(
   return result;
 }
 
-DecodeRawTransactionResponseStruct TransactionApi::DecodeRawTransaction(
+DecodeRawTransactionResponseStruct TransactionStructApi::DecodeRawTransaction(
     const DecodeRawTransactionRequestStruct& request) {
   auto call_func = [](const DecodeRawTransactionRequestStruct& request)
       -> DecodeRawTransactionResponseStruct {  // NOLINT
@@ -161,7 +161,7 @@ DecodeRawTransactionResponseStruct TransactionApi::DecodeRawTransaction(
     // TODO(k-matsuzawa): 引数のiswitness未使用。bitcoincoreの指定方法が不明瞭
     // // NOLINT
 
-    NetType net_type = AddressApi::ConvertNetType(request.network);
+    NetType net_type = AddressStructApi::ConvertNetType(request.network);
 
     // TransactionController作成
     TransactionController txc(hex_string);
@@ -322,7 +322,7 @@ DecodeRawTransactionResponseStruct TransactionApi::DecodeRawTransaction(
   return result;
 }
 
-GetWitnessStackNumResponseStruct TransactionApi::GetWitnessStackNum(
+GetWitnessStackNumResponseStruct TransactionStructApi::GetWitnessStackNum(
     const GetWitnessStackNumRequestStruct& request) {
   auto call_func = [](const GetWitnessStackNumRequestStruct& request)
       -> GetWitnessStackNumResponseStruct {  // NOLINT
@@ -337,7 +337,7 @@ GetWitnessStackNumResponseStruct TransactionApi::GetWitnessStackNum(
   return result;
 }
 
-AddSignResponseStruct TransactionApi::AddSign(
+AddSignResponseStruct TransactionStructApi::AddSign(
     const AddSignRequestStruct& request) {
   auto call_func =
       [](const AddSignRequestStruct& request) -> AddSignResponseStruct {
@@ -351,7 +351,7 @@ AddSignResponseStruct TransactionApi::AddSign(
   return result;
 }
 
-UpdateWitnessStackResponseStruct TransactionApi::UpdateWitnessStack(
+UpdateWitnessStackResponseStruct TransactionStructApi::UpdateWitnessStack(
     const UpdateWitnessStackRequestStruct& request) {
   auto call_func = [](const UpdateWitnessStackRequestStruct& request)
       -> UpdateWitnessStackResponseStruct {  // NOLINT
@@ -366,7 +366,7 @@ UpdateWitnessStackResponseStruct TransactionApi::UpdateWitnessStack(
   return result;
 }
 
-AddMultisigSignResponseStruct TransactionApi::AddMultisigSign(
+AddMultisigSignResponseStruct TransactionStructApi::AddMultisigSign(
     const AddMultisigSignRequestStruct& request) {
   auto call_func = [](const AddMultisigSignRequestStruct& request)
       -> AddMultisigSignResponseStruct {  // NOLINT
@@ -381,7 +381,7 @@ AddMultisigSignResponseStruct TransactionApi::AddMultisigSign(
   return result;
 }
 
-CreateSignatureHashResponseStruct TransactionApi::CreateSignatureHash(
+CreateSignatureHashResponseStruct TransactionStructApi::CreateSignatureHash(
     const CreateSignatureHashRequestStruct& request) {
   auto call_func = [](const CreateSignatureHashRequestStruct& request)
       -> CreateSignatureHashResponseStruct {  // NOLINT
@@ -441,7 +441,7 @@ CreateSignatureHashResponseStruct TransactionApi::CreateSignatureHash(
   return result;
 }
 
-bool TransactionApi::CheckMultiSigScript(const Script& script) {
+bool TransactionStructApi::CheckMultiSigScript(const Script& script) {
   bool is_match = false;
   std::vector<ScriptElement> script_element = script.GetElementList();
 
@@ -479,7 +479,7 @@ bool TransactionApi::CheckMultiSigScript(const Script& script) {
   return is_match;
 }
 
-bool TransactionApi::CheckP2pkhScript(const Script& script) {
+bool TransactionStructApi::CheckP2pkhScript(const Script& script) {
   // OP_DUP OP_HASH160 [HASH160] OP_EQUALVERIFY OP_CHECKSIG
   bool is_match = false;
   std::vector<ScriptElement> script_element = script.GetElementList();
@@ -506,7 +506,7 @@ bool TransactionApi::CheckP2pkhScript(const Script& script) {
   return is_match;
 }
 
-bool TransactionApi::CheckP2shScript(const Script& script) {
+bool TransactionStructApi::CheckP2shScript(const Script& script) {
   // OP_HASH160 [HASH160] OP_EQUAL
   bool is_match = false;
   std::vector<ScriptElement> script_element = script.GetElementList();
@@ -529,7 +529,7 @@ bool TransactionApi::CheckP2shScript(const Script& script) {
   return is_match;
 }
 
-bool TransactionApi::CheckPubkeyScript(const Script& script) {
+bool TransactionStructApi::CheckPubkeyScript(const Script& script) {
   // <pubkey> OP_CHECKSIG
   bool is_match = false;
   std::vector<ScriptElement> script_element = script.GetElementList();
@@ -550,7 +550,7 @@ bool TransactionApi::CheckPubkeyScript(const Script& script) {
   return is_match;
 }
 
-bool TransactionApi::CheckNullDataScript(const Script& script) {
+bool TransactionStructApi::CheckNullDataScript(const Script& script) {
   // OP_RETURN <0 to 40 bytes of data>
   static constexpr uint32_t kNullDataMaxSize = 40 + 1 + 1;
   bool is_match = false;
@@ -582,4 +582,5 @@ bool TransactionApi::CheckNullDataScript(const Script& script) {
 }
 
 }  // namespace api
+}  // namespace js
 }  // namespace cfd

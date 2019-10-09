@@ -10,11 +10,11 @@
 
 // TEST(test_suite_name, test_name)
 
-using cfdcore::Address;
-using cfdcore::NetType;
-using cfdcore::Pubkey;
-using cfdcore::Script;
-using cfdcore::WitnessVersion;
+using cfd::core::Address;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::WitnessVersion;
 using cfd::AddressFactory;
 
 TEST(AddressFactory, CreateP2pkhAddress)

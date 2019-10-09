@@ -18,15 +18,15 @@
 
 namespace cfd {
 
-using cfdcore::Address;
-using cfdcore::AddressFormatData;
-using cfdcore::AddressType;
-using cfdcore::ByteData;
-using cfdcore::ByteData160;
-using cfdcore::NetType;
-using cfdcore::Pubkey;
-using cfdcore::Script;
-using cfdcore::WitnessVersion;
+using cfd::core::Address;
+using cfd::core::AddressFormatData;
+using cfd::core::AddressType;
+using cfd::core::ByteData;
+using cfd::core::ByteData160;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::WitnessVersion;
 
 /**
  * @brief Addressを生成するFactoryクラス

@@ -1,11 +1,11 @@
 {
-	"namespace": ["cfd","api"],
+	"namespace": ["cfd","js","api","json"],
 	"request": {
 		":class": "CreateElementsSignatureHashRequest",
 		"tx": "",
 		"tx:comment": "transaction hex",
 		"txin": {
-			":class": "CreateElementsSignatureHashTxInRequest",
+			":class": "CreateElementsSignatureHashTxIn",
 			"txid": "",
 			"vout": 0,
 			"vout:type": "uint32_t",

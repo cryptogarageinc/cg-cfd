@@ -1,10 +1,10 @@
 {
-	"namespace": ["cfd","api"],
+	"namespace": ["cfd","js","api","json"],
 	"request": {
 		":class": "SetRawReissueAssetRequest",
 		"tx": "",
 		"tx:comment": "transaction hex",
-		"isRandomize": false,
+		"isRandomSortTxOut": false,
 		"issuances": [
 			{
 				":class": "ReissuanceDataRequest",
