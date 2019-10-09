@@ -34,9 +34,11 @@ CreateKeyPairResponseStruct KeyStructApi::CreateKeyPair(
     const bool is_wif = request.wif;
     Pubkey pubkey;
     if (is_wif) {
-      const NetType net_type = AddressStructApi::ConvertNetType(request.network);
+      const NetType net_type =
+          AddressStructApi::ConvertNetType(request.network);
       std::string wif;
-      Privkey privkey = KeyApi::CreateKeyPair(is_compressed, &pubkey, &wif, net_type);
+      Privkey privkey =
+          KeyApi::CreateKeyPair(is_compressed, &pubkey, &wif, net_type);
       response.privkey = wif;
 
     } else {
@@ -62,7 +64,8 @@ CreateKeyPairResponseStruct KeyStructApi::CreateKeyPair(
 namespace cfd {
 namespace api {
 
-Privkey KeyApi::CreateKeyPair(bool is_compressed, Pubkey* pubkey, std::string* wif, NetType net_type) {
+Privkey KeyApi::CreateKeyPair(
+    bool is_compressed, Pubkey* pubkey, std::string* wif, NetType net_type) {
   // generate random private key
   Privkey privkey = Privkey::GenerageRandomKey();
 

@@ -9,6 +9,8 @@
 #ifndef CFD_INCLUDE_CFD_CFDAPI_KEY_H_
 #define CFD_INCLUDE_CFD_CFDAPI_KEY_H_
 
+#include <string>
+
 #include "cfd/cfd_common.h"
 #include "cfd/cfdapi_struct.h"
 
@@ -47,6 +49,9 @@ using cfd::core::NetType;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
 
+/**
+ * @brief 鍵情報関連のAPI群クラス
+ */
 class CFD_EXPORT KeyApi {
  public:
   /**
@@ -57,7 +62,9 @@ class CFD_EXPORT KeyApi {
    * @param[in] net_type mainnet/testnet/regtest/liquidv1
    * @return Privkeyオブジェクト
    */
-  static Privkey CreateKeyPair(bool is_compressed, Pubkey* pubkey, std::string* wif = nullptr, NetType net_type = NetType::kMainnet);
+  static Privkey CreateKeyPair(
+      bool is_compressed, Pubkey* pubkey, std::string* wif = nullptr,
+      NetType net_type = NetType::kMainnet);
 
  private:
   KeyApi();
