@@ -30,15 +30,20 @@ CreateKeyPairResponseStruct KeyStructApi::CreateKeyPair(
     CreateKeyPairResponseStruct response;
 
     // generate random private key
-    bool is_compressed = request.is_compressed;
-    Pubkey pubkey;
-    Privkey privkey = KeyApi::CreateKeyPair(is_compressed, &pubkey);
-
-    // convert parameters to response struct
+    const bool is_compressed = request.is_compressed;
     const bool is_wif = request.wif;
-    const NetType net_type = AddressStructApi::ConvertNetType(request.network);
-    response.privkey = is_wif ? privkey.ConvertWif(net_type, is_compressed)
-                              : privkey.GetHex();  // NOLINT
+    Pubkey pubkey;
+    if (is_wif) {
+      const NetType net_type = AddressStructApi::ConvertNetType(request.network);
+      std::string wif;
+      Privkey privkey = KeyApi::CreateKeyPair(is_compressed, &pubkey, &wif, net_type);
+      response.privkey = wif;
+
+    } else {
+      Privkey privkey = KeyApi::CreateKeyPair(is_compressed, &pubkey);
+      response.privkey = privkey.GetHex();
+    }
+
     response.pubkey = pubkey.GetHex();
     return response;
   };
@@ -57,7 +62,7 @@ CreateKeyPairResponseStruct KeyStructApi::CreateKeyPair(
 namespace cfd {
 namespace api {
 
-Privkey KeyApi::CreateKeyPair(bool is_compressed, Pubkey* pubkey) {
+Privkey KeyApi::CreateKeyPair(bool is_compressed, Pubkey* pubkey, std::string* wif, NetType net_type) {
   // generate random private key
   Privkey privkey = Privkey::GenerageRandomKey();
 
@@ -66,6 +71,10 @@ Privkey KeyApi::CreateKeyPair(bool is_compressed, Pubkey* pubkey) {
 
   if (pubkey != nullptr) {
     *pubkey = out_pubkey;
+  }
+
+  if (wif != nullptr) {
+    *wif = privkey.ConvertWif(net_type, is_compressed);
   }
   return privkey;
 }
