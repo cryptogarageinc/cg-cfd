@@ -17,6 +17,7 @@ namespace cfd {
 namespace js {
 namespace api {
 
+using cfd::api::KeyApi;
 using cfd::core::NetType;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
@@ -29,11 +30,9 @@ CreateKeyPairResponseStruct KeyStructApi::CreateKeyPair(
     CreateKeyPairResponseStruct response;
 
     // generate random private key
-    Privkey privkey = Privkey::GenerageRandomKey();
-
-    // derive pubkey from private key
     bool is_compressed = request.is_compressed;
-    const Pubkey pubkey = privkey.GeneratePubkey(is_compressed);
+    Pubkey pubkey;
+    Privkey privkey = KeyApi::CreateKeyPair(is_compressed, &pubkey);
 
     // convert parameters to response struct
     const bool is_wif = request.wif;
@@ -53,4 +52,23 @@ CreateKeyPairResponseStruct KeyStructApi::CreateKeyPair(
 
 }  // namespace api
 }  // namespace js
+}  // namespace cfd
+
+namespace cfd {
+namespace api {
+
+Privkey KeyApi::CreateKeyPair(bool is_compressed, Pubkey* pubkey) {
+  // generate random private key
+  Privkey privkey = Privkey::GenerageRandomKey();
+
+  // derive pubkey from private key
+  const Pubkey out_pubkey = privkey.GeneratePubkey(is_compressed);
+
+  if (pubkey != nullptr) {
+    *pubkey = out_pubkey;
+  }
+  return privkey;
+}
+
+}  // namespace api
 }  // namespace cfd
