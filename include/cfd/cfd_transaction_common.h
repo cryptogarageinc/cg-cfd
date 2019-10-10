@@ -77,7 +77,12 @@ class CFD_EXPORT SignParameter {
    * @param[in] redeem_script  redeem script data
    */
   explicit SignParameter(const Script& redeem_script);
-
+  /**
+   * @brief コピーコンストラクタ.
+   * @param[in] sign_parameter     Sign生成情報オブジェクト
+   * @return SignParameterオブジェクト
+   */
+  SignParameter &operator=(const SignParameter &sign_parameter);
   /**
    * @brief RelatedPubkeyのセット
    * @param[in] pubkey  realated pubkey
@@ -109,6 +114,11 @@ class CFD_EXPORT SignParameter {
    * @return sighash type
    */
   SigHashType GetSigHashType() const;
+  /**
+   * @brief 格納された情報でdataをsignatureへ変換する
+   * @return signature data
+   */
+  ByteData ConvertToSignature() const;
 
  private:
   ByteData data_;             //!< data hex
@@ -116,12 +126,6 @@ class CFD_EXPORT SignParameter {
   Pubkey related_pubkey_;     //!< need der encode flag
   bool der_encode_;           //!< sighash type
   SigHashType sighash_type_;  //!< AnyoneCanPay flag
-
-  /**
-   * @brief 格納された情報でdataをsignatureへ変換する
-   * @return signature data
-   */
-  ByteData ConvertToSignature() const;
 };
 
 /**

@@ -37,7 +37,7 @@ using cfd::core::CfdError;
 using cfd::core::CfdException;
 using cfd::core::Txid;
 using cfd::core::logger::warn;
-using cfd::js::api::TransactionApiBase;
+using cfd::api::TransactionApiBase;
 
 // -----------------------------------------------------------------------------
 // ファイル内関数
@@ -206,6 +206,8 @@ using cfd::core::TxOutReference;
 using cfd::core::WitnessVersion;
 using cfd::core::logger::warn;
 using cfd::js::api::AddressStructApi;
+using cfd::js::api::TransactionStructApi;
+using cfd::js::api::TransactionStructApiBase;
 
 // -----------------------------------------------------------------------------
 // TransactionStructApiクラス
@@ -452,7 +454,7 @@ AddSignResponseStruct TransactionStructApi::AddSign(
     std::vector<SignParameter> sign_params;
     for (const SignDataStruct& sign_data : request.txin.sign_param) {
       sign_params.push_back(
-          TransactionApiBase::ConvertSignDataStructToSignParameter(sign_data));
+          TransactionStructApiBase::ConvertSignDataStructToSignParameter(sign_data));
     }
 
     bool is_witness = request.txin.is_witness;

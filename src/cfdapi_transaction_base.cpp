@@ -295,6 +295,41 @@ static void ValidateAddMultisigSign(  // linefeed
 }
 
 template <class T>
+T TransactionApiBase::AddSign(
+    std::function<T(const std::string&)> create_controller,
+    const std::string& hex, const Txid& txid, const uint32_t vout,
+    const std::vector<SignParameter>& sign_params, bool is_witness,
+    bool clear_stack) {
+  if (hex.empty()) {
+    warn(
+        CFD_LOG_SOURCE,
+        "Failed to AddSign. Invalid hex string. empty data. tx=[{}]", hex);
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError, "Invalid hex string. empty data.");
+  }
+
+  // TransactionController作成
+  T txc = create_controller(hex);
+
+  std::vector<ByteData> sign_stack;
+  for (const SignParameter& sign_param : sign_params) {
+    sign_stack.push_back(sign_param.ConvertToSignature());
+  }
+
+  if (is_witness) {
+    // Witnessの追加
+    if (clear_stack) {
+      txc.RemoveWitnessStackAll(txid, vout);
+    }
+    txc.AddWitnessStack(txid, vout, sign_stack);
+  } else {
+    txc.SetUnlockingScript(txid, vout, sign_stack);
+  }
+
+  return txc;
+}
+
+template <class T>
 std::string TransactionApiBase::AddMultisigSign(
     const std::string& tx_hex, const AbstractTxInReference& txin,
     const std::vector<SignParameter>& sign_list, AddressType address_type,
@@ -369,6 +404,13 @@ std::string TransactionApiBase::AddMultisigSign(
   return txc.GetHex();
 }
 
+template TransactionController
+TransactionApiBase::AddSign<TransactionController>(
+    std::function<TransactionController(const std::string&)> create_controller,
+    const std::string& hex, const Txid& txid, const uint32_t vout,
+    const std::vector<SignParameter>& sign_params, bool is_witness = true,
+    bool clear_stack = true);
+
 template std::string
 TransactionApiBase::AddMultisigSign<TransactionController>(
     const std::string& tx_hex, const AbstractTxInReference& txin,
@@ -380,6 +422,14 @@ TransactionApiBase::AddMultisigSign<TransactionController>(
 #ifndef CFD_DISABLE_ELEMENTS
 
 using cfd::ConfidentialTransactionController;
+
+template ConfidentialTransactionController
+TransactionApiBase::AddSign<ConfidentialTransactionController>(
+    std::function<ConfidentialTransactionController(const std::string&)>
+        create_controller,
+    const std::string& hex, const Txid& txid, const uint32_t vout,
+    const std::vector<SignParameter>& sign_params, bool is_witness = true,
+    bool clear_stack = true);
 
 template std::string
 TransactionApiBase::AddMultisigSign<ConfidentialTransactionController>(
@@ -416,38 +466,6 @@ using cfd::core::Txid;
 using cfd::core::logger::warn;
 
 /**
- * @brief Convert signature information to a signature.
- * @param[in] hex_string              Signature information
- * @param[in] is_sign                 Whether signature data is provided
- * @param[in] is_der_encode           Whether the signature is DER encoded
- * @param[in] sighash_type            SigHash type
- * @param[in] sighash_anyone_can_pay  Flag determining if SigHash is
- * anyone_can_pay
- * @return Converted signature information.
- */
-static ByteData ConvertSignDataToSignature(
-    const std::string& hex_string, bool is_sign, bool is_der_encode,
-    const std::string& sighash_type, bool sighash_anyone_can_pay) {
-  ByteData byte_data;
-  if (is_sign && is_der_encode) {
-    if (hex_string.empty()) {
-      warn(CFD_LOG_SOURCE, "Failed to AddMultisigSign. sign hex empty.");
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Invalid hex string. empty sign hex.");
-    }
-    SigHashType sighashtype = TransactionStructApiBase::ConvertSigHashType(
-        sighash_type, sighash_anyone_can_pay);
-    byte_data = CryptoUtil::ConvertSignatureToDer(hex_string, sighashtype);
-  } else if (hex_string.empty()) {
-    // do nothing
-  } else {
-    byte_data = ByteData(hex_string);
-  }
-  return byte_data;
-}
-
-/**
  * @brief Convert sign data type from string.
  * @param[in] data_type               data type string
  * anyone_can_pay
@@ -460,7 +478,7 @@ static SignDataType ConvertToSignDataType(const std::string& data_type) {
     return SignDataType::kBinary;
   } else if (data_type == "pubkey") {
     return SignDataType::kPubkey;
-  } else if (data_type == "redeem_script") {
+  } else if (data_type == "script") {
     return SignDataType::kRedeemScript;
   } else {
     warn(
@@ -482,10 +500,8 @@ SignParameter TransactionStructApiBase::ConvertSignDataStructToSignParameter(
     case kSign:
       return SignParameter(
           ByteData(sign_data.hex), sign_data.der_encode,
-          TransactionApiBase::ConvertSigHashType(
+          TransactionStructApiBase::ConvertSigHashType(
               sign_data.sighash_type, sign_data.sighash_anyone_can_pay));
-    case kBinary:
-      return SignParameter(ByteData(sign_data.hex));
     case kPubkey:
       return SignParameter(Pubkey(sign_data.hex));
     case kRedeemScript:
@@ -495,6 +511,28 @@ SignParameter TransactionStructApiBase::ConvertSignDataStructToSignParameter(
     default:
       return SignParameter(ByteData(sign_data.hex));
   }
+}
+
+ByteData TransactionStructApiBase::ConvertSignDataToSignature(
+    const std::string& hex_string, bool is_sign, bool is_der_encode,
+    const std::string& sighash_type, bool sighash_anyone_can_pay) {
+  ByteData byte_data;
+  if (is_sign && is_der_encode) {
+    if (hex_string.empty()) {
+      warn(CFD_LOG_SOURCE, "Failed to AddMultisigSign. sign hex empty.");
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError,
+          "Invalid hex string. empty sign hex.");
+    }
+    SigHashType sighashtype = TransactionStructApiBase::ConvertSigHashType(
+        sighash_type, sighash_anyone_can_pay);
+    byte_data = CryptoUtil::ConvertSignatureToDer(hex_string, sighashtype);
+  } else if (hex_string.empty()) {
+    // do nothing
+  } else {
+    byte_data = ByteData(hex_string);
+  }
+  return byte_data;
 }
 
 SigHashType TransactionStructApiBase::ConvertSigHashType(
@@ -521,42 +559,7 @@ SigHashType TransactionStructApiBase::ConvertSigHashType(
 }
 
 template <class T>
-T TransactionApiBase::AddSign(
-    std::function<T(const std::string&)> create_controller,
-    const std::string& hex, const Txid& txid, const uint32_t vout,
-    const std::vector<SignParameter>& sign_params, bool is_witness,
-    bool clear_stack) {
-  if (hex.empty()) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to AddSign. Invalid hex string. empty data. tx=[{}]", hex);
-    throw CfdException(
-        CfdError::kCfdIllegalArgumentError, "Invalid hex string. empty data.");
-  }
-
-  // TransactionController作成
-  T txc = create_controller(hex);
-
-  std::vector<ByteData> sign_stack;
-  for (const SignParameter& sign_param : sign_params) {
-    sign_stack.push_back(sign_param.GetData());
-  }
-
-  if (is_witness) {
-    // Witnessの追加
-    if (clear_stack) {
-      txc.RemoveWitnessStackAll(txid, vout);
-    }
-    txc.AddWitnessStack(txid, vout, sign_stack);
-  } else {
-    txc.SetUnlockingScript(txid, vout, sign_stack);
-  }
-
-  return txc;
-}
-
-template <class T>
-GetWitnessStackNumResponseStruct TransactionApiBase::GetWitnessStackNum(
+GetWitnessStackNumResponseStruct TransactionStructApiBase::GetWitnessStackNum(
     const GetWitnessStackNumRequestStruct& request,
     std::function<T(const std::string&)> create_controller) {
   auto call_func =
@@ -744,13 +747,6 @@ std::string TransactionStructApiBase::ConvertLockingScriptTypeString(
   return "";
 }
 
-template TransactionController
-TransactionApiBase::AddSign<TransactionController>(
-    std::function<TransactionController(const std::string&)> create_controller,
-    const std::string& hex, const Txid& txid, const uint32_t vout,
-    const std::vector<SignParameter>& sign_params, bool is_witness = true,
-    bool clear_stack = true);
-
 template GetWitnessStackNumResponseStruct
 TransactionStructApiBase::GetWitnessStackNum<TransactionController>(
     const GetWitnessStackNumRequestStruct& request,
@@ -774,14 +770,6 @@ TransactionStructApiBase::ConvertSignDataStructToSignParameter<
 #ifndef CFD_DISABLE_ELEMENTS
 
 using cfd::ConfidentialTransactionController;
-
-template ConfidentialTransactionController
-TransactionApiBase::AddSign<ConfidentialTransactionController>(
-    std::function<ConfidentialTransactionController(const std::string&)>
-        create_controller,
-    const std::string& hex, const Txid& txid, const uint32_t vout,
-    const std::vector<SignParameter>& sign_params, bool is_witness = true,
-    bool clear_stack = true);
 
 template GetWitnessStackNumResponseStruct TransactionStructApiBase::
     GetWitnessStackNum<ConfidentialTransactionController>(

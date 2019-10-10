@@ -69,7 +69,7 @@ SignParameter::SignParameter(
       related_pubkey_(),
       der_encode_(der_encode),
       sighash_type_(sighash_type) {
-  data_ = ConvertToSignature();
+  // do nothing
 }
 
 SignParameter::SignParameter(const ByteData& data)
@@ -97,6 +97,16 @@ SignParameter::SignParameter(const Script& redeem_script)
       der_encode_(false),
       sighash_type_() {
   // do nothing
+}
+
+SignParameter &SignParameter::operator=(
+    const SignParameter &sign_parameter) {
+  data_ = sign_parameter.GetData();
+  data_type_ = sign_parameter.GetDataType();
+  related_pubkey_ = sign_parameter.GetRelatedPubkey();
+  der_encode_ = sign_parameter.IsDerEncode();
+  sighash_type_ = sign_parameter.GetSigHashType();
+  return *this;
 }
 
 void SignParameter::SetRelatedPubkey(const Pubkey& pubkey) {

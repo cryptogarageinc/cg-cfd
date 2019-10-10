@@ -41,6 +41,26 @@ using cfd::core::Script;
 class TransactionApiBase {
  public:
   /**
+   * @brief Add signature information based on parameter information.
+   * @param[in] create_controller   transaction controller create function
+   * @param[in] hex                 transaction hex
+   * @param[in] txid                txid of input to add sign parameters to
+   * @param[in] vout                vout of input to add sign parameters to
+   * @param[in] sign_params         sign parameters to add the input
+   * @param[in] is_witness          flag to add sign parameters to 
+   *     witness or unlocking script
+   * @param[in] clear_stack         flag of clear all stacks
+   * @return structure containing Transaction hex data
+   */
+  template <class T>
+  static T AddSign(
+      std::function<T(const std::string&)> create_controller,
+      const std::string& hex, const Txid& txid, const uint32_t vout,
+      const std::vector<SignParameter>& sign_params, bool is_witness = true,
+      bool clear_stack = true);
+
+ public:
+  /**
    * @brief Add Segwit multisig signature information.
    * @details the order of signatures to be added is automatically aligned
    * with the corresponding pubkey in redeemscript and relatedPubkey in
@@ -106,25 +126,6 @@ struct ExtractScriptData {
 class TransactionStructApiBase {
  public:
   /**
-   * @brief Add signature information based on parameter information.
-   * @param[in] create_controller   transaction controller create function
-   * @param[in] hex                 transaction hex
-   * @param[in] txid                txid of input to add sign parameters to
-   * @param[in] vout                vout of input to add sign parameters to
-   * @param[in] sign_params         sign parameters to add the input
-   * @param[in] is_witness          flag to add sign parameters to 
-   *     witness or unlocking script
-   * @param[in] clear_stack         flag of clear all stacks
-   * @return structure containing Transaction hex data
-   */
-  template <class T>
-  static T AddSign(
-      std::function<T(const std::string&)> create_controller,
-      const std::string& hex, const Txid& txid, const uint32_t vout,
-      const std::vector<SignParameter>& sign_params, bool is_witness = true,
-      bool clear_stack = true);
-
-  /**
    * @brief Outputs number of elements in witness stack based on JSON parameters.
    * @param[in] request structure containing Transaction and TxIn information.
    * @param[in] create_controller a callback to create a transaction controller.
@@ -165,6 +166,20 @@ class TransactionStructApiBase {
       const AddMultisigSignRequestStruct& request,
       std::function<T(const std::string&)> create_controller);
 #endif
+
+  /**
+   * @brief Convert signature information to a signature.
+   * @param[in] hex_string              Signature information
+   * @param[in] is_sign                 Whether signature data is provided
+   * @param[in] is_der_encode           Whether the signature is DER encoded
+   * @param[in] sighash_type            SigHash type
+   * @param[in] sighash_anyone_can_pay  Flag determining if SigHash is
+   * anyone_can_pay
+   * @return Converted signature information.
+   */
+  static ByteData ConvertSignDataToSignature(
+    const std::string& hex_string, bool is_sign, bool is_der_encode,
+    const std::string& sighash_type, bool sighash_anyone_can_pay);
 
   /**
    * @brief Convert a string to a SigHashType object.

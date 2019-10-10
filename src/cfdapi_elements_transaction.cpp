@@ -84,7 +84,7 @@ using cfd::core::UnblindParameter;
 using cfd::core::WitnessVersion;
 using cfd::core::logger::info;
 using cfd::core::logger::warn;
-using cfd::js::api::TransactionApiBase;
+using cfd::api::TransactionApiBase;
 
 // -----------------------------------------------------------------------------
 // ファイル内関数
@@ -768,7 +768,7 @@ AddSignResponseStruct ElementsTransactionStructApi::AddSign(
     std::vector<SignParameter> sign_params;
     for (const SignDataStruct& sign_data : request.txin.sign_param) {
       sign_params.push_back(
-          TransactionApiBase::ConvertSignDataStructToSignParameter(sign_data));
+          TransactionStructApiBase::ConvertSignDataStructToSignParameter(sign_data));
     }
 
     bool is_witness = request.txin.is_witness;

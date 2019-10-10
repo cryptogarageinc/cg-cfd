@@ -16,7 +16,7 @@
 					":class": "SignData",
 					"hex": "",
 					"type": "binary",
-					"type:hint": "binary, sign, pubkey, redeem_script",
+					"type:hint": "binary, sign, pubkey, script",
 					"derEncode": false,
 					"sighashType": "all",
 					"sighashType:hint": "all, none, single",
