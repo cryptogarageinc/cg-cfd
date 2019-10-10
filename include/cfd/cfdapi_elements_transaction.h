@@ -14,6 +14,7 @@
 
 #include "cfd/cfd_common.h"
 #include "cfd/cfd_elements_transaction.h"
+#include "cfd/cfd_transaction_common.h"
 #include "cfd/cfdapi_struct.h"
 #include "cfdcore/cfdcore_coin.h"
 #include "cfdcore/cfdcore_elements_transaction.h"
@@ -28,6 +29,7 @@ namespace cfd {
 namespace api {
 
 using cfd::ConfidentialTransactionController;
+using cfd::SignParameter;
 using cfd::core::ByteData;
 using cfd::core::ConfidentialTxIn;
 using cfd::core::ConfidentialTxInReference;
@@ -107,6 +109,28 @@ class CFD_EXPORT ElementsTransactionApi {
       const std::string& tx_hex, const ConfidentialTxInReference& txin,
       const ByteData& key_data, const ConfidentialValue& value,
       HashType hash_type, const SigHashType& sighash_type) const;
+
+  /**
+   * @brief Multisig署名情報を追加する.
+   * @details 追加するsignatureの順序は、redeem
+   * scriptのpubkeyとsign_list内のrelatedPubkeyで
+   *   対応をとって自動的に整列される.
+   * (relatedPubkeyが設定されていない場合は、relatedPubkeyが
+   *   設定されているsignatureを追加した後にsignParamの順序でsignatureを追加)
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] sign_list       value (amount or commitment)
+   * @param[in] address_type    address type. (support is P2sh-P2wsh or P2wsh)
+   * @param[in] witness_script  witness script
+   * @param[in] redeem_script   redeem script
+   * @param[in] clear_stack     clear stack data before add.
+   * @return Transaction
+   */
+  ConfidentialTransactionController AddMultisigSign(
+      const std::string& tx_hex, const ConfidentialTxInReference& txin,
+      const std::vector<SignParameter>& sign_list, AddressType address_type,
+      const Script& witness_script, const Script redeem_script = Script(),
+      bool clear_stack = true);
 
   /*
    * @brief Issue用BlindingKeyを作成する.

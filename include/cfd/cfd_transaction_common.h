@@ -49,12 +49,16 @@ enum SignDataType {
 class CFD_EXPORT SignParameter {
  public:
   /**
+   * @brief コンストラクタ(for vector)
+   */
+  SignParameter();
+  /**
    * @brief コンストラクタ(Type: Sign)
    * @param[in] data                    byte data
    * @param[in] der_encode              flag of need der encode
    * @param[in] sighash_type            sighash type (SigHashType)
    */
-  SignParameter(
+  explicit SignParameter(
       const ByteData& data, bool der_encode,
       const SigHashType sighash_type =
           SigHashType(SigHashAlgorithm::kSigHashAll));
@@ -62,17 +66,18 @@ class CFD_EXPORT SignParameter {
    * @brief コンストラクタ(Type: Binary)
    * @param[in] data  data
    */
-  SignParameter(const ByteData& data);
+  explicit SignParameter(const ByteData& data);
   /**
    * @brief コンストラクタ(Type: Pubkey)
    * @param[in] pubkey  pubkey data
    */
-  SignParameter(const Pubkey& pubkey);
+  explicit SignParameter(const Pubkey& pubkey);
   /**
    * @brief コンストラクタ(Type: RedeemScript)
    * @param[in] redeem_script  redeem script data
    */
-  SignParameter(const Script& redeem_script);
+  explicit SignParameter(const Script& redeem_script);
+
   /**
    * @brief RelatedPubkeyのセット
    * @param[in] pubkey  realated pubkey

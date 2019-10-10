@@ -6,8 +6,8 @@
  *
  * JSON形式のAPIを提供する.
  */
-#ifndef CFD_INCLUDE_CFD_CFDAPI_TRANSACTION_BASE_H_
-#define CFD_INCLUDE_CFD_CFDAPI_TRANSACTION_BASE_H_
+#ifndef CFD_SRC_CFDAPI_TRANSACTION_BASE_H_
+#define CFD_SRC_CFDAPI_TRANSACTION_BASE_H_
 
 #include <functional>
 #include <string>
@@ -25,6 +25,44 @@
 /**
  * @brief cfdapi namespace
  */
+namespace cfd {
+namespace api {
+
+using cfd::core::AbstractTxInReference;
+using cfd::core::ByteData;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+
+/**
+ * @brief Class providing common functionalities to TransactionStructApi and
+ * ConfidentialTransactionApi.
+ */
+class TransactionApiBase {
+ public:
+  /**
+   * @brief Add Segwit multisig signature information.
+   * @details the order of signatures to be added is automatically aligned
+   * with the corresponding pubkey in redeemscript and relatedPubkey in
+   * signParam. (If relatedPubkey is not set, signatures are added in order of
+   * signParam after adding signature with relatedPubkey).
+   * @param[in] request structure containing Transaction and Segwit signature
+   * information.
+   * @param[in] create_controller a callback to create a transaction controller.
+   * @return structure that holds Transaction and Segwit multisig signature
+   * information.
+   */
+  template <class T>
+  static std::string AddMultisigSign(
+      const std::string& tx_hex, const AbstractTxInReference& txin,
+      const std::vector<SignParameter>& sign_list, AddressType address_type,
+      const Script& witness_script, const Script redeem_script,
+      bool clear_stack,
+      std::function<T(const std::string&)> create_controller);
+};
+
+}  // namespace api
+}  // namespace cfd
+
 namespace cfd {
 namespace js {
 namespace api {
@@ -64,7 +102,7 @@ struct ExtractScriptData {
  * @brief Class providing common functionalities to TransactionStructApi and
  * ConfidentialTransactionApi.
  */
-class TransactionApiBase {
+class TransactionStructApiBase {
  public:
   /**
    * @brief Add signature information based on JSON parameter information.
@@ -101,6 +139,7 @@ class TransactionApiBase {
       const UpdateWitnessStackRequestStruct& request,
       std::function<T(const std::string&)> create_controller);
 
+#if 0
   /**
    * @brief Add Segwit multisig signature information.
    * @details the order of signatures to be added is automatically aligned
@@ -117,6 +156,7 @@ class TransactionApiBase {
   static AddMultisigSignResponseStruct AddMultisigSign(
       const AddMultisigSignRequestStruct& request,
       std::function<T(const std::string&)> create_controller);
+#endif
 
   /**
    * @brief Convert a string to a SigHashType object.
@@ -147,4 +187,4 @@ class TransactionApiBase {
 }  // namespace js
 }  // namespace cfd
 
-#endif  // CFD_INCLUDE_CFD_CFDAPI_TRANSACTION_BASE_H_
+#endif  // CFD_SRC_CFDAPI_TRANSACTION_BASE_H_

@@ -95,16 +95,16 @@ ByteData TransactionApi::CreateSignatureHash(
 }
 
 ByteData TransactionApi::CreateSignatureHash(
-    const std::string& tx_hex, const TxInReference& txin, const Script& redeem_script,
-    const Amount& amount, HashType hash_type,
+    const std::string& tx_hex, const TxInReference& txin,
+    const Script& redeem_script, const Amount& amount, HashType hash_type,
     const SigHashType& sighash_type) const {
   return CreateSignatureHash(
       tx_hex, txin, redeem_script.GetData(), amount, hash_type, sighash_type);
 }
 
 ByteData TransactionApi::CreateSignatureHash(
-    const std::string& tx_hex, const TxInReference& txin, const ByteData& key_data,
-    const Amount& amount, HashType hash_type,
+    const std::string& tx_hex, const TxInReference& txin,
+    const ByteData& key_data, const Amount& amount, HashType hash_type,
     const SigHashType& sighash_type) const {
   std::string sig_hash;
   int64_t amount_value = amount.GetSatoshiValue();
@@ -140,6 +140,18 @@ ByteData TransactionApi::CreateSignatureHash(
   }
 
   return ByteData(sig_hash);
+}
+
+TransactionController TransactionApi::AddMultisigSign(
+    const std::string& tx_hex, const TxInReference& txin,
+    const std::vector<SignParameter>& sign_list, AddressType address_type,
+    const Script& witness_script, const Script redeem_script,
+    bool clear_stack) {
+  std::string result =
+      TransactionApiBase::AddMultisigSign<TransactionController>(
+          tx_hex, txin, sign_list, address_type, witness_script, redeem_script,
+          clear_stack, CreateController);
+  return TransactionController(result);
 }
 
 }  // namespace api
@@ -401,7 +413,7 @@ GetWitnessStackNumResponseStruct TransactionStructApi::GetWitnessStackNum(
     const GetWitnessStackNumRequestStruct& request) {
   auto call_func = [](const GetWitnessStackNumRequestStruct& request)
       -> GetWitnessStackNumResponseStruct {  // NOLINT
-    return TransactionApiBase::GetWitnessStackNum<TransactionController>(
+    return TransactionStructApiBase::GetWitnessStackNum<TransactionController>(
         request, cfd::api::CreateController);
   };
 
@@ -416,7 +428,7 @@ AddSignResponseStruct TransactionStructApi::AddSign(
     const AddSignRequestStruct& request) {
   auto call_func =
       [](const AddSignRequestStruct& request) -> AddSignResponseStruct {
-    return TransactionApiBase::AddSign<TransactionController>(
+    return TransactionStructApiBase::AddSign<TransactionController>(
         request, cfd::api::CreateController);
   };
 
@@ -430,7 +442,7 @@ UpdateWitnessStackResponseStruct TransactionStructApi::UpdateWitnessStack(
     const UpdateWitnessStackRequestStruct& request) {
   auto call_func = [](const UpdateWitnessStackRequestStruct& request)
       -> UpdateWitnessStackResponseStruct {  // NOLINT
-    return TransactionApiBase::UpdateWitnessStack<TransactionController>(
+    return TransactionStructApiBase::UpdateWitnessStack<TransactionController>(
         request, cfd::api::CreateController);
   };
 
@@ -445,8 +457,23 @@ AddMultisigSignResponseStruct TransactionStructApi::AddMultisigSign(
     const AddMultisigSignRequestStruct& request) {
   auto call_func = [](const AddMultisigSignRequestStruct& request)
       -> AddMultisigSignResponseStruct {  // NOLINT
-    return TransactionApiBase::AddMultisigSign<TransactionController>(
-        request, cfd::api::CreateController);
+    TxInReference txin(TxIn(Txid(request.txin.txid), request.txin.vout, 0));
+    AddressType addr_type =
+        AddressStructApi::ConvertAddressType(request.txin.hash_type);
+    Script redeem_script(request.txin.redeem_script);
+    Script witness_script(request.txin.witness_script);
+    std::vector<SignParameter> sign_list;
+
+    // FIXME(k-matsuzawa): 実装する
+
+    TransactionApi api;
+    TransactionController ctx = api.AddMultisigSign(
+        request.tx, txin, sign_list, addr_type, witness_script, redeem_script,
+        request.txin.clear_stack);
+
+    AddMultisigSignResponseStruct response;
+    response.hex = ctx.GetHex();
+    return response;
   };
 
   AddMultisigSignResponseStruct result;
@@ -467,7 +494,7 @@ CreateSignatureHashResponseStruct TransactionStructApi::CreateSignatureHash(
     const Txid& txid = Txid(request.txin.txid);
     uint32_t vout = request.txin.vout;
     const std::string& hashtype_str = request.txin.hash_type;
-    SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
+    SigHashType sighashtype = TransactionStructApiBase::ConvertSigHashType(
         request.txin.sighash_type, request.txin.sighash_anyone_can_pay);
 
     Pubkey pubkey;

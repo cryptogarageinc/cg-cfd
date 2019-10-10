@@ -28,6 +28,7 @@ using cfd::core::Amount;
 using cfd::core::ByteData;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
+using cfd::core::CryptoUtil;
 using cfd::core::HashType;
 using cfd::core::NetType;
 using cfd::core::Pubkey;
@@ -52,6 +53,15 @@ constexpr uint32_t kSequenceDisableLockTime = 0xffffffffU;
 // SignParameter
 // -----------------------------------------------------------------------------
 
+SignParameter::SignParameter()
+    : data_(),
+      data_type_(SignDataType::kBinary),
+      related_pubkey_(),
+      der_encode_(false),
+      sighash_type_() {
+  // do nothing
+}
+
 SignParameter::SignParameter(
     const ByteData& data, bool der_encode, const SigHashType sighash_type)
     : data_(data),
@@ -59,7 +69,7 @@ SignParameter::SignParameter(
       related_pubkey_(),
       der_encode_(der_encode),
       sighash_type_(sighash_type) {
-  // FIXME: encode処理
+  // do nothing
 }
 
 SignParameter::SignParameter(const ByteData& data)
@@ -90,7 +100,9 @@ SignParameter::SignParameter(const Script& redeem_script)
 }
 
 void SignParameter::SetRelatedPubkey(const Pubkey& pubkey) {
-  related_pubkey_ = pubkey;
+  if (pubkey.IsValid()) {
+    related_pubkey_ = pubkey;
+  }
 }
 
 ByteData SignParameter::GetData() const { return data_; }
@@ -104,8 +116,20 @@ bool SignParameter::IsDerEncode() const { return der_encode_; }
 SigHashType SignParameter::GetSigHashType() const { return sighash_type_; }
 
 ByteData SignParameter::ConvertToSignature() const {
-  // FIXME: signature変換処理
-  return ByteData();
+  ByteData byte_data;
+  if ((data_type_ == SignDataType::kSign) && der_encode_) {
+    if (data_.Empty()) {
+      warn(CFD_LOG_SOURCE, "Failed to ConvertToSignature. sign data empty.");
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError,
+          "Invalid hex string. empty sign data.");
+    }
+    byte_data =
+        CryptoUtil::ConvertSignatureToDer(data_.GetHex(), sighash_type_);
+  } else {
+    byte_data = data_;
+  }
+  return byte_data;
 }
 
 // -----------------------------------------------------------------------------
