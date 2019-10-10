@@ -321,24 +321,22 @@ ElementsTransactionStructApi::CreateRawTransaction(  // NOLINT
 
     // TxOutの追加
     Script script;
-    Amount amount;
     for (const auto& txout_req : request.txouts) {
       const std::string addr = txout_req.address;
-      ConfidentialNonce nonce;
+      Amount amount(Amount::CreateBySatoshiAmount(txout_req.amount));
+      ConfidentialAssetId asset(txout_req.asset);
       if (ElementsConfidentialAddress::IsConfidentialAddress(addr)) {
         ElementsConfidentialAddress confidential_addr(addr);
-        script = confidential_addr.GetLockingScript();
-        if (!txout_req.is_remove_nonce) {
-          nonce = ConfidentialNonce(
-              confidential_addr.GetConfidentialKey().GetData());
+        if (txout_req.is_remove_nonce) {
+          txouts.emplace_back(
+              confidential_addr.GetUnblindedAddress(), asset, amount);
+        } else {
+          txouts.emplace_back(confidential_addr, asset, amount);
         }
       } else {
-        script = ElementsAddressFactory().GetAddress(addr).GetLockingScript();
+        txouts.emplace_back(
+            ElementsAddressFactory().GetAddress(addr), asset, amount);
       }
-      txouts.emplace_back(
-          script, ConfidentialAssetId(txout_req.asset),
-          ConfidentialValue(Amount::CreateBySatoshiAmount(txout_req.amount)),
-          nonce, ByteData(), ByteData());
     }
 
     // feeの追加
@@ -348,7 +346,7 @@ ElementsTransactionStructApi::CreateRawTransaction(  // NOLINT
     if (fee_req.amount != 0) {
       txout_fee = ConfidentialTxOut(
           ConfidentialAssetId(fee_req.asset),
-          ConfidentialValue(Amount::CreateBySatoshiAmount(fee_req.amount)));
+          Amount::CreateBySatoshiAmount(fee_req.amount));
     }
 
     ElementsTransactionApi api;
