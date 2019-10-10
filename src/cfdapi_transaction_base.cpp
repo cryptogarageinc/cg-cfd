@@ -416,120 +416,6 @@ using cfd::core::Txid;
 using cfd::core::logger::warn;
 
 /**
- * @brief Validate the request for AddMultisigSign.
- * @param[in] req       request information
- * @param[in] addr_type the address type for the request
- */
-static void ValidateAddMultisigSignRequest(  // linefeed
-    AddMultisigSignRequestStruct req, AddressType addr_type) {
-  // check txHex
-  if (req.tx.empty()) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to AddSegwitMultisigSignRequest. Transaction hex empty.");
-    throw CfdException(
-        CfdError::kCfdIllegalArgumentError,
-        "Invalid hex string. empty txHex.");
-  }
-
-  // check require script
-  switch (addr_type) {
-    case AddressType::kP2shAddress: {
-      if (req.txin.redeem_script.empty()) {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to AddSegwitMultisigSignRequest. redeem script empty.");
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "Invalid hex string. empty redeemScript.");
-      }
-      break;
-    }
-    case AddressType::kP2wshAddress: {
-      if (req.txin.witness_script.empty()) {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to AddSegwitMultisigSignRequest. witness script empty.");
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "Invalid hex string. empty witnessScript.");
-      }
-      break;
-    }
-    case AddressType::kP2shP2wshAddress: {
-      if (req.txin.redeem_script.empty()) {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to AddSegwitMultisigSignRequest. redeem script empty.");
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "Invalid hex string. empty redeemScript.");
-      }
-      if (req.txin.witness_script.empty()) {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to AddSegwitMultisigSignRequest. witness script empty.");
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "Invalid hex string. empty witnessScript.");
-      }
-      break;
-    }
-    default: {
-      warn(
-          CFD_LOG_SOURCE,
-          "Failed to AddSegwitMultisigSignRequest. address type must be one "
-          "of p2sh address.");
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError, "Invalid address type.");
-    }
-  }
-
-  // check signData (not empty)
-  if (req.txin.sign_params.empty()) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to AddSegwitMultisigSignRequest. sign parameters empty.");
-    throw CfdException(
-        CfdError::kCfdIllegalArgumentError,
-        "Invalid array length. empty signParams.");
-  }
-
-  // check signData (too much data)
-  if (req.txin.sign_params.size() > 15) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to AddSegwitMultisigSignRequest. sign array length over.");
-    throw CfdException(
-        CfdError::kCfdOutOfRangeError,
-        "Value out of range. sign array length over.");
-  }
-}
-
-SigHashType TransactionStructApiBase::ConvertSigHashType(
-    const std::string& sighash_type_string, bool is_anyone_can_pay) {
-  std::string check_string = sighash_type_string;
-  std::transform(
-      check_string.begin(), check_string.end(), check_string.begin(),
-      ::tolower);
-  if (check_string == "all") {
-    return SigHashType(SigHashAlgorithm::kSigHashAll, is_anyone_can_pay);
-  } else if (check_string == "none") {
-    return SigHashType(SigHashAlgorithm::kSigHashNone, is_anyone_can_pay);
-  } else if (check_string == "single") {
-    return SigHashType(SigHashAlgorithm::kSigHashSingle, is_anyone_can_pay);
-  }
-  warn(
-      CFD_LOG_SOURCE,
-      "Failed to CreateMultisig. Invalid sighash_type: sighashType={}",
-      sighash_type_string);
-  throw CfdException(
-      CfdError::kCfdIllegalArgumentError,
-      "Invalid sighashType. sighashType must be "
-      "\"all, none, single\".");
-}
-
-/**
  * @brief Convert signature information to a signature.
  * @param[in] hex_string              Signature information
  * @param[in] is_sign                 Whether signature data is provided
@@ -559,6 +445,73 @@ static ByteData ConvertSignDataToSignature(
     byte_data = ByteData(hex_string);
   }
   return byte_data;
+}
+
+/**
+ * @brief Convert sign data type from string.
+ * @param[in] data_type               data type string
+ * anyone_can_pay
+ * @return sign data type.
+ */
+static SignDataType ConvertToSignDataType(const std::string& data_type) {
+  if (data_type == "sign") {
+    return SignDataType::kSign;
+  } else if (data_type == "binary") {
+    return SignDataType::kBinary;
+  } else if (data_type == "pubkey") {
+    return SignDataType::kPubkey;
+  } else if (data_type == "redeem_script") {
+    return SignDataType::kRedeemScript;
+  } else {
+    warn(
+        CFD_LOG_SOURCE,
+        "Failed to ConvertToSignDataType. Invalid data_type string passed. "
+        "data_type=[{}]",
+        data_type);
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
+        "Sign data type convert error. Invalid data_type string passed.");
+  }
+}
+
+SignParameter TransactionStructApiBase::ConvertSignDataStructToSignParameter(
+    const SignDataStruct& sign_data) {
+  SignDataType data_type = ConvertToSignDataType(sign_data.type);
+  switch (data_type) {
+    case kSign:
+      return SignParameter(
+          ByteData(sign_data.hex), sign_data.der_encode, 
+          TransactionStructApiBase::ConvertSigHashType(sign_data.sighash_type, sign_data.sighash_anyone_can_pay));
+    case kBinary:
+      return SignParameter(ByteData(sign_data.hex));
+    case kPubkey:
+      return SignParameter(Pubkey(sign_data.hex));
+    case kRedeemScript:
+      return SignParameter(Script(sign_data.hex));
+  }
+}
+
+SigHashType TransactionStructApiBase::ConvertSigHashType(
+    const std::string& sighash_type_string, bool is_anyone_can_pay) {
+  std::string check_string = sighash_type_string;
+  std::transform(
+      check_string.begin(), check_string.end(), check_string.begin(),
+      ::tolower);
+  if (check_string == "all") {
+    return SigHashType(SigHashAlgorithm::kSigHashAll, is_anyone_can_pay);
+  } else if (check_string == "none") {
+    return SigHashType(SigHashAlgorithm::kSigHashNone, is_anyone_can_pay);
+  } else if (check_string == "single") {
+    return SigHashType(SigHashAlgorithm::kSigHashSingle, is_anyone_can_pay);
+  }
+  warn(
+      CFD_LOG_SOURCE,
+      "Failed to CreateMultisig. Invalid sighash_type: sighashType={}",
+      sighash_type_string);
+  throw CfdException(
+      CfdError::kCfdIllegalArgumentError,
+      "Invalid sighashType. sighashType must be "
+      "\"all, none, single\".");
 }
 
 template <class T>
@@ -686,105 +639,6 @@ UpdateWitnessStackResponseStruct TransactionStructApiBase::UpdateWitnessStack(
       request, call_func, std::string(__FUNCTION__));
   return result;
 }
-
-#if 0
-template <class T>
-AddMultisigSignResponseStruct TransactionStructApiBase::AddMultisigSign(
-    const AddMultisigSignRequestStruct& request,
-    std::function<T(const std::string&)> create_controller) {
-  auto call_func =
-      [create_controller](const AddMultisigSignRequestStruct& request)
-      -> AddMultisigSignResponseStruct {  // NOLINT
-    AddMultisigSignResponseStruct response;
-    // validate request
-    AddressType addr_type =
-        AddressStructApi::ConvertAddressType(request.txin.hash_type);
-    ValidateAddMultisigSignRequest(request, addr_type);
-
-    const std::string& hex_string = request.tx;
-    T txc = create_controller(hex_string);
-
-    // extract pubkeys from redeem script
-    // ValidateAddMultiSignRequest ensures that we have one of three correct
-    // types.
-    Script redeem_script = addr_type == AddressType::kP2shAddress
-                               ? Script(request.txin.redeem_script)
-                               : Script(request.txin.witness_script);
-
-    std::vector<Pubkey> pubkeys =
-        cfd::api::ExtractPubkeysFromMultisigScript(redeem_script);
-    // get signParams from json request
-    std::vector<MultisigSignDataStruct> sign_params = request.txin.sign_params;
-
-    // set signParam to signature_data (only contains relatedPubkey);
-    std::vector<ByteData> signature_data;
-    for (const Pubkey& pubkey : pubkeys) {
-      for (auto itr = sign_params.begin(); itr != sign_params.end();) {
-        MultisigSignDataStruct sign_param = *itr;
-        if (sign_param.related_pubkey != pubkey.GetHex()) {
-          ++itr;
-          continue;
-        }
-
-        itr = sign_params.erase(itr);
-        ByteData byte_data = ConvertSignDataToSignature(
-            sign_param.hex, true, sign_param.der_encode,
-            sign_param.sighash_type, sign_param.sighash_anyone_can_pay);
-        signature_data.push_back(byte_data);
-      }
-    }
-
-    // set the others to signature data
-    for (MultisigSignDataStruct sign_param : sign_params) {
-      // related pubkey not found in script
-      if (!sign_param.related_pubkey.empty()) {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to AddMultisigSign. Missing related pubkey"
-            " in script.: relatedPubkey={}, script={}",
-            sign_param.related_pubkey, redeem_script.GetHex());
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "Missing related pubkey in script."
-            " Check your signature and pubkey pair.");
-      }
-      ByteData byte_data = ConvertSignDataToSignature(
-          sign_param.hex, true, sign_param.der_encode, sign_param.sighash_type,
-          sign_param.sighash_anyone_can_pay);
-      signature_data.push_back(byte_data);
-    }
-
-    // set signatures to target input
-    Txid txid(request.txin.txid);
-    if (addr_type == AddressType::kP2shAddress) {
-      cfd::api::SetP2shMultisigUnlockingScript(
-          signature_data, redeem_script, txid, request.txin.vout, &txc);
-    } else {
-      cfd::api::SetP2wshMultisigWitnessStack(
-          signature_data, redeem_script, txid, request.txin.vout,
-          request.txin.clear_stack, &txc);
-    }
-
-    if (addr_type == AddressType::kP2shP2wshAddress) {
-      // set p2sh redeem script to unlockking script
-      Script p2sh_redeem_script(request.txin.redeem_script);
-      ScriptBuilder sb;
-      sb.AppendData(p2sh_redeem_script);
-      txc.SetUnlockingScript(
-          Txid(request.txin.txid), request.txin.vout, sb.Build());
-    }
-
-    response.hex = txc.GetHex();
-    return response;
-  };
-
-  AddMultisigSignResponseStruct result;
-  result = ExecuteStructApi<
-      AddMultisigSignRequestStruct, AddMultisigSignResponseStruct>(
-      request, call_func, std::string(__FUNCTION__));
-  return result;
-}
-#endif
 
 ExtractScriptData TransactionStructApiBase::ExtractLockingScript(
     Script locking_script) {
