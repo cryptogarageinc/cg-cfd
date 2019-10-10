@@ -163,10 +163,9 @@ SignParameter TransactionApiBase::ConvertSignDataStructToSignParameter(
   SignDataType data_type = ConvertToSignDataType(sign_data.type);
   switch (data_type) {
     case kSign:
-      SigHashType sighash_type = TransactionApiBase::ConvertSigHashType(
-          sign_data.sighash_type, sign_data.sighash_anyone_can_pay);
       return SignParameter(
-          ByteData(sign_data.hex), sign_data.der_encode, sighash_type);
+          ByteData(sign_data.hex), sign_data.der_encode, 
+          TransactionApiBase::ConvertSigHashType(sign_data.sighash_type, sign_data.sighash_anyone_can_pay));
     case kBinary:
       return SignParameter(ByteData(sign_data.hex));
     case kPubkey:
