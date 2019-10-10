@@ -84,6 +84,7 @@ using cfd::core::UnblindParameter;
 using cfd::core::WitnessVersion;
 using cfd::core::logger::info;
 using cfd::core::logger::warn;
+using cfd::js::api::TransactionApiBase;
 
 // -----------------------------------------------------------------------------
 // ファイル内関数
@@ -134,6 +135,15 @@ ConfidentialTransactionController ElementsTransactionApi::CreateRawTransaction(
   }
 
   return ctxc;
+}
+
+ConfidentialTransactionController ElementsTransactionApi::AddSign(
+    const std::string& hex, const Txid& txid, const uint32_t vout,
+    const std::vector<SignParameter>& sign_params, bool is_witness,
+    bool clear_stack) const {
+  return TransactionApiBase::AddSign<ConfidentialTransactionController>(
+      cfd::api::CreateController, hex, txid, vout, sign_params, is_witness,
+      clear_stack);
 }
 
 ByteData ElementsTransactionApi::CreateSignatureHash(
@@ -749,9 +759,27 @@ AddSignResponseStruct ElementsTransactionStructApi::AddSign(
     const AddSignRequestStruct& request) {
   auto call_func =
       [](const AddSignRequestStruct& request) -> AddSignResponseStruct {
-    return TransactionStructApiBase::AddSign<
-        ConfidentialTransactionController>(
-        request, cfd::api::CreateController);
+    AddSignResponseStruct response;
+
+    std::string tx_hex = request.tx;
+    Txid txid(request.txin.txid);
+    uint32_t vout = request.txin.vout;
+
+    std::vector<SignParameter> sign_params;
+    for (const SignDataStruct& sign_data : request.txin.sign_param) {
+      sign_params.push_back(
+          TransactionApiBase::ConvertSignDataStructToSignParameter(sign_data));
+    }
+
+    bool is_witness = request.txin.is_witness;
+    bool clear_stack = request.txin.clear_stack;
+
+    ElementsTransactionApi api;
+    ConfidentialTransactionController txc =
+        api.AddSign(tx_hex, txid, vout, sign_params, is_witness, clear_stack);
+
+    response.hex = txc.GetHex();
+    return response;
   };
 
   AddSignResponseStruct result;

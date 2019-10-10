@@ -106,17 +106,6 @@ struct ExtractScriptData {
 class TransactionStructApiBase {
  public:
   /**
-   * @brief Add signature information based on JSON parameter information.
-   * @param[in] request structure that stores Transaction and
-   * signature information.
-   * @param[in] create_controller a callback to create a transaction controller.
-   * @return structure containing Transaction hex data.
-   */
-  template <class T>
-  static AddSignResponseStruct AddSign(
-      const AddSignRequestStruct& request,
-      std::function<T(const std::string&)> create_controller);
-  /**
    * @brief Add signature information based on parameter information.
    * @param[in] create_controller   transaction controller create function
    * @param[in] hex                 transaction hex

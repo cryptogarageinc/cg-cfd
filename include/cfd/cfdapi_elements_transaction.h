@@ -69,6 +69,22 @@ class CFD_EXPORT ElementsTransactionApi {
       const ConfidentialTxOut& txout_fee) const;
 
   /**
+   * @brief hexで与えられたtxに、SignDataを付与した
+   *     ConfidentialTransctionControllerを作成する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] pubkey          public key
+   * @param[in] amount          amount
+   * @param[in] hash_type       hash type
+   * @param[in] sighash_type    sighash type
+   * @return SignDataが付与されたTransactionController
+   */
+  ConfidentialTransactionController AddSign(
+      const std::string& tx_hex, const Txid& txid, const uint32_t vout,
+      const std::vector<SignParameter>& sign_params, bool is_witness = true,
+      bool clear_stack = false) const;
+
+  /**
    * @brief tx情報およびパラメータから、SigHashを作成する.
    * @param[in] tx_hex          tx hex string
    * @param[in] txin            target tx input

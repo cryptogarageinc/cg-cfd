@@ -32,6 +32,7 @@
 namespace cfd {
 namespace api {
 
+using cfd::TransactionController;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
 using cfd::core::Txid;
@@ -92,7 +93,7 @@ TransactionController TransactionApi::CreateRawTransaction(
 }
 
 TransactionController TransactionApi::AddSign(
-    const std::string& hex, const Txid txid, const uint32_t vout,
+    const std::string& hex, const Txid& txid, const uint32_t vout,
     const std::vector<SignParameter>& sign_params, bool is_witness,
     bool clear_stack) const {
   return TransactionApiBase::AddSign<TransactionController>(

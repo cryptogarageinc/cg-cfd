@@ -521,61 +521,6 @@ SigHashType TransactionStructApiBase::ConvertSigHashType(
 }
 
 template <class T>
-AddSignResponseStruct TransactionStructApiBase::AddSign(
-    const AddSignRequestStruct& request,
-    std::function<T(const std::string&)> create_controller) {
-  auto call_func =
-      [create_controller](
-          const AddSignRequestStruct& request) -> AddSignResponseStruct {
-    AddSignResponseStruct response;
-    const std::string& hex_string = request.tx;
-    if (hex_string.empty()) {
-      warn(CFD_LOG_SOURCE, "Failed to AddSignRequest. hex empty.");
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Invalid hex string. empty data.");
-    }
-
-    // TransactionController作成
-    T txc = create_controller(hex_string);
-
-    if (request.txin.is_witness) {
-      // Witnessの追加
-      Txid txid = Txid(request.txin.txid);
-      if (request.txin.clear_stack) {
-        txc.RemoveWitnessStackAll(txid, request.txin.vout);
-      }
-      std::vector<ByteData> witness_datas;
-      for (const SignDataStruct& stack_req : request.txin.sign_param) {
-        ByteData byte_data = ConvertSignDataToSignature(
-            stack_req.hex, (stack_req.type == "sign"), stack_req.der_encode,
-            stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
-        witness_datas.push_back(byte_data);
-      }
-      txc.AddWitnessStack(txid, request.txin.vout, witness_datas);
-    } else {
-      std::vector<ByteData> unlock_script;
-      for (const SignDataStruct& stack_req : request.txin.sign_param) {
-        ByteData byte_data = ConvertSignDataToSignature(
-            stack_req.hex, (stack_req.type == "sign"), stack_req.der_encode,
-            stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
-        unlock_script.push_back(byte_data);
-      }
-      txc.SetUnlockingScript(
-          Txid(request.txin.txid), request.txin.vout, unlock_script);
-    }
-
-    response.hex = txc.GetHex();
-    return response;
-  };
-
-  AddSignResponseStruct result;
-  result = ExecuteStructApi<AddSignRequestStruct, AddSignResponseStruct>(
-      request, call_func, std::string(__FUNCTION__));
-  return result;
-}
-
-template <class T>
 T TransactionApiBase::AddSign(
     std::function<T(const std::string&)> create_controller,
     const std::string& hex, const Txid& txid, const uint32_t vout,
@@ -583,11 +528,10 @@ T TransactionApiBase::AddSign(
     bool clear_stack) {
   if (hex.empty()) {
     warn(
-        CFD_LOG_SOURCE, "Failed to AddSign. empty transaction hex. tx=[{}]",
-        hex);
+        CFD_LOG_SOURCE,
+        "Failed to AddSign. Invalid hex string. empty data. tx=[{}]", hex);
     throw CfdException(
-        CfdError::kCfdIllegalArgumentError,
-        "Failed to AddSign. empty transaction hex.");
+        CfdError::kCfdIllegalArgumentError, "Invalid hex string. empty data.");
   }
 
   // TransactionController作成
@@ -800,11 +744,12 @@ std::string TransactionStructApiBase::ConvertLockingScriptTypeString(
   return "";
 }
 
-template AddSignResponseStruct
-TransactionStructApiBase::AddSign<TransactionController>(
-    const AddSignRequestStruct& request,
-    std::function<TransactionController(const std::string&)>
-        create_controller);
+template TransactionController
+TransactionApiBase::AddSign<TransactionController>(
+    std::function<TransactionController(const std::string&)> create_controller,
+    const std::string& hex, const Txid& txid, const uint32_t vout,
+    const std::vector<SignParameter>& sign_params, bool is_witness = true,
+    bool clear_stack = true);
 
 template GetWitnessStackNumResponseStruct
 TransactionStructApiBase::GetWitnessStackNum<TransactionController>(
@@ -830,11 +775,13 @@ TransactionStructApiBase::ConvertSignDataStructToSignParameter<
 
 using cfd::ConfidentialTransactionController;
 
-template AddSignResponseStruct
-TransactionStructApiBase::AddSign<ConfidentialTransactionController>(
-    const AddSignRequestStruct& request,
+template ConfidentialTransactionController
+TransactionApiBase::AddSign<ConfidentialTransactionController>(
     std::function<ConfidentialTransactionController(const std::string&)>
-        create_controller);
+        create_controller,
+    const std::string& hex, const Txid& txid, const uint32_t vout,
+    const std::vector<SignParameter>& sign_params, bool is_witness = true,
+    bool clear_stack = true);
 
 template GetWitnessStackNumResponseStruct TransactionStructApiBase::
     GetWitnessStackNum<ConfidentialTransactionController>(

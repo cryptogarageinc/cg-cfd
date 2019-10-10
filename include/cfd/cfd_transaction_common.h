@@ -109,11 +109,6 @@ class CFD_EXPORT SignParameter {
    * @return sighash type
    */
   SigHashType GetSigHashType() const;
-  /**
-   * @brief 格納された情報でdataをsignatureへ変換する
-   * @return signature data
-   */
-  ByteData ConvertToSignature() const;
 
  private:
   ByteData data_;             //!< data hex
@@ -121,6 +116,12 @@ class CFD_EXPORT SignParameter {
   Pubkey related_pubkey_;     //!< need der encode flag
   bool der_encode_;           //!< sighash type
   SigHashType sighash_type_;  //!< AnyoneCanPay flag
+
+  /**
+   * @brief 格納された情報でdataをsignatureへ変換する
+   * @return signature data
+   */
+  ByteData ConvertToSignature() const;
 };
 
 /**

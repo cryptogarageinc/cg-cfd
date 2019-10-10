@@ -69,7 +69,7 @@ SignParameter::SignParameter(
       related_pubkey_(),
       der_encode_(der_encode),
       sighash_type_(sighash_type) {
-  // do nothing
+  data_ = ConvertToSignature();
 }
 
 SignParameter::SignParameter(const ByteData& data)
@@ -117,12 +117,12 @@ SigHashType SignParameter::GetSigHashType() const { return sighash_type_; }
 
 ByteData SignParameter::ConvertToSignature() const {
   ByteData byte_data;
-  if ((data_type_ == SignDataType::kSign) && der_encode_) {
+  if (der_encode_) {
     if (data_.Empty()) {
-      warn(CFD_LOG_SOURCE, "Failed to ConvertToSignature. sign data empty.");
+      warn(CFD_LOG_SOURCE, "Failed to ConvertToSignature. sign hex empty.");
       throw CfdException(
           CfdError::kCfdIllegalArgumentError,
-          "Invalid hex string. empty sign data.");
+          "Invalid hex string. empty sign hex.");
     }
     byte_data =
         CryptoUtil::ConvertSignatureToDer(data_.GetHex(), sighash_type_);

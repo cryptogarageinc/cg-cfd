@@ -63,10 +63,10 @@ class CFD_EXPORT TransactionApi {
    * @param[in] amount          amount
    * @param[in] hash_type       hash type
    * @param[in] sighash_type    sighash type
-   * @return sighash
+   * @return SignDataが付与されたTransactionController
    */
   TransactionController AddSign(
-      const std::string& tx_hex, const Txid txid, const uint32_t vout,
+      const std::string& tx_hex, const Txid& txid, const uint32_t vout,
       const std::vector<SignParameter>& sign_params, bool is_witness = true,
       bool clear_stack = false) const;
 
