@@ -11,6 +11,7 @@
 #ifndef CFD_DISABLE_ELEMENTS
 
 #include <string>
+#include <vector>
 
 #include "cfd/cfd_common.h"
 #include "cfd/cfdapi_struct.h"
@@ -86,6 +87,73 @@ class CFD_EXPORT ElementsAddressStructApi {
 
 }  // namespace api
 }  // namespace js
+}  // namespace cfd
+
+namespace cfd {
+namespace api {
+
+using cfd::core::Address;
+using cfd::core::AddressFormatData;
+using cfd::core::AddressType;
+using cfd::core::ConfidentialKey;
+using cfd::core::ElementsConfidentialAddress;
+using cfd::core::NetType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+
+/**
+ * @brief ElementsAddress関連のAPI群クラス
+ */
+class CFD_EXPORT ElementsAddressApi {
+ public:
+  /**
+ * @brief Addressを作成する
+ * @param[in] net_type        network type
+ * @param[in] address_type    address type
+ * @param[in] pubkey          public key (default: nullptr)
+ * @param[in] script          script (default: nullptr)
+ * @param[out] locking_script locking script
+ * @param[out] redeem_script  redeem script
+ * @param[in] prefix_list     address prefix list
+ * @return Address
+ */
+  static Address CreateAddress(
+      NetType net_type, AddressType address_type, const Pubkey* pubkey,
+      const Script* script, Script* locking_script = nullptr,
+      Script* redeem_script = nullptr,
+      std::vector<AddressFormatData>* prefix_list = nullptr);
+
+  /**
+ * @brief Multisig Addressを作成する
+ * @param[in] net_type        network type
+ * @param[in] address_type    address type
+ * @param[in] req_sig_num     multisig require sign num
+ * @param[in] pubkeys         public key list
+ * @param[out] redeem_script  redeem script (p2sh, p2sh-p2wsh)
+ * @param[out] witness_script witness script (p2wsh, p2sh-p2wsh)
+ * @param[in] prefix_list     address prefix list
+ * @return Address
+ */
+  static Address CreateMultisig(
+      NetType net_type, AddressType address_type, uint32_t req_sig_num,
+      const std::vector<Pubkey>& pubkeys, Script* redeem_script = nullptr,
+      Script* witness_script = nullptr,
+      std::vector<AddressFormatData>* prefix_list = nullptr);
+
+  /**
+ * @brief AddressからConfidentialAddressを取得する.
+ * @param[in] address Address
+ * @param[in] confidential_key confidential key
+ * @return ElementsConfidentialAddress
+ */
+  static ElementsConfidentialAddress GetConfidentialAddress(
+      const Address& address, const ConfidentialKey confidential_key);
+
+ private:
+  ElementsAddressApi();
+};
+
+}  // namespace api
 }  // namespace cfd
 
 #endif  // CFD_DISABLE_ELEMENTS
