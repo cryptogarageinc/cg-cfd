@@ -130,9 +130,10 @@ class TransactionStructApiBase {
    */
   template <class T>
   static T AddSign(
-      std::function<T(const std::string&)> create_controller, const std::string& hex, const Txid& txid,
-      const uint32_t vout, const std::vector<SignParameter>& sign_params,
-      bool is_witness = true, bool clear_stack = true);
+      std::function<T(const std::string&)> create_controller,
+      const std::string& hex, const Txid& txid, const uint32_t vout,
+      const std::vector<SignParameter>& sign_params, bool is_witness = true,
+      bool clear_stack = true);
 
   /**
    * @brief Outputs number of elements in witness stack based on JSON parameters.

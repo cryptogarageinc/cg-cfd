@@ -482,8 +482,10 @@ SignParameter TransactionStructApiBase::ConvertSignDataStructToSignParameter(
     case kSign:
       return SignParameter(
           ByteData(sign_data.hex), sign_data.der_encode,
-          TransactionStructApiBase::ConvertSigHashType(
+          TransactionApiBase::ConvertSigHashType(
               sign_data.sighash_type, sign_data.sighash_anyone_can_pay));
+    case kBinary:
+      return SignParameter(ByteData(sign_data.hex));
     case kPubkey:
       return SignParameter(Pubkey(sign_data.hex));
     case kRedeemScript:
@@ -575,9 +577,10 @@ AddSignResponseStruct TransactionStructApiBase::AddSign(
 
 template <class T>
 T TransactionApiBase::AddSign(
-    std::function<T(const std::string&)> create_controller, const std::string& hex, const Txid& txid,
-    const uint32_t vout, const std::vector<SignParameter>& sign_params,
-    bool is_witness, bool clear_stack) {
+    std::function<T(const std::string&)> create_controller,
+    const std::string& hex, const Txid& txid, const uint32_t vout,
+    const std::vector<SignParameter>& sign_params, bool is_witness,
+    bool clear_stack) {
   if (hex.empty()) {
     warn(
         CFD_LOG_SOURCE, "Failed to AddSign. empty transaction hex. tx=[{}]",
