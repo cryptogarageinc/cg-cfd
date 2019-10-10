@@ -36,6 +36,7 @@ using cfd::core::CfdError;
 using cfd::core::CfdException;
 using cfd::core::Txid;
 using cfd::core::logger::warn;
+using cfd::js::api::TransactionApiBase;
 
 // -----------------------------------------------------------------------------
 // ファイル内関数
@@ -84,6 +85,14 @@ TransactionController TransactionApi::CreateRawTransaction(
   }
 
   return txc;
+}
+
+TransactionController TransactionApi::AddSign(
+  const std::string& hex, const Txid txid, const uint32_t vout,
+  const std::vector<SignParameter>& sign_params, bool is_witness = true,
+  bool clear_stack = false) const {
+  return TransactionApiBase::AddSign<TransactionController>(
+    cfd::api::CreateController, hex, txid, vout, sign_params, is_witness, clear_stack);
 }
 
 ByteData TransactionApi::CreateSignatureHash(

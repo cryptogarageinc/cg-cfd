@@ -47,6 +47,11 @@ class CFD_EXPORT TransactionApi {
       uint32_t version, uint32_t locktime, const std::vector<TxIn>& txins,
       const std::vector<TxOut>& txouts) const;
 
+  TransactionController AddSign(
+      const std::string& hex, const Txid txid, const uint32_t vout,
+      const std::vector<SignParameter>& sign_params, bool is_witness = true,
+      bool clear_stack = false) const;
+
   ByteData CreateSignatureHash(
       const std::string& tx_hex, const TxInReference& txin,
       const Pubkey& pubkey, const Amount& amount, HashType hash_type,
