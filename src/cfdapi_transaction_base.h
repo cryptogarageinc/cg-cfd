@@ -20,6 +20,7 @@
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_bytedata.h"
 #include "cfdcore/cfdcore_key.h"
+#include "cfdcore/cfdcore_transaction_common.h"
 #include "cfdcore/cfdcore_util.h"
 
 /**
@@ -115,6 +116,23 @@ class TransactionStructApiBase {
   static AddSignResponseStruct AddSign(
       const AddSignRequestStruct& request,
       std::function<T(const std::string&)> create_controller);
+  /**
+   * @brief Add signature information based on parameter information.
+   * @param[in] create_controller   transaction controller create function
+   * @param[in] hex                 transaction hex
+   * @param[in] txid                txid of input to add sign parameters to
+   * @param[in] vout                vout of input to add sign parameters to
+   * @param[in] sign_params         sign parameters to add the input
+   * @param[in] is_witness          flag to add sign parameters to 
+   *     witness or unlocking script
+   * @param[in] clear_stack         flag of clear all stacks
+   * @return structure containing Transaction hex data
+   */
+  template <class T>
+  static T AddSign(
+      std::function<T(const std::string&)> create_controller, const std::string& hex, const Txid& txid,
+      const uint32_t vout, const std::vector<SignParameter>& sign_params,
+      bool is_witness = true, bool clear_stack = true);
 
   /**
    * @brief Outputs number of elements in witness stack based on JSON parameters.

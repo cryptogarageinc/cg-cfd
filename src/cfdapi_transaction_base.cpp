@@ -574,7 +574,42 @@ AddSignResponseStruct TransactionStructApiBase::AddSign(
 }
 
 template <class T>
-GetWitnessStackNumResponseStruct TransactionStructApiBase::GetWitnessStackNum(
+T TransactionApiBase::AddSign(
+    std::function<T(const std::string&)> create_controller, const std::string& hex, const Txid& txid,
+    const uint32_t vout, const std::vector<SignParameter>& sign_params,
+    bool is_witness, bool clear_stack) {
+  if (hex.empty()) {
+    warn(
+        CFD_LOG_SOURCE, "Failed to AddSign. empty transaction hex. tx=[{}]",
+        hex);
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
+        "Failed to AddSign. empty transaction hex.");
+  }
+
+  // TransactionController作成
+  T txc = create_controller(hex);
+
+  std::vector<ByteData> sign_stack;
+  for (const SignParameter& sign_param : sign_params) {
+    sign_stack.push_back(sign_param.GetData());
+  }
+
+  if (is_witness) {
+    // Witnessの追加
+    if (clear_stack) {
+      txc.RemoveWitnessStackAll(txid, vout);
+    }
+    txc.AddWitnessStack(txid, vout, sign_stack);
+  } else {
+    txc.SetUnlockingScript(txid, vout, sign_stack);
+  }
+
+  return txc;
+}
+
+template <class T>
+GetWitnessStackNumResponseStruct TransactionApiBase::GetWitnessStackNum(
     const GetWitnessStackNumRequestStruct& request,
     std::function<T(const std::string&)> create_controller) {
   auto call_func =
