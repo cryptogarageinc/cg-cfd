@@ -136,7 +136,7 @@ ConfidentialTransactionController ElementsTransactionApi::CreateRawTransaction(
 }
 
 ByteData ElementsTransactionApi::CreateSignatureHash(
-    const std::string& tx_hex, const ConfidentialTxIn& txin,
+    const std::string& tx_hex, const ConfidentialTxInReference& txin,
     const Pubkey& pubkey, const ConfidentialValue& value, HashType hash_type,
     const SigHashType& sighash_type) const {
   return CreateSignatureHash(
@@ -144,7 +144,7 @@ ByteData ElementsTransactionApi::CreateSignatureHash(
 }
 
 ByteData ElementsTransactionApi::CreateSignatureHash(
-    const std::string& tx_hex, const ConfidentialTxIn& txin,
+    const std::string& tx_hex, const ConfidentialTxInReference& txin,
     const Script& redeem_script, const ConfidentialValue& value,
     HashType hash_type, const SigHashType& sighash_type) const {
   return CreateSignatureHash(
@@ -152,7 +152,7 @@ ByteData ElementsTransactionApi::CreateSignatureHash(
 }
 
 ByteData ElementsTransactionApi::CreateSignatureHash(
-    const std::string& tx_hex, const ConfidentialTxIn& txin,
+    const std::string& tx_hex, const ConfidentialTxInReference& txin,
     const ByteData& key_data, const ConfidentialValue& value,
     HashType hash_type, const SigHashType& sighash_type) const {
   std::string sig_hash;
@@ -811,6 +811,7 @@ ElementsTransactionStructApi::CreateSignatureHash(  // NOLINT
 
     ElementsTransactionApi api;
     HashType hash_type;
+    ConfidentialTxInReference txin(ConfidentialTxIn(txid, vout));
     ConfidentialValue value =
         (value_hex.empty())
             ? ConfidentialValue(Amount::CreateBySatoshiAmount(amount))
@@ -819,14 +820,12 @@ ElementsTransactionStructApi::CreateSignatureHash(  // NOLINT
       hash_type =
           (hashtype_str == "p2wpkh") ? HashType::kP2wpkh : HashType::kP2pkh;
       sig_hash = api.CreateSignatureHash(
-          request.tx, ConfidentialTxIn(txid, vout), pubkey, value, hash_type,
-          sighashtype);
+          request.tx, txin, pubkey, value, hash_type, sighashtype);
     } else if ((hashtype_str == "p2sh") || (hashtype_str == "p2wsh")) {
       hash_type =
           (hashtype_str == "p2wsh") ? HashType::kP2wsh : HashType::kP2sh;
       sig_hash = api.CreateSignatureHash(
-          request.tx, ConfidentialTxIn(txid, vout), script, value, hash_type,
-          sighashtype);
+          request.tx, txin, script, value, hash_type, sighashtype);
     } else {
       warn(
           CFD_LOG_SOURCE,

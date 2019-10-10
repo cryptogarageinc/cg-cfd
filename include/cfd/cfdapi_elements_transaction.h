@@ -29,6 +29,7 @@ namespace api {
 
 using cfd::ConfidentialTransactionController;
 using cfd::core::ConfidentialTxIn;
+using cfd::core::ConfidentialTxInReference;
 using cfd::core::ConfidentialTxOut;
 using cfd::core::ConfidentialValue;
 using cfd::core::HashType;
@@ -72,7 +73,7 @@ class CFD_EXPORT ElementsTransactionApi {
    * @return sighash
    */
   ByteData CreateSignatureHash(
-      const std::string& tx_hex, const ConfidentialTxIn& txin,
+      const std::string& tx_hex, const ConfidentialTxInReference& txin,
       const Pubkey& pubkey, const ConfidentialValue& value, HashType hash_type,
       const SigHashType& sighash_type) const;
   /**
@@ -86,7 +87,7 @@ class CFD_EXPORT ElementsTransactionApi {
    * @return sighash
    */
   ByteData CreateSignatureHash(
-      const std::string& tx_hex, const ConfidentialTxIn& txin,
+      const std::string& tx_hex, const ConfidentialTxInReference& txin,
       const Script& redeem_script, const ConfidentialValue& value,
       HashType hash_type, const SigHashType& sighash_type) const;
   /**
@@ -100,7 +101,7 @@ class CFD_EXPORT ElementsTransactionApi {
    * @return sighash
    */
   ByteData CreateSignatureHash(
-      const std::string& tx_hex, const ConfidentialTxIn& txin,
+      const std::string& tx_hex, const ConfidentialTxInReference& txin,
       const ByteData& key_data, const ConfidentialValue& value,
       HashType hash_type, const SigHashType& sighash_type) const;
 
