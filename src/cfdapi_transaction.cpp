@@ -95,16 +95,16 @@ ByteData TransactionApi::CreateSignatureHash(
 }
 
 ByteData TransactionApi::CreateSignatureHash(
-    const std::string& tx_hex, const TxInReference& txin, const Script& redeem_script,
-    const Amount& amount, HashType hash_type,
+    const std::string& tx_hex, const TxInReference& txin,
+    const Script& redeem_script, const Amount& amount, HashType hash_type,
     const SigHashType& sighash_type) const {
   return CreateSignatureHash(
       tx_hex, txin, redeem_script.GetData(), amount, hash_type, sighash_type);
 }
 
 ByteData TransactionApi::CreateSignatureHash(
-    const std::string& tx_hex, const TxInReference& txin, const ByteData& key_data,
-    const Amount& amount, HashType hash_type,
+    const std::string& tx_hex, const TxInReference& txin,
+    const ByteData& key_data, const Amount& amount, HashType hash_type,
     const SigHashType& sighash_type) const {
   std::string sig_hash;
   int64_t amount_value = amount.GetSatoshiValue();
