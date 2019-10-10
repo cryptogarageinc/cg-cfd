@@ -187,8 +187,9 @@ class TransactionStructApiBase {
    * @param[in] sign_data   SignDataStruct which is passed by StructApi request.
    * @return a SignParameter instance
    */
+  template <class SignStructClass>
   static SignParameter ConvertSignDataStructToSignParameter(
-      const SignDataStruct& sign_data);
+      const SignStructClass& sign_data);
 };
 
 }  // namespace api

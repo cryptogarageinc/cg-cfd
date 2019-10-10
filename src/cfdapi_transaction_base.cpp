@@ -474,20 +474,24 @@ static SignDataType ConvertToSignDataType(const std::string& data_type) {
   }
 }
 
+template <class SignStructClass>
 SignParameter TransactionStructApiBase::ConvertSignDataStructToSignParameter(
-    const SignDataStruct& sign_data) {
+    const SignStructClass& sign_data) {
   SignDataType data_type = ConvertToSignDataType(sign_data.type);
   switch (data_type) {
     case kSign:
       return SignParameter(
-          ByteData(sign_data.hex), sign_data.der_encode, 
-          TransactionStructApiBase::ConvertSigHashType(sign_data.sighash_type, sign_data.sighash_anyone_can_pay));
-    case kBinary:
-      return SignParameter(ByteData(sign_data.hex));
+          ByteData(sign_data.hex), sign_data.der_encode,
+          TransactionStructApiBase::ConvertSigHashType(
+              sign_data.sighash_type, sign_data.sighash_anyone_can_pay));
     case kPubkey:
       return SignParameter(Pubkey(sign_data.hex));
     case kRedeemScript:
       return SignParameter(Script(sign_data.hex));
+    case kBinary:
+      // fall-through
+    default:
+      return SignParameter(ByteData(sign_data.hex));
   }
 }
 
@@ -775,6 +779,14 @@ TransactionStructApiBase::UpdateWitnessStack<TransactionController>(
     const UpdateWitnessStackRequestStruct& request,
     std::function<TransactionController(const std::string&)>
         create_controller);
+
+template SignParameter
+TransactionStructApiBase::ConvertSignDataStructToSignParameter<SignDataStruct>(
+    const SignDataStruct& sign_data);
+
+template SignParameter
+TransactionStructApiBase::ConvertSignDataStructToSignParameter<
+    MultisigSignDataStruct>(const MultisigSignDataStruct& sign_data);
 
 #ifndef CFD_DISABLE_ELEMENTS
 

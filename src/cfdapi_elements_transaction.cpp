@@ -775,7 +775,16 @@ AddMultisigSignResponseStruct ElementsTransactionStructApi::AddMultisigSign(
     Script witness_script(request.txin.witness_script);
     std::vector<SignParameter> sign_list;
 
-    // FIXME(k-matsuzawa): 実装する
+    SignParameter sign_data;
+    for (const auto& stack_req : request.txin.sign_params) {
+      sign_data =
+          TransactionStructApiBase::ConvertSignDataStructToSignParameter(
+              stack_req);
+      if (!stack_req.related_pubkey.empty()) {
+        sign_data.SetRelatedPubkey(Pubkey(stack_req.related_pubkey));
+      }
+      sign_list.push_back(sign_data);
+    }
 
     ElementsTransactionApi api;
     ConfidentialTransactionController ctx = api.AddMultisigSign(
