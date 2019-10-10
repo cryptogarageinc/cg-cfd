@@ -18,8 +18,8 @@
 #include "cfdcore/cfdcore_logger.h"
 #include "cfdcore/cfdcore_util.h"
 
-#include "cfdapi_internal.h"          // NOLINT
 #include "cfdapi_transaction_base.h"  // NOLINT
+#include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
 namespace js {
@@ -241,6 +241,41 @@ AddSignResponseStruct TransactionApiBase::AddSign(
   result = ExecuteStructApi<AddSignRequestStruct, AddSignResponseStruct>(
       request, call_func, std::string(__FUNCTION__));
   return result;
+}
+
+template <class T>
+T TransactionApiBase::AddSign(
+  std::function<T(const std::string&)> create_controller, const Txid& txid, const uint32_t vout, const std::vector<SignParameter>& sign_params, bool is_witness, bool clear_stack) {
+
+    if (hex.empty()) {
+      warn(CFD_LOG_SOURCE, "Failed to AddSign. empty transaction hex. tx=[{}]", hex);
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError,
+          "Failed to AddSign. empty transaction hex.");
+    }
+
+    // TransactionController作成
+    T txc = create_controller(hex);
+
+    std::vector<ByteData> sign_stack;
+    for (const SignParameter& sign_param : sign_params) {
+      ByteData byte_data = ConvertSignDataToSignature(
+        stack_req.hex, (stack_req.type == "sign"), stack_req.der_encode,
+        stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
+      sign_stack.push_back(byte_data);
+    }
+
+    if (is_witness) {
+      // Witnessの追加
+      if (clear_stack) {
+        txc.RemoveWitnessStackAll(txid, vout);
+      }
+      txc.AddWitnessStack(txid, vout, sign_stack);
+    } else {
+      txc.SetUnlockingScript(txid, vout, sign_stack);
+    }
+
+    return txc;
 }
 
 template <class T>

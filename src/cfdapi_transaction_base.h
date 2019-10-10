@@ -64,7 +64,7 @@ struct ExtractScriptData {
  * @brief Class providing common functionalities to TransactionStructApi and
  * ConfidentialTransactionApi.
  */
-class CFD_EXPORT TransactionApiBase {
+class TransactionApiBase {
  public:
   /**
    * @brief Add signature information based on JSON parameter information.

@@ -49,6 +49,66 @@ constexpr uint32_t kSequenceEnableLockTimeMax = 0xfffffffeU;
 constexpr uint32_t kSequenceDisableLockTime = 0xffffffffU;
 
 // -----------------------------------------------------------------------------
+// SignParameter
+// -----------------------------------------------------------------------------
+
+SignParameter::SignParameter(
+    const ByteData& data, bool der_encode, const SigHashType sighash_type)
+    : data_(data),
+      data_type_(SignDataType::kSign),
+      related_pubkey_(),
+      der_encode_(der_encode),
+      sighash_type_(sighash_type) {
+  // FIXME: encode処理
+}
+
+SignParameter::SignParameter(const ByteData& data)
+    : data_(data),
+      data_type_(SignDataType::kBinary),
+      related_pubkey_(),
+      der_encode_(false),
+      sighash_type_() {
+  // do nothing
+}
+
+SignParameter::SignParameter(const Pubkey& pubkey)
+    : data_(pubkey.GetData()),
+      data_type_(SignDataType::kPubkey),
+      related_pubkey_(),
+      der_encode_(false),
+      sighash_type_() {
+  // do nothing
+}
+
+SignParameter::SignParameter(const Script& redeem_script)
+    : data_(redeem_script.GetData()),
+      data_type_(SignDataType::kRedeemScript),
+      related_pubkey_(),
+      der_encode_(false),
+      sighash_type_() {
+  // do nothing
+}
+
+void SignParameter::SetRelatedPubkey(const Pubkey& pubkey) {
+  related_pubkey_ = pubkey;
+}
+
+ByteData SignParameter::GetData() const { return data_; }
+
+SignDataType SignParameter::GetDataType() const { return data_type_; }
+
+Pubkey SignParameter::GetRelatedPubkey() const { return related_pubkey_; }
+
+bool SignParameter::IsDerEncode() const { return der_encode_; }
+
+SigHashType SignParameter::GetSigHashType() const { return sighash_type_; }
+
+ByteData SignParameter::ConvertToSignature() const {
+  // FIXME: signature変換処理
+  return ByteData();
+}
+
+// -----------------------------------------------------------------------------
 // TransactionController
 // -----------------------------------------------------------------------------
 AbstractTransactionController::AbstractTransactionController()

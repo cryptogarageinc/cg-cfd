@@ -26,8 +26,8 @@
 #include "cfd/cfdapi_elements_transaction.h"
 #include "cfd/cfdapi_struct.h"
 #include "cfd/cfdapi_transaction.h"
-#include "cfd/cfdapi_transaction_base.h"
-#include "cfdapi_internal.h"  // NOLINT
+#include "cfdapi_internal.h"          // NOLINT
+#include "cfdapi_transaction_base.h"  // NOLINT
 
 namespace cfd {
 namespace js {

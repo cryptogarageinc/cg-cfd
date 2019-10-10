@@ -19,9 +19,9 @@
 #include "cfdcore/cfdcore_util.h"
 
 #include "cfd/cfdapi_struct.h"
-#include "cfd/cfdapi_transaction_base.h"
 #include "cfd/dlcapi_transaction.h"
-#include "dlcapi_internal.h"  // NOLINT
+#include "cfdapi_transaction_base.h"  // NOLINT
+#include "dlcapi_internal.h"          // NOLINT
 
 namespace dlc {
 namespace js {
