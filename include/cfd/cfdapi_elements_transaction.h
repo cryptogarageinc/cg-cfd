@@ -11,6 +11,7 @@
 #ifndef CFD_DISABLE_ELEMENTS
 
 #include <string>
+#include <vector>
 
 #include "cfd/cfd_common.h"
 #include "cfd/cfd_elements_transaction.h"
@@ -28,12 +29,15 @@ namespace cfd {
 namespace api {
 
 using cfd::ConfidentialTransactionController;
+using cfd::core::ByteData;
 using cfd::core::ConfidentialTxIn;
 using cfd::core::ConfidentialTxInReference;
 using cfd::core::ConfidentialTxOut;
 using cfd::core::ConfidentialValue;
 using cfd::core::HashType;
 using cfd::core::Privkey;
+using cfd::core::Pubkey;
+using cfd::core::Script;
 using cfd::core::SigHashType;
 using cfd::core::Txid;
 

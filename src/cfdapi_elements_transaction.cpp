@@ -244,6 +244,7 @@ using cfd::core::HashType;
 using cfd::core::HashUtil;
 using cfd::core::IssuanceBlindingKeyPair;
 using cfd::core::IssuanceParameter;
+using cfd::core::NetType;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
 using cfd::core::RangeProofInfo;
