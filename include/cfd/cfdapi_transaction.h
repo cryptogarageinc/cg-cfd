@@ -19,9 +19,52 @@
 #include "cfdcore/cfdcore_script.h"
 #include "cfdcore/cfdcore_util.h"
 
+namespace cfd {
+namespace api {
+
+using cfd::TransactionController;
+using cfd::core::Amount;
+using cfd::core::ByteData;
+using cfd::core::HashType;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::SigHashType;
+using cfd::core::TxIn;
+using cfd::core::TxInReference;
+using cfd::core::TxOut;
+
 /**
- * @brief cfdapi名前空間
+ * @brief Transaction関連のAPIクラス
  */
+class CFD_EXPORT TransactionApi {
+ public:
+  /**
+   * @brief constructor
+   */
+  TransactionApi(){};
+
+  TransactionController CreateRawTransaction(
+      uint32_t version, uint32_t locktime, const std::vector<TxIn>& txins,
+      const std::vector<TxOut>& txouts) const;
+
+  ByteData CreateSignatureHash(
+      const std::string& tx_hex, const TxInReference& txin,
+      const Pubkey& pubkey, const Amount& amount, HashType hash_type,
+      const SigHashType& sighash_type) const;
+
+  ByteData CreateSignatureHash(
+      const std::string& tx_hex, const TxInReference& txin,
+      const Script& redeem_script, const Amount& amount, HashType hash_type,
+      const SigHashType& sighash_type) const;
+
+  ByteData CreateSignatureHash(
+      const std::string& tx_hex, const TxInReference& txin,
+      const ByteData& key_data, const Amount& amount, HashType hash_type,
+      const SigHashType& sighash_type) const;
+};
+}  // namespace api
+}  // namespace cfd
+
 namespace cfd {
 namespace js {
 namespace api {
