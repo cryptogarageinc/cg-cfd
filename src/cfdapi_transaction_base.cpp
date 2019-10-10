@@ -42,6 +42,10 @@ using cfd::core::SigHashType;
 using cfd::core::Txid;
 using cfd::core::logger::warn;
 
+// -----------------------------------------------------------------------------
+// ファイル内関数
+// -----------------------------------------------------------------------------
+
 /**
  * @brief Validate the request for AddMultisigSign.
  * @param[in] req       request information
@@ -130,6 +134,45 @@ static void ValidateAddMultisigSignRequest(  // linefeed
     throw CfdException(
         CfdError::kCfdOutOfRangeError,
         "Value out of range. sign array length over.");
+  }
+}
+
+SignDataType ConvertToSignDataType(const std::string& data_type) {
+  if (data_type == "sign") {
+    return SignDataType::kSign;
+  } else if (data_type == "binary") {
+    return SignDataType::kBinary;
+  } else if (data_type == "pubkey") {
+    return SignDataType::kPubkey;
+  } else if (data_type == "redeem_script") {
+    return SignDataType::kRedeemScript;
+  } else {
+    warn(
+        CFD_LOG_SOURCE,
+        "Failed to ConvertToSignDataType. Invalid data_type string passed. "
+        "data_type=[{}]",
+        data_type);
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
+        "Sign data type convert error. Invalid data_type string passed.");
+  }
+}
+
+SignParameter TransactionApiBase::ConvertSignDataStructToSignParameter(
+    const SignDataStruct& sign_data) {
+  SignDataType data_type = ConvertToSignDataType(sign_data.type);
+  switch (data_type) {
+    case kSign:
+      SigHashType sighash_type = TransactionApiBase::ConvertSigHashType(
+          sign_data.sighash_type, sign_data.sighash_anyone_can_pay);
+      return SignParameter(
+          ByteData(sign_data.hex), sign_data.der_encode, sighash_type);
+    case kBinary:
+      return SignParameter(ByteData(sign_data.hex));
+    case kPubkey:
+      return SignParameter(Pubkey(sign_data.hex));
+    case kRedeemScript:
+      return SignParameter(Script(sign_data.hex));
   }
 }
 

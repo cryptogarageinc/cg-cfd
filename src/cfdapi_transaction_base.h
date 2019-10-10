@@ -141,6 +141,14 @@ class TransactionApiBase {
    */
   static std::string ConvertLockingScriptTypeString(
       LockingScriptType script_type);
+
+  /**
+   * @brief Convert SignDataStruct to SignParameter object.
+   * @param[in] sign_data   SignDataStruct which is passed by StructApi request.
+   * @return a SignParameter instance
+   */
+  static SignParameter ConvertSignDataStructToSignParameter(
+      const SignDataStruct& sign_data);
 };
 
 }  // namespace api
