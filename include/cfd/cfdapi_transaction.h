@@ -41,8 +41,16 @@ class CFD_EXPORT TransactionApi {
   /**
    * @brief constructor
    */
-  TransactionApi(){};
+  TransactionApi() {}
 
+  /**
+   * @brief Raw Transactionを作成する.
+   * @param[in] version     tx version
+   * @param[in] locktime    lock time
+   * @param[in] txins       tx input list
+   * @param[in] txouts      tx output list
+   * @return transaction controller
+   */
   TransactionController CreateRawTransaction(
       uint32_t version, uint32_t locktime, const std::vector<TxIn>& txins,
       const std::vector<TxOut>& txouts) const;
@@ -52,16 +60,46 @@ class CFD_EXPORT TransactionApi {
       const std::vector<SignParameter>& sign_params, bool is_witness = true,
       bool clear_stack = false) const;
 
+  /**
+   * @brief tx情報およびパラメータから、SigHashを作成する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] pubkey          public key
+   * @param[in] amount          amount
+   * @param[in] hash_type       hash type
+   * @param[in] sighash_type    sighash type
+   * @return sighash
+   */
   ByteData CreateSignatureHash(
       const std::string& tx_hex, const TxInReference& txin,
       const Pubkey& pubkey, const Amount& amount, HashType hash_type,
       const SigHashType& sighash_type) const;
 
+  /**
+   * @brief tx情報およびパラメータから、SigHashを作成する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] redeem_script   redeem script
+   * @param[in] amount          amount
+   * @param[in] hash_type       hash type
+   * @param[in] sighash_type    sighash type
+   * @return sighash
+   */
   ByteData CreateSignatureHash(
       const std::string& tx_hex, const TxInReference& txin,
       const Script& redeem_script, const Amount& amount, HashType hash_type,
       const SigHashType& sighash_type) const;
 
+  /**
+   * @brief tx情報およびパラメータから、SigHashを作成する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] key_data        key data (pubkey or redeem script)
+   * @param[in] amount          amount
+   * @param[in] hash_type       hash type
+   * @param[in] sighash_type    sighash type
+   * @return sighash
+   */
   ByteData CreateSignatureHash(
       const std::string& tx_hex, const TxInReference& txin,
       const ByteData& key_data, const Amount& amount, HashType hash_type,

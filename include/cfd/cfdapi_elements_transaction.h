@@ -11,6 +11,7 @@
 #ifndef CFD_DISABLE_ELEMENTS
 
 #include <string>
+#include <vector>
 
 #include "cfd/cfd_common.h"
 #include "cfd/cfd_elements_transaction.h"
