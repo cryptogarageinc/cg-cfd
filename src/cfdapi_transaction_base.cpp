@@ -478,7 +478,7 @@ static SignDataType ConvertToSignDataType(const std::string& data_type) {
     return SignDataType::kBinary;
   } else if (data_type == "pubkey") {
     return SignDataType::kPubkey;
-  } else if (data_type == "script") {
+  } else if (data_type == "redeem_script") {
     return SignDataType::kRedeemScript;
   } else {
     warn(
