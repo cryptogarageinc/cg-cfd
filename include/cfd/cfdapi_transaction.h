@@ -23,12 +23,14 @@ namespace cfd {
 namespace api {
 
 using cfd::TransactionController;
+using cfd::core::AddressType;
 using cfd::core::Amount;
 using cfd::core::ByteData;
 using cfd::core::HashType;
 using cfd::core::Pubkey;
 using cfd::core::Script;
 using cfd::core::SigHashType;
+using cfd::core::Txid;
 using cfd::core::TxIn;
 using cfd::core::TxInReference;
 using cfd::core::TxOut;
