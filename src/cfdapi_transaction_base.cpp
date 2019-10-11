@@ -408,8 +408,8 @@ template TransactionController
 TransactionApiBase::AddSign<TransactionController>(
     std::function<TransactionController(const std::string&)> create_controller,
     const std::string& hex, const Txid& txid, const uint32_t vout,
-    const std::vector<SignParameter>& sign_params, bool is_witness = true,
-    bool clear_stack = true);
+    const std::vector<SignParameter>& sign_params, bool is_witness,
+    bool clear_stack);
 
 template std::string
 TransactionApiBase::AddMultisigSign<TransactionController>(
@@ -428,8 +428,8 @@ TransactionApiBase::AddSign<ConfidentialTransactionController>(
     std::function<ConfidentialTransactionController(const std::string&)>
         create_controller,
     const std::string& hex, const Txid& txid, const uint32_t vout,
-    const std::vector<SignParameter>& sign_params, bool is_witness = true,
-    bool clear_stack = true);
+    const std::vector<SignParameter>& sign_params, bool is_witness,
+    bool clear_stack);
 
 template std::string
 TransactionApiBase::AddMultisigSign<ConfidentialTransactionController>(

@@ -132,7 +132,7 @@ ByteData SignParameter::ConvertToSignature() const {
       warn(CFD_LOG_SOURCE, "Failed to ConvertToSignature. sign hex empty.");
       throw CfdException(
           CfdError::kCfdIllegalArgumentError,
-          "Invalid hex string. empty sign hex.");
+          "Invalid hex string. empty sign data.");
     }
     byte_data =
         CryptoUtil::ConvertSignatureToDer(data_.GetHex(), sighash_type_);
