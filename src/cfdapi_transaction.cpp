@@ -26,12 +26,14 @@
 #include "cfd/cfdapi_elements_transaction.h"
 #include "cfd/cfdapi_struct.h"
 #include "cfd/cfdapi_transaction.h"
-#include "cfd/cfdapi_transaction_base.h"
-#include "cfdapi_internal.h"  // NOLINT
+#include "cfdapi_internal.h"          // NOLINT
+#include "cfdapi_transaction_base.h"  // NOLINT
 
 namespace cfd {
 namespace api {
 
+using cfd::TransactionController;
+using cfd::api::TransactionApiBase;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
 using cfd::core::Txid;
@@ -49,6 +51,10 @@ using cfd::core::logger::warn;
 static TransactionController CreateController(const std::string& hex) {
   return TransactionController(hex);
 }
+
+// -----------------------------------------------------------------------------
+// TransactionApi
+// -----------------------------------------------------------------------------
 
 TransactionController TransactionApi::CreateRawTransaction(
     uint32_t version, uint32_t locktime, const std::vector<TxIn>& txins,
@@ -84,6 +90,15 @@ TransactionController TransactionApi::CreateRawTransaction(
   }
 
   return txc;
+}
+
+TransactionController TransactionApi::AddSign(
+    const std::string& hex, const Txid& txid, const uint32_t vout,
+    const std::vector<SignParameter>& sign_params, bool is_witness,
+    bool clear_stack) const {
+  return TransactionApiBase::AddSign<TransactionController>(
+      cfd::api::CreateController, hex, txid, vout, sign_params, is_witness,
+      clear_stack);
 }
 
 ByteData TransactionApi::CreateSignatureHash(
@@ -142,6 +157,18 @@ ByteData TransactionApi::CreateSignatureHash(
   return ByteData(sig_hash);
 }
 
+TransactionController TransactionApi::AddMultisigSign(
+    const std::string& tx_hex, const TxInReference& txin,
+    const std::vector<SignParameter>& sign_list, AddressType address_type,
+    const Script& witness_script, const Script redeem_script,
+    bool clear_stack) {
+  std::string result =
+      TransactionApiBase::AddMultisigSign<TransactionController>(
+          tx_hex, txin, sign_list, address_type, witness_script, redeem_script,
+          clear_stack, CreateController);
+  return TransactionController(result);
+}
+
 }  // namespace api
 }  // namespace cfd
 
@@ -179,6 +206,8 @@ using cfd::core::TxOutReference;
 using cfd::core::WitnessVersion;
 using cfd::core::logger::warn;
 using cfd::js::api::AddressStructApi;
+using cfd::js::api::TransactionStructApi;
+using cfd::js::api::TransactionStructApiBase;
 
 // -----------------------------------------------------------------------------
 // TransactionStructApiクラス
@@ -401,7 +430,7 @@ GetWitnessStackNumResponseStruct TransactionStructApi::GetWitnessStackNum(
     const GetWitnessStackNumRequestStruct& request) {
   auto call_func = [](const GetWitnessStackNumRequestStruct& request)
       -> GetWitnessStackNumResponseStruct {  // NOLINT
-    return TransactionApiBase::GetWitnessStackNum<TransactionController>(
+    return TransactionStructApiBase::GetWitnessStackNum<TransactionController>(
         request, cfd::api::CreateController);
   };
 
@@ -416,8 +445,28 @@ AddSignResponseStruct TransactionStructApi::AddSign(
     const AddSignRequestStruct& request) {
   auto call_func =
       [](const AddSignRequestStruct& request) -> AddSignResponseStruct {
-    return TransactionApiBase::AddSign<TransactionController>(
-        request, cfd::api::CreateController);
+    AddSignResponseStruct response;
+
+    std::string tx_hex = request.tx;
+    Txid txid(request.txin.txid);
+    uint32_t vout = request.txin.vout;
+
+    std::vector<SignParameter> sign_params;
+    for (const SignDataStruct& sign_data : request.txin.sign_param) {
+      sign_params.push_back(
+          TransactionStructApiBase::ConvertSignDataStructToSignParameter(
+              sign_data));
+    }
+
+    bool is_witness = request.txin.is_witness;
+    bool clear_stack = request.txin.clear_stack;
+
+    TransactionApi api;
+    TransactionController txc =
+        api.AddSign(tx_hex, txid, vout, sign_params, is_witness, clear_stack);
+
+    response.hex = txc.GetHex();
+    return response;
   };
 
   AddSignResponseStruct result;
@@ -430,7 +479,7 @@ UpdateWitnessStackResponseStruct TransactionStructApi::UpdateWitnessStack(
     const UpdateWitnessStackRequestStruct& request) {
   auto call_func = [](const UpdateWitnessStackRequestStruct& request)
       -> UpdateWitnessStackResponseStruct {  // NOLINT
-    return TransactionApiBase::UpdateWitnessStack<TransactionController>(
+    return TransactionStructApiBase::UpdateWitnessStack<TransactionController>(
         request, cfd::api::CreateController);
   };
 
@@ -445,8 +494,32 @@ AddMultisigSignResponseStruct TransactionStructApi::AddMultisigSign(
     const AddMultisigSignRequestStruct& request) {
   auto call_func = [](const AddMultisigSignRequestStruct& request)
       -> AddMultisigSignResponseStruct {  // NOLINT
-    return TransactionApiBase::AddMultisigSign<TransactionController>(
-        request, cfd::api::CreateController);
+    TxInReference txin(TxIn(Txid(request.txin.txid), request.txin.vout, 0));
+    AddressType addr_type =
+        AddressStructApi::ConvertAddressType(request.txin.hash_type);
+    Script redeem_script(request.txin.redeem_script);
+    Script witness_script(request.txin.witness_script);
+    std::vector<SignParameter> sign_list;
+
+    SignParameter sign_data;
+    for (const auto& stack_req : request.txin.sign_params) {
+      sign_data =
+          TransactionStructApiBase::ConvertSignDataStructToSignParameter(
+              stack_req);
+      if (!stack_req.related_pubkey.empty()) {
+        sign_data.SetRelatedPubkey(Pubkey(stack_req.related_pubkey));
+      }
+      sign_list.push_back(sign_data);
+    }
+
+    TransactionApi api;
+    TransactionController ctx = api.AddMultisigSign(
+        request.tx, txin, sign_list, addr_type, witness_script, redeem_script,
+        request.txin.clear_stack);
+
+    AddMultisigSignResponseStruct response;
+    response.hex = ctx.GetHex();
+    return response;
   };
 
   AddMultisigSignResponseStruct result;
@@ -467,7 +540,7 @@ CreateSignatureHashResponseStruct TransactionStructApi::CreateSignatureHash(
     const Txid& txid = Txid(request.txin.txid);
     uint32_t vout = request.txin.vout;
     const std::string& hashtype_str = request.txin.hash_type;
-    SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
+    SigHashType sighashtype = TransactionStructApiBase::ConvertSigHashType(
         request.txin.sighash_type, request.txin.sighash_anyone_can_pay);
 
     Pubkey pubkey;

@@ -6,8 +6,8 @@
  *
  * JSON形式のAPIを提供する.
  */
-#ifndef CFD_INCLUDE_CFD_CFDAPI_TRANSACTION_BASE_H_
-#define CFD_INCLUDE_CFD_CFDAPI_TRANSACTION_BASE_H_
+#ifndef CFD_SRC_CFDAPI_TRANSACTION_BASE_H_
+#define CFD_SRC_CFDAPI_TRANSACTION_BASE_H_
 
 #include <functional>
 #include <string>
@@ -20,11 +20,77 @@
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_bytedata.h"
 #include "cfdcore/cfdcore_key.h"
+#include "cfdcore/cfdcore_transaction_common.h"
 #include "cfdcore/cfdcore_util.h"
 
 /**
  * @brief cfdapi namespace
  */
+namespace cfd {
+namespace api {
+
+using cfd::core::AbstractTxInReference;
+using cfd::core::AddressType;
+using cfd::core::ByteData;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::Txid;
+
+/**
+ * @brief Class providing common functionalities to TransactionStructApi and
+ * ConfidentialTransactionApi.
+ */
+class TransactionApiBase {
+ public:
+  /**
+   * @brief Add signature information based on parameter information.
+   * @param[in] create_controller   transaction controller create function
+   * @param[in] hex                 transaction hex
+   * @param[in] txid                txid of input to add sign parameters to
+   * @param[in] vout                vout of input to add sign parameters to
+   * @param[in] sign_params         sign parameters to add the input
+   * @param[in] is_witness          flag to add sign parameters to
+   *     witness or unlocking script
+   * @param[in] clear_stack         flag of clear all stacks
+   * @return structure containing Transaction hex data
+   */
+  template <class T>
+  static T AddSign(
+      std::function<T(const std::string&)> create_controller,
+      const std::string& hex, const Txid& txid, const uint32_t vout,
+      const std::vector<SignParameter>& sign_params, bool is_witness = true,
+      bool clear_stack = true);
+
+ public:
+  /**
+   * @brief Add Segwit multisig signature information.
+   * @details the order of signatures to be added is automatically aligned
+   * with the corresponding pubkey in redeemscript and relatedPubkey in
+   * signParam. (If relatedPubkey is not set, signatures are added in order of
+   * signParam after adding signature with relatedPubkey).
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] sign_list       value (amount or commitment)
+   * @param[in] address_type    address type. (support is P2sh-P2wsh or P2wsh)
+   * @param[in] witness_script  witness script
+   * @param[in] redeem_script   redeem script
+   * @param[in] clear_stack     clear stack data before add.
+   * @param[in] create_controller a callback to create a transaction controller.
+   * @return structure that holds Transaction and Segwit multisig signature
+   * information.
+   */
+  template <class T>
+  static std::string AddMultisigSign(
+      const std::string& tx_hex, const AbstractTxInReference& txin,
+      const std::vector<SignParameter>& sign_list, AddressType address_type,
+      const Script& witness_script, const Script redeem_script,
+      bool clear_stack,
+      std::function<T(const std::string&)> create_controller);
+};
+
+}  // namespace api
+}  // namespace cfd
+
 namespace cfd {
 namespace js {
 namespace api {
@@ -64,20 +130,8 @@ struct ExtractScriptData {
  * @brief Class providing common functionalities to TransactionStructApi and
  * ConfidentialTransactionApi.
  */
-class CFD_EXPORT TransactionApiBase {
+class TransactionStructApiBase {
  public:
-  /**
-   * @brief Add signature information based on JSON parameter information.
-   * @param[in] request structure that stores Transaction and
-   * signature information.
-   * @param[in] create_controller a callback to create a transaction controller.
-   * @return structure containing Transaction hex data.
-   */
-  template <class T>
-  static AddSignResponseStruct AddSign(
-      const AddSignRequestStruct& request,
-      std::function<T(const std::string&)> create_controller);
-
   /**
    * @brief Outputs number of elements in witness stack based on JSON parameters.
    * @param[in] request structure containing Transaction and TxIn information.
@@ -102,21 +156,18 @@ class CFD_EXPORT TransactionApiBase {
       std::function<T(const std::string&)> create_controller);
 
   /**
-   * @brief Add Segwit multisig signature information.
-   * @details the order of signatures to be added is automatically aligned
-   * with the corresponding pubkey in redeemscript and relatedPubkey in
-   * signParam. (If relatedPubkey is not set, signatures are added in order of
-   * signParam after adding signature with relatedPubkey).
-   * @param[in] request structure containing Transaction and Segwit signature
-   * information.
-   * @param[in] create_controller a callback to create a transaction controller.
-   * @return structure that holds Transaction and Segwit multisig signature
-   * information.
+   * @brief Convert signature information to a signature.
+   * @param[in] hex_string              Signature information
+   * @param[in] is_sign                 Whether signature data is provided
+   * @param[in] is_der_encode           Whether the signature is DER encoded
+   * @param[in] sighash_type            SigHash type
+   * @param[in] sighash_anyone_can_pay  Flag determining if SigHash is
+   * anyone_can_pay
+   * @return Converted signature information.
    */
-  template <class T>
-  static AddMultisigSignResponseStruct AddMultisigSign(
-      const AddMultisigSignRequestStruct& request,
-      std::function<T(const std::string&)> create_controller);
+  static ByteData ConvertSignDataToSignature(
+      const std::string& hex_string, bool is_sign, bool is_der_encode,
+      const std::string& sighash_type, bool sighash_anyone_can_pay);
 
   /**
    * @brief Convert a string to a SigHashType object.
@@ -141,10 +192,19 @@ class CFD_EXPORT TransactionApiBase {
    */
   static std::string ConvertLockingScriptTypeString(
       LockingScriptType script_type);
+
+  /**
+   * @brief Convert SignDataStruct to SignParameter object.
+   * @param[in] sign_data   SignDataStruct which is passed by StructApi request.
+   * @return a SignParameter instance
+   */
+  template <class SignStructClass>
+  static SignParameter ConvertSignDataStructToSignParameter(
+      const SignStructClass& sign_data);
 };
 
 }  // namespace api
 }  // namespace js
 }  // namespace cfd
 
-#endif  // CFD_INCLUDE_CFD_CFDAPI_TRANSACTION_BASE_H_
+#endif  // CFD_SRC_CFDAPI_TRANSACTION_BASE_H_

@@ -32,15 +32,17 @@
 #include "cfd/cfdapi_elements_transaction.h"
 #include "cfd/cfdapi_struct.h"
 #include "cfd/cfdapi_transaction.h"
-#include "cfd/cfdapi_transaction_base.h"
-#include "cfdapi_internal.h"  // NOLINT
+#include "cfdapi_internal.h"          // NOLINT
+#include "cfdapi_transaction_base.h"  // NOLINT
 
 namespace cfd {
 namespace api {
 
 using cfd::ConfidentialTransactionController;
 using cfd::ElementsAddressFactory;
+using cfd::SignParameter;
 using cfd::api::AddressApi;
+using cfd::api::TransactionApiBase;
 using cfd::core::Address;
 using cfd::core::AddressType;
 using cfd::core::Amount;
@@ -135,6 +137,15 @@ ConfidentialTransactionController ElementsTransactionApi::CreateRawTransaction(
   return ctxc;
 }
 
+ConfidentialTransactionController ElementsTransactionApi::AddSign(
+    const std::string& hex, const Txid& txid, const uint32_t vout,
+    const std::vector<SignParameter>& sign_params, bool is_witness,
+    bool clear_stack) const {
+  return TransactionApiBase::AddSign<ConfidentialTransactionController>(
+      cfd::api::CreateController, hex, txid, vout, sign_params, is_witness,
+      clear_stack);
+}
+
 ByteData ElementsTransactionApi::CreateSignatureHash(
     const std::string& tx_hex, const ConfidentialTxInReference& txin,
     const Pubkey& pubkey, const ConfidentialValue& value, HashType hash_type,
@@ -202,6 +213,18 @@ ByteData ElementsTransactionApi::CreateSignatureHash(
   }
 
   return ByteData(sig_hash);
+}
+
+ConfidentialTransactionController ElementsTransactionApi::AddMultisigSign(
+    const std::string& tx_hex, const ConfidentialTxInReference& txin,
+    const std::vector<SignParameter>& sign_list, AddressType address_type,
+    const Script& witness_script, const Script redeem_script,
+    bool clear_stack) {
+  std::string result =
+      TransactionApiBase::AddMultisigSign<ConfidentialTransactionController>(
+          tx_hex, txin, sign_list, address_type, witness_script, redeem_script,
+          clear_stack, CreateController);
+  return ConfidentialTransactionController(result);
 }
 
 }  // namespace api
@@ -584,10 +607,10 @@ ElementsTransactionStructApi::DecodeRawTransaction(  // NOLINT
       script_pub_key_res.hex = locking_script.GetHex();
 
       ExtractScriptData extract_data =
-          TransactionApiBase::ExtractLockingScript(locking_script);
+          TransactionStructApiBase::ExtractLockingScript(locking_script);
       LockingScriptType type = extract_data.script_type;
       script_pub_key_res.type =
-          TransactionApiBase::ConvertLockingScriptTypeString(type);
+          TransactionStructApiBase::ConvertLockingScriptTypeString(type);
       script_pub_key_res.req_sigs = extract_data.pushed_datas.size();
 
       ElementsNetType elements_net_type =
@@ -644,10 +667,12 @@ ElementsTransactionStructApi::DecodeRawTransaction(  // NOLINT
         script_pub_key_res.pegout_hex = pegout_locking_script.GetHex();
 
         ExtractScriptData pegout_extract_data =
-            TransactionApiBase::ExtractLockingScript(pegout_locking_script);
+            TransactionStructApiBase::ExtractLockingScript(
+                pegout_locking_script);
         LockingScriptType pegout_type = pegout_extract_data.script_type;
         script_pub_key_res.pegout_type =
-            TransactionApiBase::ConvertLockingScriptTypeString(pegout_type);
+            TransactionStructApiBase::ConvertLockingScriptTypeString(
+                pegout_type);
         script_pub_key_res.pegout_req_sigs =
             pegout_extract_data.pushed_datas.size();
 
@@ -718,7 +743,7 @@ ElementsTransactionStructApi::GetWitnessStackNum(
     const GetWitnessStackNumRequestStruct& request) {
   auto call_func = [](const GetWitnessStackNumRequestStruct& request)
       -> GetWitnessStackNumResponseStruct {  // NOLINT
-    return TransactionApiBase::GetWitnessStackNum<
+    return TransactionStructApiBase::GetWitnessStackNum<
         ConfidentialTransactionController>(
         request, cfd::api::CreateController);
   };
@@ -734,8 +759,28 @@ AddSignResponseStruct ElementsTransactionStructApi::AddSign(
     const AddSignRequestStruct& request) {
   auto call_func =
       [](const AddSignRequestStruct& request) -> AddSignResponseStruct {
-    return TransactionApiBase::AddSign<ConfidentialTransactionController>(
-        request, cfd::api::CreateController);
+    AddSignResponseStruct response;
+
+    std::string tx_hex = request.tx;
+    Txid txid(request.txin.txid);
+    uint32_t vout = request.txin.vout;
+
+    std::vector<SignParameter> sign_params;
+    for (const SignDataStruct& sign_data : request.txin.sign_param) {
+      sign_params.push_back(
+          TransactionStructApiBase::ConvertSignDataStructToSignParameter(
+              sign_data));
+    }
+
+    bool is_witness = request.txin.is_witness;
+    bool clear_stack = request.txin.clear_stack;
+
+    ElementsTransactionApi api;
+    ConfidentialTransactionController txc =
+        api.AddSign(tx_hex, txid, vout, sign_params, is_witness, clear_stack);
+
+    response.hex = txc.GetHex();
+    return response;
   };
 
   AddSignResponseStruct result;
@@ -750,16 +795,33 @@ AddMultisigSignResponseStruct ElementsTransactionStructApi::AddMultisigSign(
       -> AddMultisigSignResponseStruct {  // NOLINT
     AddMultisigSignResponseStruct response;
     // レスポンスとなるモデルへ変換
-    // validate request
-    if (request.txin.hash_type == "p2wsh") {
-      throw CfdException(
-          CfdError::kCfdOutOfRangeError,
-          "Failed to AddMultisigSign. p2wsh is excluded.");
+
+    ConfidentialTxInReference txin(
+        ConfidentialTxIn(Txid(request.txin.txid), request.txin.vout));
+    AddressType addr_type =
+        AddressStructApi::ConvertAddressType(request.txin.hash_type);
+    Script redeem_script(request.txin.redeem_script);
+    Script witness_script(request.txin.witness_script);
+    std::vector<SignParameter> sign_list;
+
+    SignParameter sign_data;
+    for (const auto& stack_req : request.txin.sign_params) {
+      sign_data =
+          TransactionStructApiBase::ConvertSignDataStructToSignParameter(
+              stack_req);
+      if (!stack_req.related_pubkey.empty()) {
+        sign_data.SetRelatedPubkey(Pubkey(stack_req.related_pubkey));
+      }
+      sign_list.push_back(sign_data);
     }
 
-    return TransactionApiBase::AddMultisigSign<
-        ConfidentialTransactionController>(
-        request, cfd::api::CreateController);
+    ElementsTransactionApi api;
+    ConfidentialTransactionController ctx = api.AddMultisigSign(
+        request.tx, txin, sign_list, addr_type, witness_script, redeem_script,
+        request.txin.clear_stack);
+
+    response.hex = ctx.GetHex();
+    return response;
   };
 
   AddMultisigSignResponseStruct result;
@@ -774,7 +836,7 @@ ElementsTransactionStructApi::UpdateWitnessStack(
     const UpdateWitnessStackRequestStruct& request) {
   auto call_func = [](const UpdateWitnessStackRequestStruct& request)
       -> UpdateWitnessStackResponseStruct {  // NOLINT
-    return TransactionApiBase::UpdateWitnessStack<
+    return TransactionStructApiBase::UpdateWitnessStack<
         ConfidentialTransactionController>(
         request, cfd::api::CreateController);
   };
@@ -799,7 +861,7 @@ ElementsTransactionStructApi::CreateSignatureHash(  // NOLINT
     const Txid& txid = Txid(request.txin.txid);
     uint32_t vout = request.txin.vout;
     ConfidentialTransactionController txc(request.tx);
-    SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
+    SigHashType sighashtype = TransactionStructApiBase::ConvertSigHashType(
         request.txin.sighash_type, request.txin.sighash_anyone_can_pay);
 
     Pubkey pubkey;

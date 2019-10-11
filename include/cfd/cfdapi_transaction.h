@@ -23,12 +23,14 @@ namespace cfd {
 namespace api {
 
 using cfd::TransactionController;
+using cfd::core::AddressType;
 using cfd::core::Amount;
 using cfd::core::ByteData;
 using cfd::core::HashType;
 using cfd::core::Pubkey;
 using cfd::core::Script;
 using cfd::core::SigHashType;
+using cfd::core::Txid;
 using cfd::core::TxIn;
 using cfd::core::TxInReference;
 using cfd::core::TxOut;
@@ -54,6 +56,21 @@ class CFD_EXPORT TransactionApi {
   TransactionController CreateRawTransaction(
       uint32_t version, uint32_t locktime, const std::vector<TxIn>& txins,
       const std::vector<TxOut>& txouts) const;
+
+  /**
+   * @brief hexで与えられたtxに、SignDataを付与したTransctionControllerを作成する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txid            target tx input txid
+   * @param[in] vout            target tx input vout
+   * @param[in] sign_params     sign data list
+   * @param[in] is_witness      use witness
+   * @param[in] clear_stack     clear stack data before add.
+   * @return SignDataが付与されたTransactionController
+   */
+  TransactionController AddSign(
+      const std::string& tx_hex, const Txid& txid, const uint32_t vout,
+      const std::vector<SignParameter>& sign_params, bool is_witness = true,
+      bool clear_stack = false) const;
 
   /**
    * @brief tx情報およびパラメータから、SigHashを作成する.
@@ -99,7 +116,30 @@ class CFD_EXPORT TransactionApi {
       const std::string& tx_hex, const TxInReference& txin,
       const ByteData& key_data, const Amount& amount, HashType hash_type,
       const SigHashType& sighash_type) const;
+
+  /**
+   * @brief Multisig署名情報を追加する.
+   * @details 追加するsignatureの順序は、redeem
+   * scriptのpubkeyとsign_list内のrelatedPubkeyで
+   *   対応をとって自動的に整列される.
+   * (relatedPubkeyが設定されていない場合は、relatedPubkeyが
+   *   設定されているsignatureを追加した後にsignParamの順序でsignatureを追加)
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] sign_list       value (amount or commitment)
+   * @param[in] address_type    address type. (support is P2sh-P2wsh or P2wsh)
+   * @param[in] witness_script  witness script
+   * @param[in] redeem_script   redeem script
+   * @param[in] clear_stack     clear stack data before add.
+   * @return Transaction
+   */
+  TransactionController AddMultisigSign(
+      const std::string& tx_hex, const TxInReference& txin,
+      const std::vector<SignParameter>& sign_list, AddressType address_type,
+      const Script& witness_script, const Script redeem_script = Script(),
+      bool clear_stack = true);
 };
+
 }  // namespace api
 }  // namespace cfd
 
