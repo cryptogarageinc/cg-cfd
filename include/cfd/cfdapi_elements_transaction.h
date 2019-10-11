@@ -72,11 +72,11 @@ class CFD_EXPORT ElementsTransactionApi {
    * @brief hexで与えられたtxに、SignDataを付与した
    *     ConfidentialTransctionControllerを作成する.
    * @param[in] tx_hex          tx hex string
-   * @param[in] txin            target tx input
-   * @param[in] pubkey          public key
-   * @param[in] amount          amount
-   * @param[in] hash_type       hash type
-   * @param[in] sighash_type    sighash type
+   * @param[in] txid            target tx input txid
+   * @param[in] vout            target tx input vout
+   * @param[in] sign_params     sign data list
+   * @param[in] is_witness      use witness
+   * @param[in] clear_stack     clear stack data before add.
    * @return SignDataが付与されたTransactionController
    */
   ConfidentialTransactionController AddSign(
@@ -136,7 +136,7 @@ class CFD_EXPORT ElementsTransactionApi {
    *   設定されているsignatureを追加した後にsignParamの順序でsignatureを追加)
    * @param[in] tx_hex          tx hex string
    * @param[in] txin            target tx input
-   * @param[in] sign_list       value (amount or commitment)
+   * @param[in] sign_list       sign data list
    * @param[in] address_type    address type. (support is P2sh-P2wsh or P2wsh)
    * @param[in] witness_script  witness script
    * @param[in] redeem_script   redeem script

@@ -33,11 +33,11 @@ namespace cfd {
 namespace api {
 
 using cfd::TransactionController;
+using cfd::api::TransactionApiBase;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
 using cfd::core::Txid;
 using cfd::core::logger::warn;
-using cfd::api::TransactionApiBase;
 
 // -----------------------------------------------------------------------------
 // ファイル内関数
@@ -454,7 +454,8 @@ AddSignResponseStruct TransactionStructApi::AddSign(
     std::vector<SignParameter> sign_params;
     for (const SignDataStruct& sign_data : request.txin.sign_param) {
       sign_params.push_back(
-          TransactionStructApiBase::ConvertSignDataStructToSignParameter(sign_data));
+          TransactionStructApiBase::ConvertSignDataStructToSignParameter(
+              sign_data));
     }
 
     bool is_witness = request.txin.is_witness;

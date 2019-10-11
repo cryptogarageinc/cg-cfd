@@ -66,8 +66,13 @@ class TransactionApiBase {
    * with the corresponding pubkey in redeemscript and relatedPubkey in
    * signParam. (If relatedPubkey is not set, signatures are added in order of
    * signParam after adding signature with relatedPubkey).
-   * @param[in] request structure containing Transaction and Segwit signature
-   * information.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] sign_list       value (amount or commitment)
+   * @param[in] address_type    address type. (support is P2sh-P2wsh or P2wsh)
+   * @param[in] witness_script  witness script
+   * @param[in] redeem_script   redeem script
+   * @param[in] clear_stack     clear stack data before add.
    * @param[in] create_controller a callback to create a transaction controller.
    * @return structure that holds Transaction and Segwit multisig signature
    * information.
@@ -178,8 +183,8 @@ class TransactionStructApiBase {
    * @return Converted signature information.
    */
   static ByteData ConvertSignDataToSignature(
-    const std::string& hex_string, bool is_sign, bool is_der_encode,
-    const std::string& sighash_type, bool sighash_anyone_can_pay);
+      const std::string& hex_string, bool is_sign, bool is_der_encode,
+      const std::string& sighash_type, bool sighash_anyone_can_pay);
 
   /**
    * @brief Convert a string to a SigHashType object.

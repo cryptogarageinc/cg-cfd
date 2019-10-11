@@ -82,7 +82,7 @@ class CFD_EXPORT SignParameter {
    * @param[in] sign_parameter     Sign生成情報オブジェクト
    * @return SignParameterオブジェクト
    */
-  SignParameter &operator=(const SignParameter &sign_parameter);
+  SignParameter& operator=(const SignParameter& sign_parameter);
   /**
    * @brief RelatedPubkeyのセット
    * @param[in] pubkey  realated pubkey

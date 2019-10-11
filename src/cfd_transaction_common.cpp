@@ -99,8 +99,7 @@ SignParameter::SignParameter(const Script& redeem_script)
   // do nothing
 }
 
-SignParameter &SignParameter::operator=(
-    const SignParameter &sign_parameter) {
+SignParameter& SignParameter::operator=(const SignParameter& sign_parameter) {
   data_ = sign_parameter.GetData();
   data_type_ = sign_parameter.GetDataType();
   related_pubkey_ = sign_parameter.GetRelatedPubkey();

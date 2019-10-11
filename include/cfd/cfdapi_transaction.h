@@ -58,11 +58,11 @@ class CFD_EXPORT TransactionApi {
   /**
    * @brief hexで与えられたtxに、SignDataを付与したTransctionControllerを作成する.
    * @param[in] tx_hex          tx hex string
-   * @param[in] txin            target tx input
-   * @param[in] pubkey          public key
-   * @param[in] amount          amount
-   * @param[in] hash_type       hash type
-   * @param[in] sighash_type    sighash type
+   * @param[in] txid            target tx input txid
+   * @param[in] vout            target tx input vout
+   * @param[in] sign_params     sign data list
+   * @param[in] is_witness      use witness
+   * @param[in] clear_stack     clear stack data before add.
    * @return SignDataが付与されたTransactionController
    */
   TransactionController AddSign(
