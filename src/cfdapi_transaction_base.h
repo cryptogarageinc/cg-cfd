@@ -30,6 +30,7 @@ namespace cfd {
 namespace api {
 
 using cfd::core::AbstractTxInReference;
+using cfd::core::AddressType;
 using cfd::core::ByteData;
 using cfd::core::Pubkey;
 using cfd::core::Script;
@@ -153,25 +154,6 @@ class TransactionStructApiBase {
   static UpdateWitnessStackResponseStruct UpdateWitnessStack(
       const UpdateWitnessStackRequestStruct& request,
       std::function<T(const std::string&)> create_controller);
-
-#if 0
-  /**
-   * @brief Add Segwit multisig signature information.
-   * @details the order of signatures to be added is automatically aligned
-   * with the corresponding pubkey in redeemscript and relatedPubkey in
-   * signParam. (If relatedPubkey is not set, signatures are added in order of
-   * signParam after adding signature with relatedPubkey).
-   * @param[in] request structure containing Transaction and Segwit signature
-   * information.
-   * @param[in] create_controller a callback to create a transaction controller.
-   * @return structure that holds Transaction and Segwit multisig signature
-   * information.
-   */
-  template <class T>
-  static AddMultisigSignResponseStruct AddMultisigSign(
-      const AddMultisigSignRequestStruct& request,
-      std::function<T(const std::string&)> create_controller);
-#endif
 
   /**
    * @brief Convert signature information to a signature.
