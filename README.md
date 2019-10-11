@@ -8,10 +8,10 @@
 
 ## Dependencies
 
-
 - C/C++ Compiler
   - can compilefe c++11
 - CMake (3.14.3 or higher)
+- Python 3.x
 - node.js (stable version)
 
 ### Windows
@@ -21,6 +21,7 @@ download and install files.
   - use for compiler only
 - Visual Studio Build Tools (2017 or higher)
 - cmake (3.14.3 or higher)
+- Python 3.x
 
 ### MacOS
 
@@ -31,14 +32,14 @@ download and install files.
 xcode-select --install
 
 # install dependencies using Homebrew
-brew install cmake
+brew install cmake python node
 ```
 
 ### Linux(Ubuntsu)
 
 ```Shell
 # install dependencies using APT package Manager
-apt-get install -y build-essential cmake
+apt-get install -y build-essential cmake python nodejs
 ```
 
 cmake version 3.14.2 or lower, download from website and install cmake.
