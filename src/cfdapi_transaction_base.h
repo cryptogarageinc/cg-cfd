@@ -33,6 +33,7 @@ using cfd::core::AbstractTxInReference;
 using cfd::core::ByteData;
 using cfd::core::Pubkey;
 using cfd::core::Script;
+using cfd::core::Txid;
 
 /**
  * @brief Class providing common functionalities to TransactionStructApi and
@@ -47,7 +48,7 @@ class TransactionApiBase {
    * @param[in] txid                txid of input to add sign parameters to
    * @param[in] vout                vout of input to add sign parameters to
    * @param[in] sign_params         sign parameters to add the input
-   * @param[in] is_witness          flag to add sign parameters to 
+   * @param[in] is_witness          flag to add sign parameters to
    *     witness or unlocking script
    * @param[in] clear_stack         flag of clear all stacks
    * @return structure containing Transaction hex data
