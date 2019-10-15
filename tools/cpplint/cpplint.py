@@ -52,11 +52,13 @@ import string
 import sys
 import unicodedata
 import sysconfig
+import traceback
 
 try:
   xrange          # Python 2
 except NameError:
   xrange = range  # Python 3
+  unicode = str
 
 
 _USAGE = """
@@ -952,7 +954,12 @@ class _CppLintState(object):
 
   def PrintErrorCounts(self):
     """Print a summary of errors by category, and the total."""
-    for category, count in self.errors_by_category.iteritems():
+    try:
+      itemarr = self.errors_by_category.iteritems()
+    except:
+      itemarr = self.errors_by_category.items()     # Python3
+
+    for category, count in itemarr:
       sys.stderr.write('Category \'%s\' errors found: %d\n' %
                        (category, count))
     sys.stdout.write('Total errors found: %d\n' % self.error_count)
@@ -4624,7 +4631,10 @@ def _GetTextInside(text, start_pattern):
 
   # Give opening punctuations to get the matching close-punctuations.
   matching_punctuation = {'(': ')', '{': '}', '[': ']'}
-  closing_punctuation = set(matching_punctuation.itervalues())
+  try:
+    closing_punctuation = set(matching_punctuation.itervalues())
+  except:
+    closing_punctuation = set(matching_punctuation.values())    # Python3
 
   # Find the position to start extracting text.
   match = re.search(start_pattern, text, re.M)
@@ -5572,7 +5582,8 @@ def CheckForIncludeWhatYouUse(filename, clean_lines, include_state, error,
 
   # include_dict is modified during iteration, so we iterate over a copy of
   # the keys.
-  header_keys = include_dict.keys()
+  copy_include_dict = copy.copy(include_dict)
+  header_keys = copy_include_dict.keys()
   for header in header_keys:
     (same_module, common_path) = FilesBelongToSameModule(abs_filename, header)
     fullpath = common_path + header
@@ -6223,21 +6234,26 @@ def ParseArguments(args):
 
 
 def main():
-  filenames = ParseArguments(sys.argv[1:])
+  try:
+    filenames = ParseArguments(sys.argv[1:])
 
-  # Change stderr to write with replacement characters so we don't die
-  # if we try to print something containing non-ASCII characters.
-  sys.stderr = codecs.StreamReaderWriter(sys.stderr,
-                                         codecs.getreader('utf8'),
-                                         codecs.getwriter('utf8'),
-                                         'replace')
+    # Change stderr to write with replacement characters so we don't die
+    # if we try to print something containing non-ASCII characters.
+    sys.stderr = codecs.StreamReaderWriter(sys.stderr,
+                                           codecs.getreader('utf8'),
+                                           codecs.getwriter('utf8'),
+                                           'replace')
 
-  _cpplint_state.ResetErrorCounts()
-  for filename in filenames:
-    ProcessFile(filename, _cpplint_state.verbose_level)
-  # If --quiet is passed, suppress printing error count unless there are errors.
-  if not _cpplint_state.quiet or _cpplint_state.error_count > 0:
-    _cpplint_state.PrintErrorCounts()
+    _cpplint_state.ResetErrorCounts()
+    for filename in filenames:
+      ProcessFile(filename, _cpplint_state.verbose_level)
+    # If --quiet is passed, suppress printing error count unless there are errors.
+    if not _cpplint_state.quiet or _cpplint_state.error_count > 0:
+      _cpplint_state.PrintErrorCounts()
+
+  except Exception as e:
+    print(sys.argv[1:], ': ', e)
+    print(traceback.format_exc())
 
   sys.exit(_cpplint_state.error_count > 0)
 
