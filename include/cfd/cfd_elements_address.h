@@ -47,9 +47,27 @@ class CFD_EXPORT ElementsAddressFactory : public AddressFactory {
   /**
    * @brief コンストラクタ.
    * @param[in] type      network type
+   * @param[in] prefix_list   address prefix list
+   */
+  explicit ElementsAddressFactory(
+      NetType type, const std::vector<AddressFormatData>& prefix_list);
+
+  /**
+   * @brief コンストラクタ.
+   * @param[in] type      network type
    * @param[in] wit_ver   witness version
    */
   explicit ElementsAddressFactory(NetType type, WitnessVersion wit_ver);
+
+  /**
+   * @brief コンストラクタ.
+   * @param[in] type      network type
+   * @param[in] wit_ver   witness version
+   * @param[in] prefix_list   address prefix list
+   */
+  explicit ElementsAddressFactory(
+      NetType type, WitnessVersion wit_ver,
+      const std::vector<AddressFormatData>& prefix_list);
 
   /**
    * @brief デストラクタ.

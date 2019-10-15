@@ -27,6 +27,8 @@ namespace cfd {
 namespace api {
 
 using cfd::api::AddressApi;
+using cfd::core::ContractHashUtil;
+using cfd::core::ScriptUtil;
 
 Address ElementsAddressApi::CreateAddress(
     NetType net_type, AddressType address_type, const Pubkey* pubkey,
@@ -70,6 +72,39 @@ ElementsConfidentialAddress ElementsAddressApi::GetConfidentialAddress(
   return conf_addr;
 }
 
+Address ElementsAddressApi::CreatePegInAddress(
+    const Script& fedpegscript, const Pubkey& pubkey, const NetType net_type,
+    Script* claim_script, Script* tweak_fedpegscript,
+    std::vector<AddressFormatData>* prefix_list) {
+  std::vector<AddressFormatData> addr_prefixes;
+  if (prefix_list == nullptr) {
+    addr_prefixes = cfd::core::GetElementsAddressFormatList();
+  } else {
+    addr_prefixes = *prefix_list;
+  }
+
+  // create claim_script from pubkey
+  Script claim_script_inner = ScriptUtil::CreateP2wpkhLockingScript(pubkey);
+
+  // tweak add claim_script with fedpegscript
+  Script tweak_fedpegscript_inner =
+      ContractHashUtil::GetContractScript(claim_script_inner, fedpegscript);
+
+  // create peg-in address(P2CH = P2SH-P2WSH)
+  Address p2ch = ElementsAddressFactory(net_type, addr_prefixes)
+                     .CreatePegInAddress(tweak_fedpegscript_inner);
+
+  // convert parameters to response struct
+  if (claim_script != nullptr) {
+    *claim_script = claim_script_inner;
+  }
+  if (tweak_fedpegscript != nullptr) {
+    *tweak_fedpegscript = tweak_fedpegscript_inner;
+  }
+
+  return p2ch;
+}
+
 }  // namespace api
 }  // namespace cfd
 
@@ -83,13 +118,11 @@ using cfd::core::Address;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
 using cfd::core::ConfidentialKey;
-using cfd::core::ContractHashUtil;
 using cfd::core::ElementsConfidentialAddress;
 using cfd::core::ElementsNetType;
 using cfd::core::NetType;
 using cfd::core::Pubkey;
 using cfd::core::Script;
-using cfd::core::ScriptUtil;
 using cfd::core::logger::warn;
 
 CreateAddressResponseStruct ElementsAddressStructApi::CreateAddress(
@@ -260,25 +293,31 @@ ElementsAddressStructApi::CreatePegInAddress(
       -> ElementsCreatePegInAddressResponseStruct {  // NOLINT
     ElementsCreatePegInAddressResponseStruct response;
 
-    // create claim_script from pubkey
-    Pubkey sidechain_pubkey = Pubkey(request.pubkey);
-    Script claim_script =
-        ScriptUtil::CreateP2wpkhLockingScript(sidechain_pubkey);
-
-    // tweak add claim_script with fedpegscript
+    // convert request arguments from struct
     Script fedpegscript = Script(request.fedpegscript);
-    Script tweak_fedpegscript =
-        ContractHashUtil::GetContractScript(claim_script, fedpegscript);
-
-    // create peg-in address(P2CH = P2SH-P2WSH)
+    Pubkey pubkey = Pubkey(request.pubkey);
     NetType net_type = AddressStructApi::ConvertNetType(request.network);
-    Address p2ch = ElementsAddressFactory(net_type).CreatePegInAddress(
-        sidechain_pubkey, fedpegscript);
+
+    // prepare output parameters
+    Script claim_script;
+    Script tweak_fedpegscript;
+
+    ElementsAddressApi api;
+    Address pegin_address = api.CreatePegInAddress(
+        fedpegscript, pubkey, net_type, &claim_script, &tweak_fedpegscript);
 
     // convert parameters to response struct
-    response.mainchain_address = p2ch.GetAddress();
-    response.claim_script = claim_script.GetHex();
-    response.tweak_fedpegscript = tweak_fedpegscript.GetHex();
+    response.mainchain_address = pegin_address.GetAddress();
+    if (claim_script.IsEmpty()) {
+      response.ignore_items.insert("claimScript");
+    } else {
+      response.claim_script = claim_script.GetHex();
+    }
+    if (tweak_fedpegscript.IsEmpty()) {
+      response.ignore_items.insert("tweakFedpegscript");
+    } else {
+      response.tweak_fedpegscript = tweak_fedpegscript.GetHex();
+    }
     return response;
   };
 

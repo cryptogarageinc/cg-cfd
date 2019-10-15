@@ -7,6 +7,7 @@
 #ifndef CFD_DISABLE_ELEMENTS
 #include "cfd/cfd_elements_address.h"
 #include <string>
+#include <vector>
 #include "cfd/cfd_common.h"
 
 #include "cfdcore/cfdcore_address.h"
@@ -39,8 +40,21 @@ ElementsAddressFactory::ElementsAddressFactory(NetType type)
 }
 
 ElementsAddressFactory::ElementsAddressFactory(
+    NetType type, const std::vector<AddressFormatData>& prefix_list)
+    : AddressFactory(type, prefix_list) {
+  // do nothing
+}
+
+ElementsAddressFactory::ElementsAddressFactory(
     NetType type, WitnessVersion wit_ver)
     : AddressFactory(type, wit_ver, GetElementsAddressFormatList()) {
+  // do nothing
+}
+
+ElementsAddressFactory::ElementsAddressFactory(
+    NetType type, WitnessVersion wit_ver,
+    const std::vector<AddressFormatData>& prefix_list)
+    : AddressFactory(type, wit_ver, prefix_list) {
   // do nothing
 }
 
