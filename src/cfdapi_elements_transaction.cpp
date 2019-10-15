@@ -227,6 +227,57 @@ ConfidentialTransactionController ElementsTransactionApi::AddMultisigSign(
   return ConfidentialTransactionController(result);
 }
 
+ConfidentialTransactionController ElementsTransactionApi::BlindTransaction() {
+  // FIXME
+  return ConfidentialTransactionController(0, 0);
+}
+
+ConfidentialTransactionController
+ElementsTransactionApi::UnblindTransaction() {
+  // FIXME
+  return ConfidentialTransactionController(0, 0);
+}
+
+ConfidentialTransactionController ElementsTransactionApi::SetRawIssueAsset() {
+  // FIXME
+  return ConfidentialTransactionController(0, 0);
+}
+
+ConfidentialTransactionController
+ElementsTransactionApi::SetRawReissueAsset() {
+  // FIXME
+  return ConfidentialTransactionController(0, 0);
+}
+
+ConfidentialTransactionController
+ElementsTransactionApi::CreateRawPeginTransaction() {
+  // FIXME
+  return ConfidentialTransactionController(0, 0);
+}
+
+ConfidentialTransactionController
+ElementsTransactionApi::CreateRawPegoutTransaction() {
+  // FIXME
+  return ConfidentialTransactionController(0, 0);
+}
+
+uint32_t ElementsTransactionApi::GetWitnessStackNum() {
+  // FIXME
+  return 0;
+}
+
+ConfidentialTransactionController
+ElementsTransactionApi::UpdateWitnessStack() {
+  // FIXME
+  return ConfidentialTransactionController(0, 0);
+}
+
+Privkey GetIssuanceBlindingKey(
+    const Privkey& master_blinding_key, const Txid& txid, int32_t vout) {
+  // FIXME
+  return Privkey();
+}
+
 }  // namespace api
 }  // namespace cfd
 

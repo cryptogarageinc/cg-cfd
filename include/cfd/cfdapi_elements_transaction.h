@@ -149,6 +149,54 @@ class CFD_EXPORT ElementsTransactionApi {
       const Script& witness_script, const Script redeem_script = Script(),
       bool clear_stack = true);
 
+  /**
+   *
+   * @return
+   */
+  ConfidentialTransactionController BlindTransaction();
+
+  /**
+   *
+   * @return
+   */
+  ConfidentialTransactionController UnblindTransaction();
+
+  /**
+   *
+   * @return
+   */
+  ConfidentialTransactionController SetRawIssueAsset();
+
+  /**
+   *
+   * @return
+   */
+  ConfidentialTransactionController SetRawReissueAsset();
+
+  /**
+   *
+   * @return
+   */
+  ConfidentialTransactionController CreateRawPeginTransaction();
+
+  /**
+   *
+   * @return
+   */
+  ConfidentialTransactionController CreateRawPegoutTransaction();
+
+  /**
+   *
+   * @return
+   */
+  uint32_t GetWitnessStackNum();
+
+  /**
+   *
+   * @return
+   */
+  ConfidentialTransactionController UpdateWitnessStack();
+
   /*
    * @brief Issue用BlindingKeyを作成する.
    * @param[in] master_blinding_key master blindingKey
@@ -156,9 +204,8 @@ class CFD_EXPORT ElementsTransactionApi {
    * @param[in] vout                issuance utxo vout
    * @return blinding key
    */
-  // 別クラスに分ける。Struct系のAPIを ～StructApi というクラスにした方が良い
-  // Privkey GetIssuanceBlindingKey(const Privkey& master_blinding_key,
-  //     const Txid& txid, int32_t vout);
+  Privkey GetIssuanceBlindingKey(
+      const Privkey& master_blinding_key, const Txid& txid, int32_t vout);
 };
 
 }  // namespace api
