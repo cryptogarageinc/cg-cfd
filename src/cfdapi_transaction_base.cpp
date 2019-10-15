@@ -11,7 +11,6 @@
 #include "cfd/cfd_address.h"
 #include "cfd/cfdapi_address.h"
 #include "cfd/cfdapi_struct.h"
-#include "cfd/cfdapi_transaction_base.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_coin.h"
 #include "cfdcore/cfdcore_exception.h"
@@ -19,13 +18,15 @@
 #include "cfdcore/cfdcore_logger.h"
 #include "cfdcore/cfdcore_util.h"
 
-#include "cfdapi_internal.h"  // NOLINT
+#include "cfdapi_internal.h"          // NOLINT
+#include "cfdapi_transaction_base.h"  // NOLINT
 
 namespace cfd {
-namespace js {
 namespace api {
 
+using cfd::SignParameter;
 using cfd::TransactionController;
+using cfd::core::AbstractTxInReference;
 using cfd::core::AddressType;
 using cfd::core::ByteData;
 using cfd::core::CfdError;
@@ -41,278 +42,6 @@ using cfd::core::SigHashAlgorithm;
 using cfd::core::SigHashType;
 using cfd::core::Txid;
 using cfd::core::logger::warn;
-
-/**
- * @brief Validate the request for AddMultisigSign.
- * @param[in] req       request information
- * @param[in] addr_type the address type for the request
- */
-static void ValidateAddMultisigSignRequest(  // linefeed
-    AddMultisigSignRequestStruct req, AddressType addr_type) {
-  // check txHex
-  if (req.tx.empty()) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to AddSegwitMultisigSignRequest. Transaction hex empty.");
-    throw CfdException(
-        CfdError::kCfdIllegalArgumentError,
-        "Invalid hex string. empty txHex.");
-  }
-
-  // check require script
-  switch (addr_type) {
-    case AddressType::kP2shAddress: {
-      if (req.txin.redeem_script.empty()) {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to AddSegwitMultisigSignRequest. redeem script empty.");
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "Invalid hex string. empty redeemScript.");
-      }
-      break;
-    }
-    case AddressType::kP2wshAddress: {
-      if (req.txin.witness_script.empty()) {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to AddSegwitMultisigSignRequest. witness script empty.");
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "Invalid hex string. empty witnessScript.");
-      }
-      break;
-    }
-    case AddressType::kP2shP2wshAddress: {
-      if (req.txin.redeem_script.empty()) {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to AddSegwitMultisigSignRequest. redeem script empty.");
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "Invalid hex string. empty redeemScript.");
-      }
-      if (req.txin.witness_script.empty()) {
-        warn(
-            CFD_LOG_SOURCE,
-            "Failed to AddSegwitMultisigSignRequest. witness script empty.");
-        throw CfdException(
-            CfdError::kCfdIllegalArgumentError,
-            "Invalid hex string. empty witnessScript.");
-      }
-      break;
-    }
-    default: {
-      warn(
-          CFD_LOG_SOURCE,
-          "Failed to AddSegwitMultisigSignRequest. address type must be one "
-          "of p2sh address.");
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError, "Invalid address type.");
-    }
-  }
-
-  // check signData (not empty)
-  if (req.txin.sign_params.empty()) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to AddSegwitMultisigSignRequest. sign parameters empty.");
-    throw CfdException(
-        CfdError::kCfdIllegalArgumentError,
-        "Invalid array length. empty signParams.");
-  }
-
-  // check signData (too much data)
-  if (req.txin.sign_params.size() > 15) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to AddSegwitMultisigSignRequest. sign array length over.");
-    throw CfdException(
-        CfdError::kCfdOutOfRangeError,
-        "Value out of range. sign array length over.");
-  }
-}
-
-SigHashType TransactionApiBase::ConvertSigHashType(
-    const std::string& sighash_type_string, bool is_anyone_can_pay) {
-  std::string check_string = sighash_type_string;
-  std::transform(
-      check_string.begin(), check_string.end(), check_string.begin(),
-      ::tolower);
-  if (check_string == "all") {
-    return SigHashType(SigHashAlgorithm::kSigHashAll, is_anyone_can_pay);
-  } else if (check_string == "none") {
-    return SigHashType(SigHashAlgorithm::kSigHashNone, is_anyone_can_pay);
-  } else if (check_string == "single") {
-    return SigHashType(SigHashAlgorithm::kSigHashSingle, is_anyone_can_pay);
-  }
-  warn(
-      CFD_LOG_SOURCE,
-      "Failed to CreateMultisig. Invalid sighash_type: sighashType={}",
-      sighash_type_string);
-  throw CfdException(
-      CfdError::kCfdIllegalArgumentError,
-      "Invalid sighashType. sighashType must be "
-      "\"all, none, single\".");
-}
-
-/**
- * @brief Convert signature information to a signature.
- * @param[in] hex_string              Signature information
- * @param[in] is_sign                 Whether signature data is provided
- * @param[in] is_der_encode           Whether the signature is DER encoded
- * @param[in] sighash_type            SigHash type
- * @param[in] sighash_anyone_can_pay  Flag determining if SigHash is
- * anyone_can_pay
- * @return Converted signature information.
- */
-static ByteData ConvertSignDataToSignature(
-    const std::string& hex_string, bool is_sign, bool is_der_encode,
-    const std::string& sighash_type, bool sighash_anyone_can_pay) {
-  ByteData byte_data;
-  if (is_sign && is_der_encode) {
-    if (hex_string.empty()) {
-      warn(CFD_LOG_SOURCE, "Failed to AddMultisigSign. sign hex empty.");
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Invalid hex string. empty sign hex.");
-    }
-    SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
-        sighash_type, sighash_anyone_can_pay);
-    byte_data = CryptoUtil::ConvertSignatureToDer(hex_string, sighashtype);
-  } else if (hex_string.empty()) {
-    // do nothing
-  } else {
-    byte_data = ByteData(hex_string);
-  }
-  return byte_data;
-}
-
-template <class T>
-AddSignResponseStruct TransactionApiBase::AddSign(
-    const AddSignRequestStruct& request,
-    std::function<T(const std::string&)> create_controller) {
-  auto call_func =
-      [create_controller](
-          const AddSignRequestStruct& request) -> AddSignResponseStruct {
-    AddSignResponseStruct response;
-    const std::string& hex_string = request.tx;
-    if (hex_string.empty()) {
-      warn(CFD_LOG_SOURCE, "Failed to AddSignRequest. hex empty.");
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Invalid hex string. empty data.");
-    }
-
-    // TransactionController作成
-    T txc = create_controller(hex_string);
-
-    if (request.txin.is_witness) {
-      // Witnessの追加
-      Txid txid = Txid(request.txin.txid);
-      if (request.txin.clear_stack) {
-        txc.RemoveWitnessStackAll(txid, request.txin.vout);
-      }
-      std::vector<ByteData> witness_datas;
-      for (const SignDataStruct& stack_req : request.txin.sign_param) {
-        ByteData byte_data = ConvertSignDataToSignature(
-            stack_req.hex, (stack_req.type == "sign"), stack_req.der_encode,
-            stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
-        witness_datas.push_back(byte_data);
-      }
-      txc.AddWitnessStack(txid, request.txin.vout, witness_datas);
-    } else {
-      std::vector<ByteData> unlock_script;
-      for (const SignDataStruct& stack_req : request.txin.sign_param) {
-        ByteData byte_data = ConvertSignDataToSignature(
-            stack_req.hex, (stack_req.type == "sign"), stack_req.der_encode,
-            stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
-        unlock_script.push_back(byte_data);
-      }
-      txc.SetUnlockingScript(
-          Txid(request.txin.txid), request.txin.vout, unlock_script);
-    }
-
-    response.hex = txc.GetHex();
-    return response;
-  };
-
-  AddSignResponseStruct result;
-  result = ExecuteStructApi<AddSignRequestStruct, AddSignResponseStruct>(
-      request, call_func, std::string(__FUNCTION__));
-  return result;
-}
-
-template <class T>
-GetWitnessStackNumResponseStruct TransactionApiBase::GetWitnessStackNum(
-    const GetWitnessStackNumRequestStruct& request,
-    std::function<T(const std::string&)> create_controller) {
-  auto call_func =
-      [create_controller](const GetWitnessStackNumRequestStruct& request)
-      -> GetWitnessStackNumResponseStruct {  // NOLINT
-    GetWitnessStackNumResponseStruct response;
-    std::string hex_string = request.tx;
-    if (hex_string.empty()) {
-      warn(CFD_LOG_SOURCE, "Failed to GetWitnessStackNum. hex empty.");
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Invalid hex string. empty data.");
-    }
-
-    // TransactionController作成
-    T txc = create_controller(hex_string);
-
-    uint32_t count =
-        txc.GetWitnessStackNum(Txid(request.txin.txid), request.txin.vout);
-
-    response.count = count;
-    return response;
-  };
-  GetWitnessStackNumResponseStruct result;
-  result = ExecuteStructApi<
-      GetWitnessStackNumRequestStruct, GetWitnessStackNumResponseStruct>(
-      request, call_func, std::string(__FUNCTION__));
-  return result;
-}
-
-template <class T>
-UpdateWitnessStackResponseStruct TransactionApiBase::UpdateWitnessStack(
-    const UpdateWitnessStackRequestStruct& request,
-    std::function<T(const std::string&)> create_controller) {
-  auto call_func =
-      [create_controller](const UpdateWitnessStackRequestStruct& request)
-      -> UpdateWitnessStackResponseStruct {  // NOLINT
-    UpdateWitnessStackResponseStruct response;
-    const std::string& hex_string = request.tx;
-    if (hex_string.empty()) {
-      warn(CFD_LOG_SOURCE, "Failed to UpdateWitnessStack. hex empty.");
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Invalid hex string. empty data.");
-    }
-
-    // TransactionController作成
-    T txc = create_controller(hex_string);
-
-    // Witnessの更新
-    const WitnessStackDataStruct& stack_req = request.txin.witness_stack;
-    ByteData byte_data = ConvertSignDataToSignature(
-        stack_req.hex, (stack_req.type == "sign"), stack_req.der_encode,
-        stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
-    txc.SetWitnessStack(
-        Txid(request.txin.txid), request.txin.vout,
-        static_cast<uint32_t>(stack_req.index), byte_data);
-
-    response.hex = txc.GetHex();
-    return response;
-  };
-
-  UpdateWitnessStackResponseStruct result;
-  result = ExecuteStructApi<
-      UpdateWitnessStackRequestStruct, UpdateWitnessStackResponseStruct>(
-      request, call_func, std::string(__FUNCTION__));
-  return result;
-}
 
 /**
  * @brief Get the set of public keys contained in a multisig script.
@@ -469,104 +198,438 @@ static void SetP2wshMultisigWitnessStack(
   txc->AddWitnessStack(txid, vout, witness_stack);
 }
 
-template <class T>
-AddMultisigSignResponseStruct TransactionApiBase::AddMultisigSign(
-    const AddMultisigSignRequestStruct& request,
-    std::function<T(const std::string&)> create_controller) {
-  auto call_func =
-      [create_controller](const AddMultisigSignRequestStruct& request)
-      -> AddMultisigSignResponseStruct {  // NOLINT
-    AddMultisigSignResponseStruct response;
-    // validate request
-    AddressType addr_type =
-        AddressStructApi::ConvertAddressType(request.txin.hash_type);
-    ValidateAddMultisigSignRequest(request, addr_type);
+/**
+ * @brief Validate the request for AddMultisigSign.
+ * @param[in] tx_hex          tx hex string
+ * @param[in] sign_list       value (amount or commitment)
+ * @param[in] address_type    address type. (support is P2sh-P2wsh or P2wsh)
+ * @param[in] witness_script  witness script
+ * @param[in] redeem_script   redeem script
+ */
+static void ValidateAddMultisigSign(  // linefeed
+    const std::string& tx_hex, const std::vector<SignParameter>& sign_list,
+    AddressType address_type, const Script& witness_script,
+    const Script redeem_script) {
+  // check txHex
+  if (tx_hex.empty()) {
+    warn(
+        CFD_LOG_SOURCE,
+        "Failed to AddSegwitMultisigSign. Transaction hex empty.");
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
+        "Invalid hex string. empty txHex.");
+  }
 
-    const std::string& hex_string = request.tx;
-    T txc = create_controller(hex_string);
-
-    // extract pubkeys from redeem script
-    // ValidateAddMultiSignRequest ensures that we have one of three correct
-    // types.
-    Script redeem_script = addr_type == AddressType::kP2shAddress
-                               ? Script(request.txin.redeem_script)
-                               : Script(request.txin.witness_script);
-
-    std::vector<Pubkey> pubkeys =
-        ExtractPubkeysFromMultisigScript(redeem_script);
-    // get signParams from json request
-    std::vector<MultisigSignDataStruct> sign_params = request.txin.sign_params;
-
-    // set signParam to signature_data (only contains relatedPubkey);
-    std::vector<ByteData> signature_data;
-    for (const Pubkey& pubkey : pubkeys) {
-      for (auto itr = sign_params.begin(); itr != sign_params.end();) {
-        MultisigSignDataStruct sign_param = *itr;
-        if (sign_param.related_pubkey != pubkey.GetHex()) {
-          ++itr;
-          continue;
-        }
-
-        itr = sign_params.erase(itr);
-        ByteData byte_data = ConvertSignDataToSignature(
-            sign_param.hex, true, sign_param.der_encode,
-            sign_param.sighash_type, sign_param.sighash_anyone_can_pay);
-        signature_data.push_back(byte_data);
-      }
-    }
-
-    // set the others to signature data
-    for (MultisigSignDataStruct sign_param : sign_params) {
-      // related pubkey not found in script
-      if (!sign_param.related_pubkey.empty()) {
+  // check require script
+  switch (address_type) {
+    case AddressType::kP2shAddress: {
+      if (redeem_script.IsEmpty()) {
         warn(
             CFD_LOG_SOURCE,
-            "Failed to AddMultisigSign. Missing related pubkey"
-            " in script.: relatedPubkey={}, script={}",
-            sign_param.related_pubkey, redeem_script.GetHex());
+            "Failed to AddSegwitMultisigSign. redeem script empty.");
         throw CfdException(
             CfdError::kCfdIllegalArgumentError,
-            "Missing related pubkey in script."
-            " Check your signature and pubkey pair.");
+            "Invalid hex string. empty redeemScript.");
       }
-      ByteData byte_data = ConvertSignDataToSignature(
-          sign_param.hex, true, sign_param.der_encode, sign_param.sighash_type,
-          sign_param.sighash_anyone_can_pay);
-      signature_data.push_back(byte_data);
+      break;
+    }
+    case AddressType::kP2wshAddress: {
+      if (witness_script.IsEmpty()) {
+        warn(
+            CFD_LOG_SOURCE,
+            "Failed to AddSegwitMultisigSign. witness script empty.");
+        throw CfdException(
+            CfdError::kCfdIllegalArgumentError,
+            "Invalid hex string. empty witnessScript.");
+      }
+      break;
+    }
+    case AddressType::kP2shP2wshAddress: {
+      if (redeem_script.IsEmpty()) {
+        warn(
+            CFD_LOG_SOURCE,
+            "Failed to AddSegwitMultisigSign. redeem script empty.");
+        throw CfdException(
+            CfdError::kCfdIllegalArgumentError,
+            "Invalid hex string. empty redeemScript.");
+      }
+      if (witness_script.IsEmpty()) {
+        warn(
+            CFD_LOG_SOURCE,
+            "Failed to AddSegwitMultisigSign. witness script empty.");
+        throw CfdException(
+            CfdError::kCfdIllegalArgumentError,
+            "Invalid hex string. empty witnessScript.");
+      }
+      break;
+    }
+    default: {
+      warn(
+          CFD_LOG_SOURCE,
+          "Failed to AddSegwitMultisigSign. address type must be one "
+          "of p2sh address.");
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError, "Invalid address type.");
+    }
+  }
+
+  // check signData (not empty)
+  if (sign_list.empty()) {
+    warn(
+        CFD_LOG_SOURCE,
+        "Failed to AddSegwitMultisigSign. sign parameters empty.");
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
+        "Invalid array length. empty signParams.");
+  }
+
+  // check signData (too much data)
+  if (sign_list.size() > 15) {
+    warn(
+        CFD_LOG_SOURCE,
+        "Failed to AddSegwitMultisigSign. sign array length over.");
+    throw CfdException(
+        CfdError::kCfdOutOfRangeError,
+        "Value out of range. sign array length over.");
+  }
+}
+
+template <class T>
+T TransactionApiBase::AddSign(
+    std::function<T(const std::string&)> create_controller,
+    const std::string& hex, const Txid& txid, const uint32_t vout,
+    const std::vector<SignParameter>& sign_params, bool is_witness,
+    bool clear_stack) {
+  if (hex.empty()) {
+    warn(
+        CFD_LOG_SOURCE,
+        "Failed to AddSign. Invalid hex string. empty data. tx=[{}]", hex);
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError, "Invalid hex string. empty data.");
+  }
+
+  // TransactionController作成
+  T txc = create_controller(hex);
+
+  std::vector<ByteData> sign_stack;
+  for (const SignParameter& sign_param : sign_params) {
+    sign_stack.push_back(sign_param.ConvertToSignature());
+  }
+
+  if (is_witness) {
+    // Witnessの追加
+    if (clear_stack) {
+      txc.RemoveWitnessStackAll(txid, vout);
+    }
+    txc.AddWitnessStack(txid, vout, sign_stack);
+  } else {
+    txc.SetUnlockingScript(txid, vout, sign_stack);
+  }
+
+  return txc;
+}
+
+template <class T>
+std::string TransactionApiBase::AddMultisigSign(
+    const std::string& tx_hex, const AbstractTxInReference& txin,
+    const std::vector<SignParameter>& sign_list, AddressType address_type,
+    const Script& witness_script, const Script redeem_script, bool clear_stack,
+    std::function<T(const std::string&)> create_controller) {
+  ValidateAddMultisigSign(
+      tx_hex, sign_list, address_type, witness_script, redeem_script);
+  T txc = create_controller(tx_hex);
+
+  // extract pubkeys from redeem script
+  // ValidateAddMultiSignRequest ensures that we have one of three correct
+  // types.
+  Script script = (address_type == AddressType::kP2shAddress) ? redeem_script
+                                                              : witness_script;
+
+  std::vector<Pubkey> pubkeys = ExtractPubkeysFromMultisigScript(script);
+  // get signParams from json request
+  std::vector<SignParameter> sign_params = sign_list;
+
+  // set signParam to signature_data (only contains relatedPubkey);
+  std::vector<ByteData> signature_data;
+  for (const Pubkey& pubkey : pubkeys) {
+    std::string pubkey_hex = pubkey.GetHex();
+    for (auto itr = sign_params.begin(); itr != sign_params.end();) {
+      SignParameter sign_param = *itr;
+      Pubkey related_pubkey = sign_param.GetRelatedPubkey();
+      if ((!related_pubkey.IsValid()) ||
+          (related_pubkey.GetHex() != pubkey_hex)) {
+        ++itr;
+        continue;
+      }
+
+      itr = sign_params.erase(itr);
+      signature_data.push_back(sign_param.ConvertToSignature());
+    }
+  }
+
+  // set the others to signature data
+  for (const auto& sign_param : sign_params) {
+    // related pubkey not found in script
+    if (sign_param.GetRelatedPubkey().IsValid()) {
+      warn(
+          CFD_LOG_SOURCE,
+          "Failed to AddMultisigSign. Missing related pubkey"
+          " in script.: relatedPubkey={}, script={}",
+          sign_param.GetRelatedPubkey().GetHex(), script.GetHex());
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError,
+          "Missing related pubkey in script."
+          " Check your signature and pubkey pair.");
+    }
+    signature_data.push_back(sign_param.ConvertToSignature());
+  }
+
+  // set signatures to target input
+  if (address_type == AddressType::kP2shAddress) {
+    SetP2shMultisigUnlockingScript(
+        signature_data, script, txin.GetTxid(), txin.GetVout(), &txc);
+  } else {
+    SetP2wshMultisigWitnessStack(
+        signature_data, script, txin.GetTxid(), txin.GetVout(), clear_stack,
+        &txc);
+  }
+
+  if (address_type == AddressType::kP2shP2wshAddress) {
+    // set p2sh redeem script to unlockking script
+    ScriptBuilder sb;
+    sb.AppendData(redeem_script);
+    txc.SetUnlockingScript(txin.GetTxid(), txin.GetVout(), sb.Build());
+  }
+
+  return txc.GetHex();
+}
+
+template TransactionController
+TransactionApiBase::AddSign<TransactionController>(
+    std::function<TransactionController(const std::string&)> create_controller,
+    const std::string& hex, const Txid& txid, const uint32_t vout,
+    const std::vector<SignParameter>& sign_params, bool is_witness,
+    bool clear_stack);
+
+template std::string
+TransactionApiBase::AddMultisigSign<TransactionController>(
+    const std::string& tx_hex, const AbstractTxInReference& txin,
+    const std::vector<SignParameter>& sign_list, AddressType address_type,
+    const Script& witness_script, const Script redeem_script, bool clear_stack,
+    std::function<TransactionController(const std::string&)>
+        create_controller);
+
+#ifndef CFD_DISABLE_ELEMENTS
+
+using cfd::ConfidentialTransactionController;
+
+template ConfidentialTransactionController
+TransactionApiBase::AddSign<ConfidentialTransactionController>(
+    std::function<ConfidentialTransactionController(const std::string&)>
+        create_controller,
+    const std::string& hex, const Txid& txid, const uint32_t vout,
+    const std::vector<SignParameter>& sign_params, bool is_witness,
+    bool clear_stack);
+
+template std::string
+TransactionApiBase::AddMultisigSign<ConfidentialTransactionController>(
+    const std::string& tx_hex, const AbstractTxInReference& txin,
+    const std::vector<SignParameter>& sign_list, AddressType address_type,
+    const Script& witness_script, const Script redeem_script, bool clear_stack,
+    std::function<ConfidentialTransactionController(const std::string&)>
+        create_controller);
+#endif
+
+}  // namespace api
+}  // namespace cfd
+
+namespace cfd {
+namespace js {
+namespace api {
+
+using cfd::SignParameter;
+using cfd::TransactionController;
+using cfd::core::AddressType;
+using cfd::core::ByteData;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::CryptoUtil;
+using cfd::core::IteratorWrapper;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::ScriptBuilder;
+using cfd::core::ScriptElement;
+using cfd::core::ScriptOperator;
+using cfd::core::SigHashAlgorithm;
+using cfd::core::SigHashType;
+using cfd::core::Txid;
+using cfd::core::logger::warn;
+
+/**
+ * @brief Convert sign data type from string.
+ * @param[in] data_type               data type string
+ * anyone_can_pay
+ * @return sign data type.
+ */
+static SignDataType ConvertToSignDataType(const std::string& data_type) {
+  if (data_type == "sign") {
+    return SignDataType::kSign;
+  } else if (data_type == "binary") {
+    return SignDataType::kBinary;
+  } else if (data_type == "pubkey") {
+    return SignDataType::kPubkey;
+  } else if (data_type == "redeem_script") {
+    return SignDataType::kRedeemScript;
+  } else {
+    warn(
+        CFD_LOG_SOURCE,
+        "Failed to ConvertToSignDataType. Invalid data_type string passed. "
+        "data_type=[{}]",
+        data_type);
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
+        "Sign data type convert error. Invalid data_type string passed.");
+  }
+}
+
+template <class SignStructClass>
+SignParameter TransactionStructApiBase::ConvertSignDataStructToSignParameter(
+    const SignStructClass& sign_data) {
+  SignDataType data_type = ConvertToSignDataType(sign_data.type);
+  switch (data_type) {
+    case kSign:
+      return SignParameter(
+          ByteData(sign_data.hex), sign_data.der_encode,
+          TransactionStructApiBase::ConvertSigHashType(
+              sign_data.sighash_type, sign_data.sighash_anyone_can_pay));
+    case kPubkey:
+      return SignParameter(Pubkey(sign_data.hex));
+    case kRedeemScript:
+      return SignParameter(Script(sign_data.hex));
+    case kBinary:
+      // fall-through
+    default:
+      return SignParameter(ByteData(sign_data.hex));
+  }
+}
+
+ByteData TransactionStructApiBase::ConvertSignDataToSignature(
+    const std::string& hex_string, bool is_sign, bool is_der_encode,
+    const std::string& sighash_type, bool sighash_anyone_can_pay) {
+  ByteData byte_data;
+  if (is_sign && is_der_encode) {
+    if (hex_string.empty()) {
+      warn(CFD_LOG_SOURCE, "Failed to AddMultisigSign. sign hex empty.");
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError,
+          "Invalid hex string. empty sign hex.");
+    }
+    SigHashType sighashtype = TransactionStructApiBase::ConvertSigHashType(
+        sighash_type, sighash_anyone_can_pay);
+    byte_data = CryptoUtil::ConvertSignatureToDer(hex_string, sighashtype);
+  } else if (hex_string.empty()) {
+    // do nothing
+  } else {
+    byte_data = ByteData(hex_string);
+  }
+  return byte_data;
+}
+
+SigHashType TransactionStructApiBase::ConvertSigHashType(
+    const std::string& sighash_type_string, bool is_anyone_can_pay) {
+  std::string check_string = sighash_type_string;
+  std::transform(
+      check_string.begin(), check_string.end(), check_string.begin(),
+      ::tolower);
+  if (check_string == "all") {
+    return SigHashType(SigHashAlgorithm::kSigHashAll, is_anyone_can_pay);
+  } else if (check_string == "none") {
+    return SigHashType(SigHashAlgorithm::kSigHashNone, is_anyone_can_pay);
+  } else if (check_string == "single") {
+    return SigHashType(SigHashAlgorithm::kSigHashSingle, is_anyone_can_pay);
+  }
+  warn(
+      CFD_LOG_SOURCE,
+      "Failed to CreateMultisig. Invalid sighash_type: sighashType={}",
+      sighash_type_string);
+  throw CfdException(
+      CfdError::kCfdIllegalArgumentError,
+      "Invalid sighashType. sighashType must be "
+      "\"all, none, single\".");
+}
+
+template <class T>
+GetWitnessStackNumResponseStruct TransactionStructApiBase::GetWitnessStackNum(
+    const GetWitnessStackNumRequestStruct& request,
+    std::function<T(const std::string&)> create_controller) {
+  auto call_func =
+      [create_controller](const GetWitnessStackNumRequestStruct& request)
+      -> GetWitnessStackNumResponseStruct {  // NOLINT
+    GetWitnessStackNumResponseStruct response;
+    std::string hex_string = request.tx;
+    if (hex_string.empty()) {
+      warn(CFD_LOG_SOURCE, "Failed to GetWitnessStackNum. hex empty.");
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError,
+          "Invalid hex string. empty data.");
     }
 
-    // set signatures to target input
-    Txid txid(request.txin.txid);
-    if (addr_type == AddressType::kP2shAddress) {
-      SetP2shMultisigUnlockingScript(
-          signature_data, redeem_script, txid, request.txin.vout, &txc);
-    } else {
-      SetP2wshMultisigWitnessStack(
-          signature_data, redeem_script, txid, request.txin.vout,
-          request.txin.clear_stack, &txc);
+    // TransactionController作成
+    T txc = create_controller(hex_string);
+
+    uint32_t count =
+        txc.GetWitnessStackNum(Txid(request.txin.txid), request.txin.vout);
+
+    response.count = count;
+    return response;
+  };
+  GetWitnessStackNumResponseStruct result;
+  result = ExecuteStructApi<
+      GetWitnessStackNumRequestStruct, GetWitnessStackNumResponseStruct>(
+      request, call_func, std::string(__FUNCTION__));
+  return result;
+}
+
+template <class T>
+UpdateWitnessStackResponseStruct TransactionStructApiBase::UpdateWitnessStack(
+    const UpdateWitnessStackRequestStruct& request,
+    std::function<T(const std::string&)> create_controller) {
+  auto call_func =
+      [create_controller](const UpdateWitnessStackRequestStruct& request)
+      -> UpdateWitnessStackResponseStruct {  // NOLINT
+    UpdateWitnessStackResponseStruct response;
+    const std::string& hex_string = request.tx;
+    if (hex_string.empty()) {
+      warn(CFD_LOG_SOURCE, "Failed to UpdateWitnessStack. hex empty.");
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError,
+          "Invalid hex string. empty data.");
     }
 
-    if (addr_type == AddressType::kP2shP2wshAddress) {
-      // set p2sh redeem script to unlockking script
-      Script p2sh_redeem_script(request.txin.redeem_script);
-      ScriptBuilder sb;
-      sb.AppendData(p2sh_redeem_script);
-      txc.SetUnlockingScript(
-          Txid(request.txin.txid), request.txin.vout, sb.Build());
-    }
+    // TransactionController作成
+    T txc = create_controller(hex_string);
+
+    // Witnessの更新
+    const WitnessStackDataStruct& stack_req = request.txin.witness_stack;
+    ByteData byte_data = ConvertSignDataToSignature(
+        stack_req.hex, (stack_req.type == "sign"), stack_req.der_encode,
+        stack_req.sighash_type, stack_req.sighash_anyone_can_pay);
+    txc.SetWitnessStack(
+        Txid(request.txin.txid), request.txin.vout,
+        static_cast<uint32_t>(stack_req.index), byte_data);
 
     response.hex = txc.GetHex();
     return response;
   };
 
-  AddMultisigSignResponseStruct result;
+  UpdateWitnessStackResponseStruct result;
   result = ExecuteStructApi<
-      AddMultisigSignRequestStruct, AddMultisigSignResponseStruct>(
+      UpdateWitnessStackRequestStruct, UpdateWitnessStackResponseStruct>(
       request, call_func, std::string(__FUNCTION__));
   return result;
 }
 
-ExtractScriptData TransactionApiBase::ExtractLockingScript(
+ExtractScriptData TransactionStructApiBase::ExtractLockingScript(
     Script locking_script) {
   ExtractScriptData extract_data;
 
@@ -653,7 +716,7 @@ ExtractScriptData TransactionApiBase::ExtractLockingScript(
   return extract_data;
 }
 
-std::string TransactionApiBase::ConvertLockingScriptTypeString(
+std::string TransactionStructApiBase::ConvertLockingScriptTypeString(
     LockingScriptType script_type) {
   switch (script_type) {
     case LockingScriptType::kNonStandard:
@@ -684,57 +747,41 @@ std::string TransactionApiBase::ConvertLockingScriptTypeString(
   return "";
 }
 
-template AddSignResponseStruct
-TransactionApiBase::AddSign<TransactionController>(
-    const AddSignRequestStruct& request,
-    std::function<TransactionController(const std::string&)>
-        create_controller);
-
 template GetWitnessStackNumResponseStruct
-TransactionApiBase::GetWitnessStackNum<TransactionController>(
+TransactionStructApiBase::GetWitnessStackNum<TransactionController>(
     const GetWitnessStackNumRequestStruct& request,
     std::function<TransactionController(const std::string&)>
         create_controller);
 
 template UpdateWitnessStackResponseStruct
-TransactionApiBase::UpdateWitnessStack<TransactionController>(
+TransactionStructApiBase::UpdateWitnessStack<TransactionController>(
     const UpdateWitnessStackRequestStruct& request,
     std::function<TransactionController(const std::string&)>
         create_controller);
 
-template AddMultisigSignResponseStruct
-TransactionApiBase::AddMultisigSign<TransactionController>(
-    const AddMultisigSignRequestStruct& request,
-    std::function<TransactionController(const std::string&)>
-        create_controller);
+template SignParameter
+TransactionStructApiBase::ConvertSignDataStructToSignParameter<SignDataStruct>(
+    const SignDataStruct& sign_data);
+
+template SignParameter
+TransactionStructApiBase::ConvertSignDataStructToSignParameter<
+    MultisigSignDataStruct>(const MultisigSignDataStruct& sign_data);
 
 #ifndef CFD_DISABLE_ELEMENTS
 
 using cfd::ConfidentialTransactionController;
 
-template AddSignResponseStruct
-TransactionApiBase::AddSign<ConfidentialTransactionController>(
-    const AddSignRequestStruct& request,
-    std::function<ConfidentialTransactionController(const std::string&)>
-        create_controller);
+template GetWitnessStackNumResponseStruct TransactionStructApiBase::
+    GetWitnessStackNum<ConfidentialTransactionController>(
+        const GetWitnessStackNumRequestStruct& request,
+        std::function<ConfidentialTransactionController(const std::string&)>
+            create_controller);
 
-template GetWitnessStackNumResponseStruct
-TransactionApiBase::GetWitnessStackNum<ConfidentialTransactionController>(
-    const GetWitnessStackNumRequestStruct& request,
-    std::function<ConfidentialTransactionController(const std::string&)>
-        create_controller);
-
-template UpdateWitnessStackResponseStruct
-TransactionApiBase::UpdateWitnessStack<ConfidentialTransactionController>(
-    const UpdateWitnessStackRequestStruct& request,
-    std::function<ConfidentialTransactionController(const std::string&)>
-        create_controller);
-
-template AddMultisigSignResponseStruct
-TransactionApiBase::AddMultisigSign<ConfidentialTransactionController>(
-    const AddMultisigSignRequestStruct& request,
-    std::function<ConfidentialTransactionController(const std::string&)>
-        create_controller);
+template UpdateWitnessStackResponseStruct TransactionStructApiBase::
+    UpdateWitnessStack<ConfidentialTransactionController>(
+        const UpdateWitnessStackRequestStruct& request,
+        std::function<ConfidentialTransactionController(const std::string&)>
+            create_controller);
 #endif
 
 }  // namespace api

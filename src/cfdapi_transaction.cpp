@@ -26,17 +26,158 @@
 #include "cfd/cfdapi_elements_transaction.h"
 #include "cfd/cfdapi_struct.h"
 #include "cfd/cfdapi_transaction.h"
-#include "cfd/cfdapi_transaction_base.h"
-#include "cfdapi_internal.h"  // NOLINT
+#include "cfdapi_internal.h"          // NOLINT
+#include "cfdapi_transaction_base.h"  // NOLINT
+
+namespace cfd {
+namespace api {
+
+using cfd::TransactionController;
+using cfd::api::TransactionApiBase;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::Txid;
+using cfd::core::logger::warn;
+
+// -----------------------------------------------------------------------------
+// ファイル内関数
+// -----------------------------------------------------------------------------
+/**
+   * @brief Create a TransactionController object.
+   *
+   * @param[in] hex of the transaction for which to create the controller object
+   * @return a TransactionController instance
+   */
+static TransactionController CreateController(const std::string& hex) {
+  return TransactionController(hex);
+}
+
+// -----------------------------------------------------------------------------
+// TransactionApi
+// -----------------------------------------------------------------------------
+
+TransactionController TransactionApi::CreateRawTransaction(
+    uint32_t version, uint32_t locktime, const std::vector<TxIn>& txins,
+    const std::vector<TxOut>& txouts) const {
+  if (4 < version) {
+    warn(
+        CFD_LOG_SOURCE,
+        "Failed to CreateRawTransaction. invalid version number: version={}",  // NOLINT
+        version);
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
+        "Invalid version number. We supports only 1, 2, 3, or 4:");
+  }
+
+  // TransactionController作成
+  TransactionController txc(version, locktime);
+
+  // TxInの追加
+  const uint32_t kDisableLockTimeSequence =
+      TransactionController::GetLockTimeDisabledSequence();
+  for (TxIn txin : txins) {
+    // TxInのunlocking_scriptは空で作成
+    if (kDisableLockTimeSequence == txin.GetSequence()) {
+      txc.AddTxIn(txin.GetTxid(), txin.GetVout(), txc.GetDefaultSequence());
+    } else {
+      txc.AddTxIn(txin.GetTxid(), txin.GetVout(), txin.GetSequence());
+    }
+  }
+
+  // TxOutの追加
+  for (TxOut txout : txouts) {
+    txc.AddTxOut(txout.GetLockingScript(), txout.GetValue());
+  }
+
+  return txc;
+}
+
+TransactionController TransactionApi::AddSign(
+    const std::string& hex, const Txid& txid, const uint32_t vout,
+    const std::vector<SignParameter>& sign_params, bool is_witness,
+    bool clear_stack) const {
+  return TransactionApiBase::AddSign<TransactionController>(
+      cfd::api::CreateController, hex, txid, vout, sign_params, is_witness,
+      clear_stack);
+}
+
+ByteData TransactionApi::CreateSignatureHash(
+    const std::string& tx_hex, const TxInReference& txin, const Pubkey& pubkey,
+    const Amount& amount, HashType hash_type,
+    const SigHashType& sighash_type) const {
+  return CreateSignatureHash(
+      tx_hex, txin, pubkey.GetData(), amount, hash_type, sighash_type);
+}
+
+ByteData TransactionApi::CreateSignatureHash(
+    const std::string& tx_hex, const TxInReference& txin,
+    const Script& redeem_script, const Amount& amount, HashType hash_type,
+    const SigHashType& sighash_type) const {
+  return CreateSignatureHash(
+      tx_hex, txin, redeem_script.GetData(), amount, hash_type, sighash_type);
+}
+
+ByteData TransactionApi::CreateSignatureHash(
+    const std::string& tx_hex, const TxInReference& txin,
+    const ByteData& key_data, const Amount& amount, HashType hash_type,
+    const SigHashType& sighash_type) const {
+  std::string sig_hash;
+  int64_t amount_value = amount.GetSatoshiValue();
+  const Txid& txid = txin.GetTxid();
+  uint32_t vout = txin.GetVout();
+  TransactionController txc(tx_hex);
+
+  if (hash_type == HashType::kP2pkh) {
+    sig_hash = txc.CreateP2pkhSignatureHash(
+        txid, vout,  // vout
+        Pubkey(key_data), sighash_type);
+  } else if (hash_type == HashType::kP2sh) {
+    sig_hash = txc.CreateP2shSignatureHash(
+        txid, vout, Script(key_data), sighash_type);
+  } else if (hash_type == HashType::kP2wpkh) {
+    sig_hash = txc.CreateP2wpkhSignatureHash(
+        txid, vout, Pubkey(key_data), sighash_type,
+        Amount::CreateBySatoshiAmount(amount_value));
+  } else if (hash_type == HashType::kP2wsh) {
+    sig_hash = txc.CreateP2wshSignatureHash(
+        txid, vout, Script(key_data), sighash_type,
+        Amount::CreateBySatoshiAmount(amount_value));
+  } else {
+    warn(
+        CFD_LOG_SOURCE,
+        "Failed to CreateSignatureHash. Invalid hash_type:  "
+        "hash_type={}",  // NOLINT
+        hash_type);
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
+        "Invalid hash_type. hash_type must be \"p2pkh\"(0) "
+        "or \"p2sh\"(1) or \"p2wpkh\"(2) or \"p2wsh\"(3).");  // NOLINT
+  }
+
+  return ByteData(sig_hash);
+}
+
+TransactionController TransactionApi::AddMultisigSign(
+    const std::string& tx_hex, const TxInReference& txin,
+    const std::vector<SignParameter>& sign_list, AddressType address_type,
+    const Script& witness_script, const Script redeem_script,
+    bool clear_stack) {
+  std::string result =
+      TransactionApiBase::AddMultisigSign<TransactionController>(
+          tx_hex, txin, sign_list, address_type, witness_script, redeem_script,
+          clear_stack, CreateController);
+  return TransactionController(result);
+}
+
+}  // namespace api
+}  // namespace cfd
 
 namespace cfd {
 namespace js {
 namespace api {
 
-#ifndef CFD_DISABLE_ELEMENTS
-using cfd::js::api::ElementsTransactionStructApi;
-#endif  // CFD_DISABLE_ELEMENTS
 using cfd::TransactionController;
+using cfd::api::TransactionApi;
 using cfd::core::Address;
 using cfd::core::AddressType;
 using cfd::core::Amount;
@@ -45,7 +186,7 @@ using cfd::core::ByteData160;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
 using cfd::core::CryptoUtil;
-using cfd::core::IteratorWrapper;
+using cfd::core::HashType;
 using cfd::core::kByteData160Length;
 using cfd::core::kByteData256Length;
 using cfd::core::kScriptHashP2pkhLength;
@@ -53,38 +194,20 @@ using cfd::core::kScriptHashP2shLength;
 using cfd::core::NetType;
 using cfd::core::Pubkey;
 using cfd::core::Script;
-using cfd::core::ScriptBuilder;
 using cfd::core::ScriptElement;
-using cfd::core::ScriptElementType;
 using cfd::core::ScriptOperator;
-using cfd::core::ScriptType;
-using cfd::core::ScriptUtil;
-using cfd::core::ScriptWitness;
-using cfd::core::SigHashAlgorithm;
 using cfd::core::SigHashType;
-using cfd::core::StringUtil;
 using cfd::core::Transaction;
 using cfd::core::Txid;
 using cfd::core::TxIn;
 using cfd::core::TxInReference;
+using cfd::core::TxOut;
 using cfd::core::TxOutReference;
 using cfd::core::WitnessVersion;
 using cfd::core::logger::warn;
 using cfd::js::api::AddressStructApi;
-
-// -----------------------------------------------------------------------------
-// ファイル内関数
-// -----------------------------------------------------------------------------
-
-/**
- * @brief Create a TransactionController object.
- *
- * @param[in] hex of the transaction for which to create the controller object
- * @return a TransactionController instance
- */
-static TransactionController CreateController(const std::string& hex) {
-  return TransactionController(hex);
-}
+using cfd::js::api::TransactionStructApi;
+using cfd::js::api::TransactionStructApiBase;
 
 // -----------------------------------------------------------------------------
 // TransactionStructApiクラス
@@ -94,44 +217,25 @@ CreateRawTransactionResponseStruct TransactionStructApi::CreateRawTransaction(
   auto call_func = [](const CreateRawTransactionRequestStruct& request)
       -> CreateRawTransactionResponseStruct {  // NOLINT
     CreateRawTransactionResponseStruct response;
-    // validate version number
-    const uint32_t tx_ver = request.version;
-    if (4 < tx_ver) {
-      warn(
-          CFD_LOG_SOURCE,
-          "Failed to CreateRawTransaction. invalid version number: version={}",  // NOLINT
-          tx_ver);
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Invalid version number. We supports only 1, 2, 3, or 4:");
+
+    std::vector<TxIn> txins;
+    for (TxInRequestStruct txin_req : request.txins) {
+      // TxInのunlocking_scriptは空で作成
+      TxIn txin(Txid(txin_req.txid), txin_req.vout, txin_req.sequence);
+      txins.push_back(txin);
     }
 
-    // TransactionController作成
-    TransactionController txc(tx_ver, request.locktime);
-
-    // TxInの追加
-    {
-      const uint32_t kDisableLockTimeSequence =
-          TransactionController::GetLockTimeDisabledSequence();
-      for (TxInRequestStruct txin_req : request.txins) {
-        // TxInのunlocking_scriptは空で作成
-        if (kDisableLockTimeSequence == txin_req.sequence) {
-          txc.AddTxIn(
-              Txid(txin_req.txid), txin_req.vout, txc.GetDefaultSequence());
-        } else {
-          txc.AddTxIn(Txid(txin_req.txid), txin_req.vout, txin_req.sequence);
-        }
-      }
+    std::vector<TxOut> txouts;
+    for (TxOutRequestStruct txout_req : request.txouts) {
+      Amount amount = Amount::CreateBySatoshiAmount(txout_req.amount);
+      Address address(txout_req.address);
+      TxOut txout(amount, address);
+      txouts.push_back(txout);
     }
 
-    // TxOutの追加
-    {
-      for (TxOutRequestStruct txout_req : request.txouts) {
-        txc.AddTxOut(
-            Address(txout_req.address),
-            Amount::CreateBySatoshiAmount(txout_req.amount));
-      }
-    }
+    TransactionApi api;
+    TransactionController txc = api.CreateRawTransaction(
+        request.version, request.locktime, txins, txouts);
 
     response.hex = txc.GetHex();
     return response;
@@ -326,8 +430,8 @@ GetWitnessStackNumResponseStruct TransactionStructApi::GetWitnessStackNum(
     const GetWitnessStackNumRequestStruct& request) {
   auto call_func = [](const GetWitnessStackNumRequestStruct& request)
       -> GetWitnessStackNumResponseStruct {  // NOLINT
-    return TransactionApiBase::GetWitnessStackNum<TransactionController>(
-        request, CreateController);
+    return TransactionStructApiBase::GetWitnessStackNum<TransactionController>(
+        request, cfd::api::CreateController);
   };
 
   GetWitnessStackNumResponseStruct result;
@@ -341,8 +445,28 @@ AddSignResponseStruct TransactionStructApi::AddSign(
     const AddSignRequestStruct& request) {
   auto call_func =
       [](const AddSignRequestStruct& request) -> AddSignResponseStruct {
-    return TransactionApiBase::AddSign<TransactionController>(
-        request, CreateController);
+    AddSignResponseStruct response;
+
+    std::string tx_hex = request.tx;
+    Txid txid(request.txin.txid);
+    uint32_t vout = request.txin.vout;
+
+    std::vector<SignParameter> sign_params;
+    for (const SignDataStruct& sign_data : request.txin.sign_param) {
+      sign_params.push_back(
+          TransactionStructApiBase::ConvertSignDataStructToSignParameter(
+              sign_data));
+    }
+
+    bool is_witness = request.txin.is_witness;
+    bool clear_stack = request.txin.clear_stack;
+
+    TransactionApi api;
+    TransactionController txc =
+        api.AddSign(tx_hex, txid, vout, sign_params, is_witness, clear_stack);
+
+    response.hex = txc.GetHex();
+    return response;
   };
 
   AddSignResponseStruct result;
@@ -355,8 +479,8 @@ UpdateWitnessStackResponseStruct TransactionStructApi::UpdateWitnessStack(
     const UpdateWitnessStackRequestStruct& request) {
   auto call_func = [](const UpdateWitnessStackRequestStruct& request)
       -> UpdateWitnessStackResponseStruct {  // NOLINT
-    return TransactionApiBase::UpdateWitnessStack<TransactionController>(
-        request, CreateController);
+    return TransactionStructApiBase::UpdateWitnessStack<TransactionController>(
+        request, cfd::api::CreateController);
   };
 
   UpdateWitnessStackResponseStruct result;
@@ -370,8 +494,32 @@ AddMultisigSignResponseStruct TransactionStructApi::AddMultisigSign(
     const AddMultisigSignRequestStruct& request) {
   auto call_func = [](const AddMultisigSignRequestStruct& request)
       -> AddMultisigSignResponseStruct {  // NOLINT
-    return TransactionApiBase::AddMultisigSign<TransactionController>(
-        request, CreateController);
+    TxInReference txin(TxIn(Txid(request.txin.txid), request.txin.vout, 0));
+    AddressType addr_type =
+        AddressStructApi::ConvertAddressType(request.txin.hash_type);
+    Script redeem_script(request.txin.redeem_script);
+    Script witness_script(request.txin.witness_script);
+    std::vector<SignParameter> sign_list;
+
+    SignParameter sign_data;
+    for (const auto& stack_req : request.txin.sign_params) {
+      sign_data =
+          TransactionStructApiBase::ConvertSignDataStructToSignParameter(
+              stack_req);
+      if (!stack_req.related_pubkey.empty()) {
+        sign_data.SetRelatedPubkey(Pubkey(stack_req.related_pubkey));
+      }
+      sign_list.push_back(sign_data);
+    }
+
+    TransactionApi api;
+    TransactionController ctx = api.AddMultisigSign(
+        request.tx, txin, sign_list, addr_type, witness_script, redeem_script,
+        request.txin.clear_stack);
+
+    AddMultisigSignResponseStruct response;
+    response.hex = ctx.GetHex();
+    return response;
   };
 
   AddMultisigSignResponseStruct result;
@@ -386,13 +534,13 @@ CreateSignatureHashResponseStruct TransactionStructApi::CreateSignatureHash(
   auto call_func = [](const CreateSignatureHashRequestStruct& request)
       -> CreateSignatureHashResponseStruct {  // NOLINT
     CreateSignatureHashResponseStruct response;
-    std::string sig_hash;
-    int64_t amount = request.txin.amount;
-    const std::string& hashtype_str = request.txin.hash_type;
+
+    ByteData sig_hash;
+    Amount amount = Amount::CreateBySatoshiAmount(request.txin.amount);
     const Txid& txid = Txid(request.txin.txid);
     uint32_t vout = request.txin.vout;
-    TransactionController txc(request.tx);
-    SigHashType sighashtype = TransactionApiBase::ConvertSigHashType(
+    const std::string& hashtype_str = request.txin.hash_type;
+    SigHashType sighashtype = TransactionStructApiBase::ConvertSigHashType(
         request.txin.sighash_type, request.txin.sighash_anyone_can_pay);
 
     Pubkey pubkey;
@@ -403,20 +551,21 @@ CreateSignatureHashResponseStruct TransactionStructApi::CreateSignatureHash(
       script = Script(request.txin.key_data.hex);
     }
 
-    if (hashtype_str == "p2pkh") {
-      sig_hash = txc.CreateP2pkhSignatureHash(
-          txid, vout,  // vout
-          pubkey, sighashtype);
-    } else if (hashtype_str == "p2sh") {
-      sig_hash = txc.CreateP2shSignatureHash(txid, vout, script, sighashtype);
-    } else if (hashtype_str == "p2wpkh") {
-      sig_hash = txc.CreateP2wpkhSignatureHash(
-          txid, vout, pubkey, sighashtype,
-          Amount::CreateBySatoshiAmount(amount));
-    } else if (hashtype_str == "p2wsh") {
-      sig_hash = txc.CreateP2wshSignatureHash(
-          txid, vout, script, sighashtype,
-          Amount::CreateBySatoshiAmount(amount));
+    TransactionApi api;
+    HashType hash_type;
+    TxInReference txin_ref(TxIn(txid, vout, 0));
+    if (hashtype_str == "p2pkh" || hashtype_str == "p2wpkh") {
+      hash_type =
+          (hashtype_str == "p2pkh") ? HashType::kP2pkh : HashType::kP2wpkh;
+      sig_hash = api.CreateSignatureHash(
+          request.tx, txin_ref, pubkey, amount, hash_type, sighashtype);
+
+    } else if (hashtype_str == "p2sh" || hashtype_str == "p2wsh") {
+      hash_type =
+          (hashtype_str == "p2sh") ? HashType::kP2sh : HashType::kP2wsh;
+      sig_hash = api.CreateSignatureHash(
+          request.tx, txin_ref, script, amount, hash_type, sighashtype);
+
     } else {
       warn(
           CFD_LOG_SOURCE,
@@ -430,7 +579,7 @@ CreateSignatureHashResponseStruct TransactionStructApi::CreateSignatureHash(
     }
 
     // レスポンスとなるモデルへ変換
-    response.sighash = sig_hash;
+    response.sighash = sig_hash.GetHex();
     return response;
   };
 

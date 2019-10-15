@@ -14,9 +14,34 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace api {
+
+Privkey KeyApi::CreateKeyPair(
+    bool is_compressed, Pubkey* pubkey, std::string* wif, NetType net_type) {
+  // generate random private key
+  Privkey privkey = Privkey::GenerageRandomKey();
+
+  // derive pubkey from private key
+  const Pubkey out_pubkey = privkey.GeneratePubkey(is_compressed);
+
+  if (pubkey != nullptr) {
+    *pubkey = out_pubkey;
+  }
+
+  if (wif != nullptr) {
+    *wif = privkey.ConvertWif(net_type, is_compressed);
+  }
+  return privkey;
+}
+
+}  // namespace api
+}  // namespace cfd
+
+namespace cfd {
 namespace js {
 namespace api {
 
+using cfd::api::KeyApi;
 using cfd::core::NetType;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
@@ -29,17 +54,23 @@ CreateKeyPairResponseStruct KeyStructApi::CreateKeyPair(
     CreateKeyPairResponseStruct response;
 
     // generate random private key
-    Privkey privkey = Privkey::GenerageRandomKey();
-
-    // derive pubkey from private key
-    bool is_compressed = request.is_compressed;
-    const Pubkey pubkey = privkey.GeneratePubkey(is_compressed);
-
-    // convert parameters to response struct
+    const bool is_compressed = request.is_compressed;
     const bool is_wif = request.wif;
-    const NetType net_type = AddressStructApi::ConvertNetType(request.network);
-    response.privkey = is_wif ? privkey.ConvertWif(net_type, is_compressed)
-                              : privkey.GetHex();  // NOLINT
+    Pubkey pubkey;
+    KeyApi api;
+    if (is_wif) {
+      const NetType net_type =
+          AddressStructApi::ConvertNetType(request.network);
+      std::string wif;
+      Privkey privkey =
+          api.CreateKeyPair(is_compressed, &pubkey, &wif, net_type);
+      response.privkey = wif;
+
+    } else {
+      Privkey privkey = api.CreateKeyPair(is_compressed, &pubkey);
+      response.privkey = privkey.GetHex();
+    }
+
     response.pubkey = pubkey.GetHex();
     return response;
   };

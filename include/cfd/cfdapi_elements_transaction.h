@@ -11,21 +11,162 @@
 #ifndef CFD_DISABLE_ELEMENTS
 
 #include <string>
+#include <vector>
 
 #include "cfd/cfd_common.h"
+#include "cfd/cfd_elements_transaction.h"
+#include "cfd/cfd_transaction_common.h"
 #include "cfd/cfdapi_struct.h"
 #include "cfdcore/cfdcore_coin.h"
+#include "cfdcore/cfdcore_elements_transaction.h"
 #include "cfdcore/cfdcore_key.h"
+#include "cfdcore/cfdcore_transaction_common.h"
+#include "cfdcore/cfdcore_util.h"
 
 /**
  * @brief cfdapi名前空間
  */
 namespace cfd {
-namespace js {
 namespace api {
 
+using cfd::ConfidentialTransactionController;
+using cfd::SignParameter;
+using cfd::core::ByteData;
+using cfd::core::ConfidentialTxIn;
+using cfd::core::ConfidentialTxInReference;
+using cfd::core::ConfidentialTxOut;
+using cfd::core::ConfidentialValue;
+using cfd::core::HashType;
 using cfd::core::Privkey;
+using cfd::core::Pubkey;
+using cfd::core::Script;
+using cfd::core::SigHashType;
 using cfd::core::Txid;
+
+/**
+ * @brief Elements用Transaction関連の関数群クラス
+ */
+class CFD_EXPORT ElementsTransactionApi {
+ public:
+  /**
+   * @brief constructor.
+   */
+  ElementsTransactionApi() {}
+
+  /**
+   * @brief Elements用のRaw Transactionを作成する.
+   * @param[in] version     tx version
+   * @param[in] locktime    lock time
+   * @param[in] txins       tx input list
+   * @param[in] txouts      tx output list
+   * @param[in] txout_fee   tx output fee
+   * @return Transaction
+   */
+  ConfidentialTransactionController CreateRawTransaction(
+      uint32_t version, uint32_t locktime,
+      const std::vector<ConfidentialTxIn>& txins,
+      const std::vector<ConfidentialTxOut>& txouts,
+      const ConfidentialTxOut& txout_fee) const;
+
+  /**
+   * @brief hexで与えられたtxに、SignDataを付与した
+   *     ConfidentialTransctionControllerを作成する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txid            target tx input txid
+   * @param[in] vout            target tx input vout
+   * @param[in] sign_params     sign data list
+   * @param[in] is_witness      use witness
+   * @param[in] clear_stack     clear stack data before add.
+   * @return SignDataが付与されたTransactionController
+   */
+  ConfidentialTransactionController AddSign(
+      const std::string& tx_hex, const Txid& txid, const uint32_t vout,
+      const std::vector<SignParameter>& sign_params, bool is_witness = true,
+      bool clear_stack = false) const;
+
+  /**
+   * @brief tx情報およびパラメータから、SigHashを作成する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] pubkey          public key
+   * @param[in] value           value (amount or commitment)
+   * @param[in] hash_type       hash type
+   * @param[in] sighash_type    sighash type
+   * @return sighash
+   */
+  ByteData CreateSignatureHash(
+      const std::string& tx_hex, const ConfidentialTxInReference& txin,
+      const Pubkey& pubkey, const ConfidentialValue& value, HashType hash_type,
+      const SigHashType& sighash_type) const;
+  /**
+   * @brief tx情報およびパラメータから、SigHashを作成する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] redeem_script   redeem script
+   * @param[in] value           value (amount or commitment)
+   * @param[in] hash_type       hash type
+   * @param[in] sighash_type    sighash type
+   * @return sighash
+   */
+  ByteData CreateSignatureHash(
+      const std::string& tx_hex, const ConfidentialTxInReference& txin,
+      const Script& redeem_script, const ConfidentialValue& value,
+      HashType hash_type, const SigHashType& sighash_type) const;
+  /**
+   * @brief tx情報およびパラメータから、SigHashを作成する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] key_data        key data (pubkey or redeem script)
+   * @param[in] value           value (amount or commitment)
+   * @param[in] hash_type       hash type
+   * @param[in] sighash_type    sighash type
+   * @return sighash
+   */
+  ByteData CreateSignatureHash(
+      const std::string& tx_hex, const ConfidentialTxInReference& txin,
+      const ByteData& key_data, const ConfidentialValue& value,
+      HashType hash_type, const SigHashType& sighash_type) const;
+
+  /**
+   * @brief Multisig署名情報を追加する.
+   * @details 追加するsignatureの順序は、redeem
+   * scriptのpubkeyとsign_list内のrelatedPubkeyで
+   *   対応をとって自動的に整列される.
+   * (relatedPubkeyが設定されていない場合は、relatedPubkeyが
+   *   設定されているsignatureを追加した後にsignParamの順序でsignatureを追加)
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txin            target tx input
+   * @param[in] sign_list       sign data list
+   * @param[in] address_type    address type. (support is P2sh-P2wsh or P2wsh)
+   * @param[in] witness_script  witness script
+   * @param[in] redeem_script   redeem script
+   * @param[in] clear_stack     clear stack data before add.
+   * @return Transaction
+   */
+  ConfidentialTransactionController AddMultisigSign(
+      const std::string& tx_hex, const ConfidentialTxInReference& txin,
+      const std::vector<SignParameter>& sign_list, AddressType address_type,
+      const Script& witness_script, const Script redeem_script = Script(),
+      bool clear_stack = true);
+
+  /*
+   * @brief Issue用BlindingKeyを作成する.
+   * @param[in] master_blinding_key master blindingKey
+   * @param[in] txid                issuance utxo txid
+   * @param[in] vout                issuance utxo vout
+   * @return blinding key
+   */
+  // 別クラスに分ける。Struct系のAPIを ～StructApi というクラスにした方が良い
+  // Privkey GetIssuanceBlindingKey(const Privkey& master_blinding_key,
+  //     const Txid& txid, int32_t vout);
+};
+
+}  // namespace api
+}  // namespace cfd
+
+namespace cfd {
+namespace js {
+namespace api {
 
 /**
  * @brief Elements用Transaction関連の関数群クラス
@@ -149,17 +290,6 @@ class CFD_EXPORT ElementsTransactionStructApi {
    */
   static GetIssuanceBlindingKeyResponseStruct GetIssuanceBlindingKey(
       const GetIssuanceBlindingKeyRequestStruct& request);
-
-  /*
-   * @brief Issue用BlindingKeyを作成する.
-   * @param[in] master_blinding_key master blindingKey
-   * @param[in] txid                issuance utxo txid
-   * @param[in] vout                issuance utxo vout
-   * @return blinding key
-   */
-  // 別クラスに分ける。Struct系のAPIを ～StructApi というクラスにした方が良い
-  // Privkey GetIssuanceBlindingKey(const Privkey& master_blinding_key,
-  //     const Txid& txid, int32_t vout);
 
   /**
    * @brief パラメータの情報を元に、Elements DestroyAmount用のRaw Transactionを作成する.

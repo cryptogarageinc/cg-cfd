@@ -24,13 +24,62 @@
 #include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
+namespace api {
+
+using cfd::api::AddressApi;
+
+Address ElementsAddressApi::CreateAddress(
+    NetType net_type, AddressType address_type, const Pubkey* pubkey,
+    const Script* script, Script* locking_script, Script* redeem_script,
+    std::vector<AddressFormatData>* prefix_list) {
+  std::vector<AddressFormatData> addr_prefixes;
+  if (prefix_list == nullptr) {
+    addr_prefixes = cfd::core::GetElementsAddressFormatList();
+  } else {
+    addr_prefixes = *prefix_list;
+  }
+
+  AddressApi address_api;
+  return address_api.CreateAddress(
+      net_type, address_type, pubkey, script, locking_script, redeem_script,
+      &addr_prefixes);
+}
+
+Address ElementsAddressApi::CreateMultisig(
+    NetType net_type, AddressType address_type, uint32_t req_sig_num,
+    const std::vector<Pubkey>& pubkeys, Script* redeem_script,
+    Script* witness_script, std::vector<AddressFormatData>* prefix_list) {
+  std::vector<AddressFormatData> addr_prefixes;
+  if (prefix_list == nullptr) {
+    addr_prefixes = cfd::core::GetElementsAddressFormatList();
+  } else {
+    addr_prefixes = *prefix_list;
+  }
+
+  AddressApi address_api;
+  return address_api.CreateMultisig(
+      net_type, address_type, req_sig_num, pubkeys, redeem_script,
+      witness_script, &addr_prefixes);
+}
+
+ElementsConfidentialAddress ElementsAddressApi::GetConfidentialAddress(
+    const Address& address, const ConfidentialKey confidential_key) {
+  ConfidentialKey conf_key(confidential_key);
+  ElementsConfidentialAddress conf_addr(address, conf_key);
+
+  return conf_addr;
+}
+
+}  // namespace api
+}  // namespace cfd
+
+namespace cfd {
 namespace js {
 namespace api {
 
 using cfd::ElementsAddressFactory;
-using cfd::api::AddressApi;
+using cfd::api::ElementsAddressApi;
 using cfd::core::Address;
-using cfd::core::AddressFormatData;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
 using cfd::core::ConfidentialKey;
@@ -63,11 +112,11 @@ CreateAddressResponseStruct ElementsAddressStructApi::CreateAddress(
     } else if (request.key_data.type == "redeem_script") {
       script = Script(request.key_data.hex);
     }
-    std::vector<AddressFormatData> prefix_list =
-        cfd::core::GetElementsAddressFormatList();
-    addr = AddressApi::CreateAddress(
-        net_type, addr_type, &pubkey, &script, &locking_script, &redeem_script,
-        &prefix_list);
+
+    ElementsAddressApi api;
+    addr = api.CreateAddress(
+        net_type, addr_type, &pubkey, &script, &locking_script,
+        &redeem_script);
 
     // レスポンスとなるモデルへ変換
     response.error.code = 0;
@@ -105,12 +154,11 @@ CreateMultisigResponseStruct ElementsAddressStructApi::CreateMultisig(
         AddressStructApi::ConvertAddressType(request.hash_type);
     Script witness_script;
     Script redeem_script;
-    std::vector<AddressFormatData> prefix_list =
-        cfd::core::GetElementsAddressFormatList();
 
-    Address addr = AddressApi::CreateMultisig(
+    ElementsAddressApi api;
+    Address addr = api.CreateMultisig(
         net_type, addr_type, req_sig_num, pubkeys, &redeem_script,
-        &witness_script, &prefix_list);
+        &witness_script);
 
     // レスポンスとなるモデルへ変換
     response.address = addr.GetAddress();
@@ -160,7 +208,9 @@ ElementsAddressStructApi::GetConfidentialAddress(
 
     Address addr = ElementsAddressFactory().GetAddress(unblinded_addrss);
     ConfidentialKey conf_key(key);
-    ElementsConfidentialAddress conf_addr(addr, conf_key);
+    ElementsAddressApi api;
+    ElementsConfidentialAddress conf_addr =
+        api.GetConfidentialAddress(addr, conf_key);
 
     response.confidential_address = conf_addr.GetAddress();
     return response;
