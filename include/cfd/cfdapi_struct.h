@@ -213,6 +213,45 @@ struct BlindRawTransactionResponseStruct {
 };
 
 // ------------------------------------------------------------------------
+// PrivkeyDataStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief PrivkeyDataStruct 構造体
+ */
+struct PrivkeyDataStruct {
+  std::string privkey = "";         //!< privkey  // NOLINT
+  bool wif = true;                  //!< wif  // NOLINT
+  std::string network = "mainnet";  //!< network  // NOLINT
+  bool is_compressed = true;        //!< is_compressed  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// CalculateEcSignatureRequestStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief CalculateEcSignatureRequestStruct 構造体
+ */
+struct CalculateEcSignatureRequestStruct {
+  std::string sighash = "";        //!< sighash  // NOLINT
+  PrivkeyDataStruct privkey_data;  //!< privkey_data  // NOLINT
+  bool is_grind_r = true;          //!< is_grind_r  // NOLINT
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
+// CalculateEcSignatureResponseStruct
+// ------------------------------------------------------------------------
+/**
+ * @brief CalculateEcSignatureResponseStruct 構造体
+ */
+struct CalculateEcSignatureResponseStruct {
+  std::string signature = "";  //!< signature  // NOLINT
+  cfd::js::api::InnerErrorResponseStruct error;   //!< error information
+  std::set<std::string> ignore_items;   //!< using on JSON mapping convert.
+};
+
+// ------------------------------------------------------------------------
 // ConvertEntropyToMnemonicRequestStruct
 // ------------------------------------------------------------------------
 /**
