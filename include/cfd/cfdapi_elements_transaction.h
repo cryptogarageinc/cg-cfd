@@ -31,17 +31,38 @@ namespace api {
 
 using cfd::ConfidentialTransactionController;
 using cfd::SignParameter;
+using cfd::core::BlindParameter;
 using cfd::core::ByteData;
 using cfd::core::ConfidentialTxIn;
 using cfd::core::ConfidentialTxInReference;
 using cfd::core::ConfidentialTxOut;
 using cfd::core::ConfidentialValue;
 using cfd::core::HashType;
+using cfd::core::IssuanceBlindingKeyPair;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
 using cfd::core::Script;
 using cfd::core::SigHashType;
 using cfd::core::Txid;
+
+/**
+ * @brief TxIn Blinding keys
+ */
+struct TxInBlindKeys {
+  Txid txid;
+  uint32_t vout;
+  BlindParameter blind_param;
+  bool is_issuance;
+  IssuanceBlindingKeyPair issuance_key;
+};
+
+/**
+ * @brief TxOut Blinding keys
+ */
+struct TxOutBlindKeys {
+  uint32_t index;
+  Pubkey blinding_key;
+};
 
 /**
  * @brief Elements用Transaction関連の関数群クラス
@@ -150,10 +171,18 @@ class CFD_EXPORT ElementsTransactionApi {
       bool clear_stack = true);
 
   /**
-   *
-   * @return
+   * @brief Elements用RawTransactionをBlindする.
+   * @param[in] tx_hex                 transaction hex string
+   * @param[in] txin_blind_keys        txin blinding data
+   * @param[in] txout_blind_keys       txout blinding data
+   * @param[in] is_issuance_blinding   issuance有無
+   * @return Transaction
    */
-  ConfidentialTransactionController BlindTransaction();
+  ConfidentialTransactionController BlindTransaction(
+      const std::string& tx_hex,
+      const std::vector<TxInBlindKeys>& txin_blind_keys,
+      const std::vector<TxOutBlindKeys>& txout_blind_keys,
+      bool is_issuance_blinding = false);
 
   /**
    *

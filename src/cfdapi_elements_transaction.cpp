@@ -227,9 +227,67 @@ ConfidentialTransactionController ElementsTransactionApi::AddMultisigSign(
   return ConfidentialTransactionController(result);
 }
 
-ConfidentialTransactionController ElementsTransactionApi::BlindTransaction() {
-  // FIXME
-  return ConfidentialTransactionController(0, 0);
+ConfidentialTransactionController ElementsTransactionApi::BlindTransaction(
+    const std::string& tx_hex,
+    const std::vector<TxInBlindKeys>& txin_blind_keys,
+    const std::vector<TxOutBlindKeys>& txout_blind_keys,
+    bool is_issuance_blinding) {
+  ConfidentialTransactionController txc(tx_hex);
+
+  uint32_t txin_count = txc.GetTransaction().GetTxInCount();
+  uint32_t txout_count = txc.GetTransaction().GetTxOutCount();
+
+  if (txin_blind_keys.size() == 0) {
+    warn(CFD_LOG_SOURCE, "Failed to txins empty.");
+    throw CfdException(
+        CfdError::kCfdOutOfRangeError, "JSON value error. Empty txins.");
+  }
+  if (txout_blind_keys.size() == 0) {
+    warn(CFD_LOG_SOURCE, "Failed to txouts empty.");
+    throw CfdException(
+        CfdError::kCfdOutOfRangeError, "JSON value error. Empty txouts.");
+  }
+
+  std::vector<BlindParameter> txin_info_list(txin_count);
+  std::vector<Pubkey> txout_confidential_keys(txout_count);
+  std::vector<IssuanceBlindingKeyPair> issuance_blinding_keys;
+  if (is_issuance_blinding) {
+    issuance_blinding_keys.resize(txin_count);
+  }
+
+  // TxInのBlind情報設定
+  for (TxInBlindKeys txin_key : txin_blind_keys) {
+    uint32_t index =
+        txc.GetTransaction().GetTxInIndex(txin_key.txid, txin_key.vout);
+    txin_info_list[index].asset = txin_key.blind_param.asset;
+    txin_info_list[index].vbf = txin_key.blind_param.vbf;
+    txin_info_list[index].abf = txin_key.blind_param.abf;
+    txin_info_list[index].value = txin_key.blind_param.value;
+    if (txin_key.is_issuance) {
+      issuance_blinding_keys[index].asset_key =
+          txin_key.issuance_key.asset_key;
+      issuance_blinding_keys[index].token_key =
+          txin_key.issuance_key.token_key;
+    }
+  }
+
+  // TxOutのBlind情報設定
+  for (TxOutBlindKeys txout_key : txout_blind_keys) {
+    if (txout_key.index < txout_count) {
+      txout_confidential_keys[txout_key.index] = txout_key.blinding_key;
+    } else {
+      warn(
+          CFD_LOG_SOURCE,
+          "Failed to BlindTransaction. Invalid txout index: {}",
+          txout_key.index);
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError, "Invalid txout index.");
+    }
+  }
+
+  txc.BlindTransaction(
+      txin_info_list, issuance_blinding_keys, txout_confidential_keys);
+  return txc;
 }
 
 ConfidentialTransactionController
@@ -291,6 +349,8 @@ using cfd::ConfidentialTransactionController;
 using cfd::ElementsAddressFactory;
 using cfd::api::AddressApi;
 using cfd::api::ElementsTransactionApi;
+using cfd::api::TxInBlindKeys;
+using cfd::api::TxOutBlindKeys;
 using cfd::core::Address;
 using cfd::core::AddressType;
 using cfd::core::Amount;
@@ -970,139 +1030,57 @@ ElementsTransactionStructApi::BlindTransaction(
   auto call_func = [](const BlindRawTransactionRequestStruct& request)
       -> BlindRawTransactionResponseStruct {  // NOLINT
     BlindRawTransactionResponseStruct response;
-    ConfidentialTransactionController txc(request.tx);
-    const ConfidentialTransaction& tx = txc.GetTransaction();
 
-    uint32_t txin_count = tx.GetTxInCount();
-    uint32_t txout_count = tx.GetTxOutCount();
     const std::vector<BlindTxInRequestStruct>& txins = request.txins;
     const std::vector<BlindTxOutRequestStruct>& txouts = request.txouts;
-    if (txins.size() == 0) {
-      warn(CFD_LOG_SOURCE, "Failed to txins empty.");
-      throw CfdException(
-          CfdError::kCfdOutOfRangeError, "JSON value error. Empty txins.");
-    }
-    if (txins.size() != txin_count) {
-      warn(
-          CFD_LOG_SOURCE, "Failed to txins count. {} != {}", txins.size(),
-          txin_count);
-      throw CfdException(
-          CfdError::kCfdOutOfRangeError,
-          "JSON value error. Unmatch txins count.");
-    }
-    if (txout_count == 0) {
-      warn(CFD_LOG_SOURCE, "Failed to txouts empty.");
-      throw CfdException(
-          CfdError::kCfdOutOfRangeError, "JSON value error. txouts empty.");
-    }
 
-    // fee count
-    uint32_t fee_count = 0;
-    uint32_t fee_index = 0;
-    std::set<uint32_t> fee_indexes;
-    for (const auto& txout : tx.GetTxOutList()) {
-      if (txout.GetLockingScript().IsEmpty()) {
-        ++fee_count;
-        fee_indexes.insert(fee_index);
-      }
-      ++fee_index;
-    }
-    if (fee_count == txout_count) {
-      warn(CFD_LOG_SOURCE, "Failed to txouts fee only.");
-      throw CfdException(
-          CfdError::kCfdOutOfRangeError, "JSON value error. txouts fee only.");
-    }
-    uint32_t txout_value_count = txout_count - fee_count;
-    if (txouts.size() < txout_value_count) {
-      warn(
-          CFD_LOG_SOURCE, "Failed to pubkey count. {} < {}", txouts.size(),
-          txout_value_count);
-      throw CfdException(
-          CfdError::kCfdOutOfRangeError,
-          "JSON value error. Pubkey count not enough.");
-    }
-    bool is_insert_fee_key = false;
-    if ((!fee_indexes.empty()) && (txouts.size() == txout_value_count)) {
-      // insert empty key (for fee)
-      is_insert_fee_key = true;
-    }
+    std::vector<TxInBlindKeys> txin_blind_keys;
+    std::vector<TxOutBlindKeys> txout_blind_keys;
+    bool is_issuance = (request.issuances.size() != 0);
+    uint32_t issuance_count = 0;
 
-    std::vector<BlindParameter> params(txin_count);
-    std::vector<bool> exist_list(txin_count, false);
-    std::vector<Pubkey> blind_pubkeys(txout_count);
-    std::vector<IssuanceBlindingKeyPair> key_pairs;
-    uint32_t index;
-
-    // BlindingPubkey
-    uint32_t pubkey_index = 0;
-    for (index = 0; index < txout_count; ++index) {
-      if (is_insert_fee_key && (fee_indexes.count(index) > 0)) {
-        // throuth
-      } else if (txouts.size() > pubkey_index) {
-        // TODO(k-matsuzawa): 後で直す
-        if (!txouts[pubkey_index].blind_pubkey.empty()) {
-          blind_pubkeys[index] = Pubkey(txouts[pubkey_index].blind_pubkey);
-        }
-        ++pubkey_index;
-      }
-    }
-
-    // BlindParameter
-    uint32_t offset = 0;
-    uint32_t count = 0;
-    for (const auto& txin : txins) {
-      if (!txin.txid.empty()) {
-        // index指定
-        offset = tx.GetTxInIndex(Txid(txin.txid), txin.vout);
-        exist_list[offset] = true;
-        params[offset].asset = ConfidentialAssetId(txin.asset);
-        params[offset].vbf = BlindFactor(txin.blind_factor);
-        params[offset].abf = BlindFactor(txin.asset_blind_factor);
-        params[offset].value =
-            ConfidentialValue(Amount::CreateBySatoshiAmount(txin.amount));
-        ++count;
-      }
-    }
-
-    if (count != txin_count) {
-      for (const auto& txin : txins) {
-        if (txin.txid.empty()) {
-          // 指定なしなら前方から挿入
-          for (index = 0; index < txin_count; ++index) {
-            if (!exist_list[index]) {
-              exist_list[index] = true;
-              params[index].asset = ConfidentialAssetId(txin.asset);
-              params[index].vbf = BlindFactor(txin.blind_factor);
-              params[index].abf = BlindFactor(txin.asset_blind_factor);
-              params[index].value = ConfidentialValue(
-                  Amount::CreateBySatoshiAmount(txin.amount));
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    // Issuance
-    if (request.issuances.size() > 0) {
-      // txinの個数分確保
-      key_pairs.resize(txin_count);
+    for (BlindTxInRequestStruct txin : request.txins) {
+      TxInBlindKeys txin_key;
+      txin_key.txid = Txid(txin.txid);
+      txin_key.vout = txin.vout;
+      txin_key.blind_param.asset = ConfidentialAssetId(txin.asset);
+      txin_key.blind_param.vbf = BlindFactor(txin.blind_factor);
+      txin_key.blind_param.abf = BlindFactor(txin.asset_blind_factor);
+      txin_key.blind_param.value =
+          ConfidentialValue(Amount::CreateBySatoshiAmount(txin.amount));
+      txin_key.is_issuance = false;
 
       for (BlindIssuanceRequestStruct issuance : request.issuances) {
-        index = txc.GetTransaction().GetTxInIndex(
-            Txid(issuance.txid), issuance.vout);
-        IssuanceBlindingKeyPair key;
-        if (!issuance.asset_blinding_key.empty()) {
-          key.asset_key = Privkey(issuance.asset_blinding_key);
+        if (issuance.txid == txin.txid && issuance.vout == txin.vout) {
+          txin_key.is_issuance = true;
+          txin_key.issuance_key.asset_key =
+              Privkey(issuance.asset_blinding_key);
+          txin_key.issuance_key.token_key =
+              Privkey(issuance.token_blinding_key);
+          issuance_count++;
         }
-        if (!issuance.token_blinding_key.empty()) {
-          key.token_key = Privkey(issuance.token_blinding_key);
-        }
-        key_pairs[index] = key;
       }
+      txin_blind_keys.push_back(txin_key);
     }
 
-    txc.BlindTransaction(params, key_pairs, blind_pubkeys);
+    if (issuance_count != request.issuances.size()) {
+      warn(
+          CFD_LOG_SOURCE,
+          "Failed to BlindTransaction. issuance txid is not found.");
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError, "Txid is not found.");
+    }
+
+    for (BlindTxOutRequestStruct txout : request.txouts) {
+      TxOutBlindKeys txout_key;
+      txout_key.index = txout.index;
+      txout_key.blinding_key = Pubkey(txout.blind_pubkey);
+      txout_blind_keys.push_back(txout_key);
+    }
+
+    ElementsTransactionApi api;
+    ConfidentialTransactionController txc = api.BlindTransaction(
+        request.tx, txin_blind_keys, txout_blind_keys, is_issuance);
     response.hex = txc.GetHex();
     return response;
   };

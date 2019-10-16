@@ -42,6 +42,7 @@ using cfd::core::ConfidentialTxOutReference;
 using cfd::core::ElementsConfidentialAddress;
 using cfd::core::IssuanceBlindingKeyPair;
 using cfd::core::IssuanceParameter;
+using cfd::core::NetType;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
 using cfd::core::Script;
