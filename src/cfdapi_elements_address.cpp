@@ -91,8 +91,9 @@ Address ElementsAddressApi::CreatePegInAddress(
       ContractHashUtil::GetContractScript(claim_script_inner, fedpegscript);
 
   // create peg-in address(P2CH = P2SH-P2WSH)
-  Address p2ch = ElementsAddressFactory(net_type, addr_prefixes)
-                     .CreatePegInAddress(address_type, tweak_fedpegscript_inner);
+  Address p2ch =
+      ElementsAddressFactory(net_type, addr_prefixes)
+          .CreatePegInAddress(address_type, tweak_fedpegscript_inner);
 
   // convert parameters to response struct
   if (claim_script != nullptr) {
@@ -298,7 +299,8 @@ ElementsAddressStructApi::CreatePegInAddress(
     Pubkey pubkey = Pubkey(request.pubkey);
     NetType net_type = AddressStructApi::ConvertNetType(request.network);
     // FIXME(fujita-cg): Extend JSON I/F and modify innner logic
-    // AddressType address_type = AddressStructApi::ConvertAddressType(request.address_type);
+    // AddressType address_type =
+    //   AddressStructApi::ConvertAddressType(request.address_type);
     AddressType address_type = AddressType::kP2shP2wpkhAddress;
 
     // prepare output parameters
@@ -307,7 +309,8 @@ ElementsAddressStructApi::CreatePegInAddress(
 
     ElementsAddressApi api;
     Address pegin_address = api.CreatePegInAddress(
-        net_type, address_type, fedpegscript, pubkey, &claim_script, &tweak_fedpegscript);
+        net_type, address_type, fedpegscript, pubkey, &claim_script,
+        &tweak_fedpegscript);
 
     // convert parameters to response struct
     response.mainchain_address = pegin_address.GetAddress();

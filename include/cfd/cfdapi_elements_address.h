@@ -96,7 +96,7 @@ class CFD_EXPORT ElementsAddressApi {
    */
   Address CreatePegInAddress(
       NetType net_type, AddressType address_type, const Script& fedpegscript,
-      const Pubkey& pubkey, Script* claim_script = nullptr, 
+      const Pubkey& pubkey, Script* claim_script = nullptr,
       Script* tweak_fedpegscript = nullptr,
       std::vector<AddressFormatData>* prefix_list = nullptr);
 };

@@ -65,14 +65,16 @@ ElementsConfidentialAddress ElementsAddressFactory::GetConfidentialAddress(
 }
 
 Address ElementsAddressFactory::CreatePegInAddress(
-    AddressType address_type, const Pubkey& pubkey, const Script& fedpegscript) const {
+    AddressType address_type, const Pubkey& pubkey,
+    const Script& fedpegscript) const {
   // create claim_script from pubkey
   Script claim_script = ScriptUtil::CreateP2wpkhLockingScript(pubkey);
   return CreatePegInAddress(address_type, claim_script, fedpegscript);
 }
 
 Address ElementsAddressFactory::CreatePegInAddress(
-    AddressType address_type, const Script& claim_script, const Script& fedpegscript) const {
+    AddressType address_type, const Script& claim_script,
+    const Script& fedpegscript) const {
   // tweak add claim_script with fedpegscript
   Script tweak_fedpegscript =
       ContractHashUtil::GetContractScript(claim_script, fedpegscript);

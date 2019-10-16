@@ -97,7 +97,8 @@ class CFD_EXPORT ElementsAddressFactory : public AddressFactory {
    * @return mainchain用peg-in address
    */
   Address CreatePegInAddress(
-      AddressType address_type, const Pubkey& pubkey, const Script& fedpegscript) const;
+      AddressType address_type, const Pubkey& pubkey,
+      const Script& fedpegscript) const;
 
   /**
    * @brief fedpegscriptとclaim_scriptから、net_typeに応じたmainchain用のpeg-in
@@ -109,7 +110,8 @@ class CFD_EXPORT ElementsAddressFactory : public AddressFactory {
    * @return mainchain用peg-in address
    */
   Address CreatePegInAddress(
-      AddressType address_type, const Script& claim_script, const Script& fedpegscript) const;
+      AddressType address_type, const Script& claim_script,
+      const Script& fedpegscript) const;
 
   /**
    * @brief tweakが足されたfedpegscriptから、net_typeに応じたmainchain用のpeg-in
@@ -121,7 +123,8 @@ class CFD_EXPORT ElementsAddressFactory : public AddressFactory {
    *     (ref: cfd::core::ContractHashUtil)
    * @return mainchain用peg-in address
    */
-  Address CreatePegInAddress(AddressType address_type, const Script& tweak_fedpegscript) const;
+  Address CreatePegInAddress(
+      AddressType address_type, const Script& tweak_fedpegscript) const;
 };
 
 }  // namespace cfd
