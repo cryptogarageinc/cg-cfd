@@ -333,6 +333,7 @@ ElementsTransactionStructApi::CreateRawTransaction(  // NOLINT
   auto call_func = [](const ElementsCreateRawTransactionRequestStruct& request)
       -> ElementsCreateRawTransactionResponseStruct {  // NOLINT
     ElementsCreateRawTransactionResponseStruct response;
+    ElementsAddressFactory address_factory;
     // Transaction作成
     std::vector<ConfidentialTxIn> txins;
     std::vector<ConfidentialTxOut> txouts;
@@ -358,8 +359,7 @@ ElementsTransactionStructApi::CreateRawTransaction(  // NOLINT
           txouts.emplace_back(confidential_addr, asset, amount);
         }
       } else {
-        txouts.emplace_back(
-            ElementsAddressFactory().GetAddress(addr), asset, amount);
+        txouts.emplace_back(address_factory.GetAddress(addr), asset, amount);
       }
     }
 
@@ -1527,55 +1527,54 @@ ElementsTransactionStructApi::CreateDestroyAmountTransaction(
       -> ElementsCreateDestroyAmountResponseStruct {  // NOLINT
     ElementsCreateDestroyAmountResponseStruct response;
     // Transaction作成
-    ConfidentialTransactionController ctxc(request.version, request.locktime);
     ElementsAddressFactory address_factory;
+    // Transaction作成
+    std::vector<ConfidentialTxIn> txins;
+    std::vector<ConfidentialTxOut> txouts;
 
     // TxInの追加
-    const uint32_t kLockTimeDisabledSequence =
-        ctxc.GetLockTimeDisabledSequence();
-    for (ElementsDestroyAmountTxInStruct txin_req : request.txins) {
-      Txid txid(txin_req.txid);
-      uint32_t vout = txin_req.vout;
-
-      // TxInのunlocking_scriptは空で作成
-      if (kLockTimeDisabledSequence == txin_req.sequence) {
-        ctxc.AddTxIn(txid, vout, ctxc.GetDefaultSequence());
-      } else {
-        ctxc.AddTxIn(txid, vout, txin_req.sequence);
-      }
+    for (const auto& txin_req : request.txins) {
+      txins.emplace_back(
+          Txid(txin_req.txid), txin_req.vout, txin_req.sequence);
     }
 
     // TxOutの追加
-    for (ElementsDestroyAmountTxOutStruct txout_req : request.txouts) {
+    Script script;
+    for (const auto& txout_req : request.txouts) {
       const std::string addr = txout_req.address;
+      Amount amount(Amount::CreateBySatoshiAmount(txout_req.amount));
+      ConfidentialAssetId asset(txout_req.asset);
       if (ElementsConfidentialAddress::IsConfidentialAddress(addr)) {
-        ctxc.AddTxOut(
-            ElementsConfidentialAddress(addr),
-            Amount::CreateBySatoshiAmount(txout_req.amount),
-            ConfidentialAssetId(txout_req.asset), txout_req.is_remove_nonce);
+        ElementsConfidentialAddress confidential_addr(addr);
+        if (txout_req.is_remove_nonce) {
+          txouts.emplace_back(
+              confidential_addr.GetUnblindedAddress(), asset, amount);
+        } else {
+          txouts.emplace_back(confidential_addr, asset, amount);
+        }
       } else {
-        ctxc.AddTxOut(
-            address_factory.GetAddress(addr),
-            Amount::CreateBySatoshiAmount(txout_req.amount),
-            ConfidentialAssetId(txout_req.asset));
+        txouts.emplace_back(address_factory.GetAddress(addr), asset, amount);
       }
     }
 
     // DestroyのTxOut追加
-    // script作成
-    ScriptBuilder builder;
-    builder.AppendOperator(ScriptOperator::OP_RETURN);
-    Script locking_script = builder.Build();
-
-    ctxc.AddTxOut(
-        locking_script, Amount::CreateBySatoshiAmount(request.destroy.amount),
-        ConfidentialAssetId(request.destroy.asset));
+    txouts.push_back(ConfidentialTxOut::CreateDestroyAmountTxOut(
+        ConfidentialAssetId(request.destroy.asset),
+        Amount::CreateBySatoshiAmount(request.destroy.amount)));
 
     // feeの追加
+    ConfidentialTxOut txout_fee;
     ElementsDestroyAmountFeeStruct fee_req = request.fee;
-    ctxc.AddTxOutFee(
-        Amount::CreateBySatoshiAmount(fee_req.amount),
-        ConfidentialAssetId(fee_req.asset));
+    // amountが0のfeeは無効と判定
+    if (fee_req.amount != 0) {
+      txout_fee = ConfidentialTxOut(
+          ConfidentialAssetId(fee_req.asset),
+          Amount::CreateBySatoshiAmount(fee_req.amount));
+    }
+
+    ElementsTransactionApi api;
+    ConfidentialTransactionController ctxc = api.CreateRawTransaction(
+        request.version, request.locktime, txins, txouts, txout_fee);
 
     response.hex = ctxc.GetHex();
     return response;
