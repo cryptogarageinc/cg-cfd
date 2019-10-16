@@ -229,7 +229,7 @@ ConfidentialTransactionController ElementsTransactionApi::AddMultisigSign(
 
 ConfidentialTransactionController ElementsTransactionApi::BlindTransaction(
     const std::string& tx_hex,
-    const std::vector<TxInBlindKeys>& txin_blind_keys,
+    const std::vector<TxInBlindParameters>& txin_blind_keys,
     const std::vector<TxOutBlindKeys>& txout_blind_keys,
     bool is_issuance_blinding) {
   ConfidentialTransactionController txc(tx_hex);
@@ -256,7 +256,7 @@ ConfidentialTransactionController ElementsTransactionApi::BlindTransaction(
   }
 
   // TxInのBlind情報設定
-  for (TxInBlindKeys txin_key : txin_blind_keys) {
+  for (TxInBlindParameters txin_key : txin_blind_keys) {
     uint32_t index =
         txc.GetTransaction().GetTxInIndex(txin_key.txid, txin_key.vout);
     txin_info_list[index].asset = txin_key.blind_param.asset;
@@ -330,7 +330,7 @@ ElementsTransactionApi::UpdateWitnessStack() {
   return ConfidentialTransactionController(0, 0);
 }
 
-Privkey GetIssuanceBlindingKey(
+Privkey ElementsTransactionApi::GetIssuanceBlindingKey(
     const Privkey& master_blinding_key, const Txid& txid, int32_t vout) {
   // FIXME
   return Privkey();
@@ -349,7 +349,7 @@ using cfd::ConfidentialTransactionController;
 using cfd::ElementsAddressFactory;
 using cfd::api::AddressApi;
 using cfd::api::ElementsTransactionApi;
-using cfd::api::TxInBlindKeys;
+using cfd::api::TxInBlindParameters;
 using cfd::api::TxOutBlindKeys;
 using cfd::core::Address;
 using cfd::core::AddressType;
@@ -1034,13 +1034,13 @@ ElementsTransactionStructApi::BlindTransaction(
     const std::vector<BlindTxInRequestStruct>& txins = request.txins;
     const std::vector<BlindTxOutRequestStruct>& txouts = request.txouts;
 
-    std::vector<TxInBlindKeys> txin_blind_keys;
+    std::vector<TxInBlindParameters> txin_blind_keys;
     std::vector<TxOutBlindKeys> txout_blind_keys;
-    bool is_issuance = (request.issuances.size() != 0);
+    bool is_issuance = false;
     uint32_t issuance_count = 0;
 
     for (BlindTxInRequestStruct txin : request.txins) {
-      TxInBlindKeys txin_key;
+      TxInBlindParameters txin_key;
       txin_key.txid = Txid(txin.txid);
       txin_key.vout = txin.vout;
       txin_key.blind_param.asset = ConfidentialAssetId(txin.asset);
@@ -1052,12 +1052,14 @@ ElementsTransactionStructApi::BlindTransaction(
 
       for (BlindIssuanceRequestStruct issuance : request.issuances) {
         if (issuance.txid == txin.txid && issuance.vout == txin.vout) {
+          is_issuance = true;
           txin_key.is_issuance = true;
           txin_key.issuance_key.asset_key =
               Privkey(issuance.asset_blinding_key);
           txin_key.issuance_key.token_key =
               Privkey(issuance.token_blinding_key);
           issuance_count++;
+          break;
         }
       }
       txin_blind_keys.push_back(txin_key);

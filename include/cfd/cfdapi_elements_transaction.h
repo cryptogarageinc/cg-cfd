@@ -46,22 +46,22 @@ using cfd::core::SigHashType;
 using cfd::core::Txid;
 
 /**
- * @brief TxIn Blinding keys
+ * @brief TxIn Blinding parameters
  */
-struct TxInBlindKeys {
-  Txid txid;
-  uint32_t vout;
-  BlindParameter blind_param;
-  bool is_issuance;
-  IssuanceBlindingKeyPair issuance_key;
+struct TxInBlindParameters {
+  Txid txid;                             //!< txid
+  uint32_t vout;                         //!< vout
+  BlindParameter blind_param;            //!< blinding parameter
+  bool is_issuance;                      //!< issuance flag
+  IssuanceBlindingKeyPair issuance_key;  //!< issuance blinding keys
 };
 
 /**
  * @brief TxOut Blinding keys
  */
 struct TxOutBlindKeys {
-  uint32_t index;
-  Pubkey blinding_key;
+  uint32_t index;       //!< txout index
+  Pubkey blinding_key;  //!< blinding key
 };
 
 /**
@@ -180,7 +180,7 @@ class CFD_EXPORT ElementsTransactionApi {
    */
   ConfidentialTransactionController BlindTransaction(
       const std::string& tx_hex,
-      const std::vector<TxInBlindKeys>& txin_blind_keys,
+      const std::vector<TxInBlindParameters>& txin_blind_keys,
       const std::vector<TxOutBlindKeys>& txout_blind_keys,
       bool is_issuance_blinding = false);
 
@@ -226,7 +226,7 @@ class CFD_EXPORT ElementsTransactionApi {
    */
   ConfidentialTransactionController UpdateWitnessStack();
 
-  /*
+  /**
    * @brief Issue用BlindingKeyを作成する.
    * @param[in] master_blinding_key master blindingKey
    * @param[in] txid                issuance utxo txid
