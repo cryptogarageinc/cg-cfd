@@ -65,6 +65,40 @@ struct TxOutBlindKeys {
 };
 
 /**
+ * @brief TxIn pegin parameters
+ */
+struct TxInPeginParameters {
+  Txid txid;                      //!< txid
+  uint32_t vout;                  //!< vout
+  Amount amount;                  //!< amount
+  ConfidentialAssetId asset;      //!< asset
+  BlockHash mainchain_blockhash;  //!< mainchain genesis block hash
+  Script claim_script;            //!< claim script
+  /**
+   * @brief mainchain raw transaction.
+   * @see ConfidentialTransaction::GetBitcoinTransaction
+   */
+  ByteData mainchain_raw_tx;
+  ByteData mainchain_txoutproof;  //!< mainchain txoutproof
+};
+
+/**
+ * @brief TxOut pegout parameters
+ */
+struct TxOutPegoutParameters {
+  Amount amount;                   //!< amount
+  ConfidentialAssetId asset;       //!< asset
+  BlockHash genesisblock_hash;     //!< mainchain genesis block hash
+  Address btc_address;             //!< mainchain bitcoin address
+  NetType net_type;                //!< mainchain network type
+  Pubkey online_pubkey;            //!< online pubkey
+  Privkey master_online_key;       //!< master online key
+  std::string bitcoin_descriptor;  //!< bitcoin descriptor
+  uint32_t bip32_counter;          //!< bip32 counter
+  ByteData whitelist;              //!< claim script
+};
+
+/**
  * @brief Elements用Transaction関連の関数群クラス
  */
 class CFD_EXPORT ElementsTransactionApi {
@@ -203,16 +237,40 @@ class CFD_EXPORT ElementsTransactionApi {
   ConfidentialTransactionController SetRawReissueAsset();
 
   /**
-   *
-   * @return
+   * @brief Elements用のRaw Pegin Transactionを作成する.
+   * @param[in] version     tx version
+   * @param[in] locktime    lock time
+   * @param[in] txins       tx input list
+   * @param[in] pegins      tx pegin input list
+   * @param[in] txouts      tx output list
+   * @param[in] txout_fee   tx output fee
+   * @return Pegin Transaction
    */
-  ConfidentialTransactionController CreateRawPeginTransaction();
+  ConfidentialTransactionController CreateRawPeginTransaction(
+      uint32_t version, uint32_t locktime,
+      const std::vector<ConfidentialTxIn>& txins,
+      const std::vector<TxInPeginParameters>& pegins,
+      const std::vector<ConfidentialTxOut>& txouts,
+      const ConfidentialTxOut& txout_fee) const;
 
   /**
-   *
-   * @return
+   * @brief Elements用のRaw Pegout Transactionを作成する.
+   * @param[in] version     tx version
+   * @param[in] locktime    lock time
+   * @param[in] txins       tx input list
+   * @param[in] txouts      tx output list
+   * @param[in] pegout_data tx pegout data
+   * @param[in] txout_fee   tx output fee
+   * @param[out] pegout_address   pegout address
+   * @return Pegout Transaction
    */
-  ConfidentialTransactionController CreateRawPegoutTransaction();
+  ConfidentialTransactionController CreateRawPegoutTransaction(
+      uint32_t version, uint32_t locktime,
+      const std::vector<ConfidentialTxIn>& txins,
+      const std::vector<ConfidentialTxOut>& txouts,
+      const TxOutPegoutParameters& pegout_data,
+      const ConfidentialTxOut& txout_fee,
+      Address* pegout_address = nullptr) const;
 
   /**
    *
@@ -235,6 +293,9 @@ class CFD_EXPORT ElementsTransactionApi {
    */
   Privkey GetIssuanceBlindingKey(
       const Privkey& master_blinding_key, const Txid& txid, int32_t vout);
+
+  // CreateDestroyAmountTransaction
+  // see CreateRawTransaction and ConfidentialTxOut::CreateDestroyAmountTxOut
 };
 
 }  // namespace api
