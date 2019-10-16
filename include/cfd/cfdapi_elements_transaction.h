@@ -31,17 +31,38 @@ namespace api {
 
 using cfd::ConfidentialTransactionController;
 using cfd::SignParameter;
+using cfd::core::BlindParameter;
 using cfd::core::ByteData;
 using cfd::core::ConfidentialTxIn;
 using cfd::core::ConfidentialTxInReference;
 using cfd::core::ConfidentialTxOut;
 using cfd::core::ConfidentialValue;
 using cfd::core::HashType;
+using cfd::core::IssuanceBlindingKeyPair;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
 using cfd::core::Script;
 using cfd::core::SigHashType;
 using cfd::core::Txid;
+
+/**
+ * @brief TxIn Blinding parameters
+ */
+struct TxInBlindParameters {
+  Txid txid;                             //!< txid
+  uint32_t vout;                         //!< vout
+  BlindParameter blind_param;            //!< blinding parameter
+  bool is_issuance;                      //!< issuance flag
+  IssuanceBlindingKeyPair issuance_key;  //!< issuance blinding keys
+};
+
+/**
+ * @brief TxOut Blinding keys
+ */
+struct TxOutBlindKeys {
+  uint32_t index;       //!< txout index
+  Pubkey blinding_key;  //!< blinding key
+};
 
 /**
  * @brief Elements用Transaction関連の関数群クラス
@@ -149,16 +170,71 @@ class CFD_EXPORT ElementsTransactionApi {
       const Script& witness_script, const Script redeem_script = Script(),
       bool clear_stack = true);
 
-  /*
+  /**
+   * @brief Elements用RawTransactionをBlindする.
+   * @param[in] tx_hex                 transaction hex string
+   * @param[in] txin_blind_keys        txin blinding data
+   * @param[in] txout_blind_keys       txout blinding data
+   * @param[in] is_issuance_blinding   issuance有無
+   * @return Transaction
+   */
+  ConfidentialTransactionController BlindTransaction(
+      const std::string& tx_hex,
+      const std::vector<TxInBlindParameters>& txin_blind_keys,
+      const std::vector<TxOutBlindKeys>& txout_blind_keys,
+      bool is_issuance_blinding = false);
+
+  /**
+   *
+   * @return
+   */
+  ConfidentialTransactionController UnblindTransaction();
+
+  /**
+   *
+   * @return
+   */
+  ConfidentialTransactionController SetRawIssueAsset();
+
+  /**
+   *
+   * @return
+   */
+  ConfidentialTransactionController SetRawReissueAsset();
+
+  /**
+   *
+   * @return
+   */
+  ConfidentialTransactionController CreateRawPeginTransaction();
+
+  /**
+   *
+   * @return
+   */
+  ConfidentialTransactionController CreateRawPegoutTransaction();
+
+  /**
+   *
+   * @return
+   */
+  uint32_t GetWitnessStackNum();
+
+  /**
+   *
+   * @return
+   */
+  ConfidentialTransactionController UpdateWitnessStack();
+
+  /**
    * @brief Issue用BlindingKeyを作成する.
    * @param[in] master_blinding_key master blindingKey
    * @param[in] txid                issuance utxo txid
    * @param[in] vout                issuance utxo vout
    * @return blinding key
    */
-  // 別クラスに分ける。Struct系のAPIを ～StructApi というクラスにした方が良い
-  // Privkey GetIssuanceBlindingKey(const Privkey& master_blinding_key,
-  //     const Txid& txid, int32_t vout);
+  Privkey GetIssuanceBlindingKey(
+      const Privkey& master_blinding_key, const Txid& txid, int32_t vout);
 };
 
 }  // namespace api
