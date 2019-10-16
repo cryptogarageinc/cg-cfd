@@ -1247,13 +1247,16 @@ def Error(filename, linenum, category, confidence, message):
   if _ShouldPrintError(category, confidence, linenum):
     _cpplint_state.IncrementErrorCount(category)
     if _cpplint_state.output_format == 'vs7':
-      sys.stderr.write('%s(%s): error cpplint: [%s] %s [%d]\n' % (
+      # sys.stderr.write('%s(%s): error cpplint: [%s] %s [%d]\n' % (
+      print('%s(%s): error cpplint: [%s] %s [%d]' % (
           filename, linenum, category, message, confidence))
     elif _cpplint_state.output_format == 'eclipse':
-      sys.stderr.write('%s:%s: warning: %s  [%s] [%d]\n' % (
+      # sys.stderr.write('%s:%s: warning: %s  [%s] [%d]\n' % (
+      print('%s:%s: warning: %s  [%s] [%d]' % (
           filename, linenum, message, category, confidence))
     else:
-      sys.stderr.write('%s:%s:  %s  [%s] [%d]\n' % (
+      # sys.stderr.write('%s:%s:  %s  [%s] [%d]\n' % (
+      print('%s:%s:  %s  [%s] [%d]' % (
           filename, linenum, message, category, confidence))
 
 
