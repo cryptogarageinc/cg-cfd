@@ -40,16 +40,16 @@ class CFD_EXPORT ElementsAddressApi {
   ElementsAddressApi() {}
 
   /**
- * @brief Addressを作成する
- * @param[in] net_type        network type
- * @param[in] address_type    address type
- * @param[in] pubkey          public key (default: nullptr)
- * @param[in] script          script (default: nullptr)
- * @param[out] locking_script locking script
- * @param[out] redeem_script  redeem script
- * @param[in] prefix_list     address prefix list
- * @return Address
- */
+   * @brief Addressを作成する
+   * @param[in] net_type        network type
+   * @param[in] address_type    address type
+   * @param[in] pubkey          public key (default: nullptr)
+   * @param[in] script          script (default: nullptr)
+   * @param[out] locking_script locking script
+   * @param[out] redeem_script  redeem script
+   * @param[in] prefix_list     address prefix list
+   * @return Address
+   */
   Address CreateAddress(
       NetType net_type, AddressType address_type, const Pubkey* pubkey,
       const Script* script, Script* locking_script = nullptr,
@@ -57,16 +57,16 @@ class CFD_EXPORT ElementsAddressApi {
       std::vector<AddressFormatData>* prefix_list = nullptr);
 
   /**
- * @brief Multisig Addressを作成する
- * @param[in] net_type        network type
- * @param[in] address_type    address type
- * @param[in] req_sig_num     multisig require sign num
- * @param[in] pubkeys         public key list
- * @param[out] redeem_script  redeem script (p2sh, p2sh-p2wsh)
- * @param[out] witness_script witness script (p2wsh, p2sh-p2wsh)
- * @param[in] prefix_list     address prefix list
- * @return Address
- */
+   * @brief Multisig Addressを作成する
+   * @param[in] net_type        network type
+   * @param[in] address_type    address type
+   * @param[in] req_sig_num     multisig require sign num
+   * @param[in] pubkeys         public key list
+   * @param[out] redeem_script  redeem script (p2sh, p2sh-p2wsh)
+   * @param[out] witness_script witness script (p2wsh, p2sh-p2wsh)
+   * @param[in] prefix_list     address prefix list
+   * @return Address
+   */
   Address CreateMultisig(
       NetType net_type, AddressType address_type, uint32_t req_sig_num,
       const std::vector<Pubkey>& pubkeys, Script* redeem_script = nullptr,
@@ -74,13 +74,31 @@ class CFD_EXPORT ElementsAddressApi {
       std::vector<AddressFormatData>* prefix_list = nullptr);
 
   /**
- * @brief AddressからConfidentialAddressを取得する.
- * @param[in] address Address
- * @param[in] confidential_key confidential key
- * @return ElementsConfidentialAddress
- */
+   * @brief AddressからConfidentialAddressを取得する.
+   * @param[in] address Address
+   * @param[in] confidential_key confidential key
+   * @return ElementsConfidentialAddress
+   */
   ElementsConfidentialAddress GetConfidentialAddress(
       const Address& address, const ConfidentialKey confidential_key);
+
+  /**
+   * @brief bitcoin blockchainからのpeginに利用できるAddressを生成する
+   * @param[in] net_type              network type of mainchain
+   * @param[in] address_type          for future use
+   *     (currently fixed with p2sh-p2wpkh)
+   * @param[in] fedpegscript          fed peg script
+   * @param[in] pubkey                pubkey related to mainchain address
+   * @param[out] claim_script         claim script used when claiming peg-in bitcoin
+   * @param[out] tweak_fedpegscript   fedpeg_script with pubkey added as tweak
+   * @param[in] prefix_list           address prefix list
+   * @return peg-inに利用できるAddressインスタンス
+   */
+  Address CreatePegInAddress(
+      NetType net_type, AddressType address_type, const Script& fedpegscript,
+      const Pubkey& pubkey, Script* claim_script = nullptr,
+      Script* tweak_fedpegscript = nullptr,
+      std::vector<AddressFormatData>* prefix_list = nullptr);
 };
 
 }  // namespace api

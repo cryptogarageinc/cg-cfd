@@ -66,6 +66,14 @@ class CFD_EXPORT KeyStructApi {
   static CreateKeyPairResponseStruct CreateKeyPair(
       const CreateKeyPairRequestStruct& request);
 
+  /**
+   * @brief ec signatureを生成する.
+   * @param[in] request ec signatureを計算するためのパラメータ
+   * @return ec signature
+   */
+  static CalculateEcSignatureResponseStruct CalculateEcSignature(
+      const CalculateEcSignatureRequestStruct& request);
+
  private:
   KeyStructApi();
 };
