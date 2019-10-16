@@ -73,8 +73,8 @@ ElementsConfidentialAddress ElementsAddressApi::GetConfidentialAddress(
 }
 
 Address ElementsAddressApi::CreatePegInAddress(
-    const Script& fedpegscript, const Pubkey& pubkey, const NetType net_type,
-    Script* claim_script, Script* tweak_fedpegscript,
+    NetType net_type, AddressType address_type, const Script& fedpegscript,
+    const Pubkey& pubkey, Script* claim_script, Script* tweak_fedpegscript,
     std::vector<AddressFormatData>* prefix_list) {
   std::vector<AddressFormatData> addr_prefixes;
   if (prefix_list == nullptr) {
@@ -92,7 +92,7 @@ Address ElementsAddressApi::CreatePegInAddress(
 
   // create peg-in address(P2CH = P2SH-P2WSH)
   Address p2ch = ElementsAddressFactory(net_type, addr_prefixes)
-                     .CreatePegInAddress(tweak_fedpegscript_inner);
+                     .CreatePegInAddress(address_type, tweak_fedpegscript_inner);
 
   // convert parameters to response struct
   if (claim_script != nullptr) {
@@ -297,6 +297,9 @@ ElementsAddressStructApi::CreatePegInAddress(
     Script fedpegscript = Script(request.fedpegscript);
     Pubkey pubkey = Pubkey(request.pubkey);
     NetType net_type = AddressStructApi::ConvertNetType(request.network);
+    // FIXME(fujita-cg): Extend JSON I/F and modify innner logic
+    // AddressType address_type = AddressStructApi::ConvertAddressType(request.address_type);
+    AddressType address_type = AddressType::kP2shP2wpkhAddress;
 
     // prepare output parameters
     Script claim_script;
@@ -304,7 +307,7 @@ ElementsAddressStructApi::CreatePegInAddress(
 
     ElementsAddressApi api;
     Address pegin_address = api.CreatePegInAddress(
-        fedpegscript, pubkey, net_type, &claim_script, &tweak_fedpegscript);
+        net_type, address_type, fedpegscript, pubkey, &claim_script, &tweak_fedpegscript);
 
     // convert parameters to response struct
     response.mainchain_address = pegin_address.GetAddress();

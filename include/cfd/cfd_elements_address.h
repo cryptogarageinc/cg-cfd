@@ -78,7 +78,7 @@ class CFD_EXPORT ElementsAddressFactory : public AddressFactory {
 
   /**
    * @brief UnblindedAddressをconfidential
-   * keyでブラインドしたConfidentialAddressを取得する.
+   *     keyでブラインドしたConfidentialAddressを取得する.
    * @param[in] unblinded_address Addressインスタンス
    * @param[in] confidential_key  ConfidentialKeyインスタンス(ec public key)
    * @return BlindされたElementsConfidentialAddressインスタンス
@@ -89,33 +89,39 @@ class CFD_EXPORT ElementsAddressFactory : public AddressFactory {
 
   /**
    * @brief fedpegscriptとpubkeyから、net_typeに応じたmainchain用のpeg-in
-   * addressを作成する
+   *     addressを作成する
+   * @param[in] address_type          for future use
+   *     (currently fixed with p2sh-p2wpkh)
    * @param[in] pubkey 公開鍵
    * @param[in] fedpegscript elementsのfedpegscript
    * @return mainchain用peg-in address
    */
   Address CreatePegInAddress(
-      const Pubkey& pubkey, const Script& fedpegscript) const;
+      AddressType address_type, const Pubkey& pubkey, const Script& fedpegscript) const;
 
   /**
    * @brief fedpegscriptとclaim_scriptから、net_typeに応じたmainchain用のpeg-in
-   * addressを作成する
+   *     addressを作成する
+   * @param[in] address_type          for future use
+   *     (currently fixed with p2sh-p2wpkh)
    * @param[in] claim_script sidechainでの資産引取りに必要なclaim script
    * @param[in] fedpegscript elementsのfedpegscript
    * @return mainchain用peg-in address
    */
   Address CreatePegInAddress(
-      const Script& claim_script, const Script& fedpegscript) const;
+      AddressType address_type, const Script& claim_script, const Script& fedpegscript) const;
 
   /**
    * @brief tweakが足されたfedpegscriptから、net_typeに応じたmainchain用のpeg-in
-   * addressを作成する
+   *     addressを作成する
+   * @param[in] address_type          for future use
+   *     (currently fixed with p2sh-p2wpkh)
    * @param[in] tweak_fedpegscript
-   * fedpegscript内部のpubkeyをtweakと合成させたscript. (ref:
-   * cfd::core::ContractHashUtil)
+   *     fedpegscript内部のpubkeyをtweakと合成させたscript.
+   *     (ref: cfd::core::ContractHashUtil)
    * @return mainchain用peg-in address
    */
-  Address CreatePegInAddress(const Script& tweak_fedpegscript) const;
+  Address CreatePegInAddress(AddressType address_type, const Script& tweak_fedpegscript) const;
 };
 
 }  // namespace cfd

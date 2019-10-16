@@ -84,17 +84,20 @@ class CFD_EXPORT ElementsAddressApi {
 
   /**
    * @brief bitcoin blockchainからのpeginに利用できるAddressを生成する
+   * @param[in] net_type              network type of mainchain
+   * @param[in] address_type          for future use
+   *     (currently fixed with p2sh-p2wpkh)
    * @param[in] fedpegscript          fed peg script
    * @param[in] pubkey                pubkey related to mainchain address
-   * @param[in] net_type              network type of mainchain
    * @param[out] claim_script         claim script used when claiming peg-in bitcoin
    * @param[out] tweak_fedpegscript   fedpeg_script with pubkey added as tweak
    * @param[in] prefix_list           address prefix list
    * @return peg-inに利用できるAddressインスタンス
    */
-  static Address CreatePegInAddress(
-      const Script& fedpegscript, const Pubkey& pubkey, const NetType net_type,
-      Script* claim_script = nullptr, Script* tweak_fedpegscript = nullptr,
+  Address CreatePegInAddress(
+      NetType net_type, AddressType address_type, const Script& fedpegscript,
+      const Pubkey& pubkey, Script* claim_script = nullptr, 
+      Script* tweak_fedpegscript = nullptr,
       std::vector<AddressFormatData>* prefix_list = nullptr);
 };
 

@@ -65,22 +65,23 @@ ElementsConfidentialAddress ElementsAddressFactory::GetConfidentialAddress(
 }
 
 Address ElementsAddressFactory::CreatePegInAddress(
-    const Pubkey& pubkey, const Script& fedpegscript) const {
+    AddressType address_type, const Pubkey& pubkey, const Script& fedpegscript) const {
   // create claim_script from pubkey
   Script claim_script = ScriptUtil::CreateP2wpkhLockingScript(pubkey);
-  return CreatePegInAddress(claim_script, fedpegscript);
+  return CreatePegInAddress(address_type, claim_script, fedpegscript);
 }
 
 Address ElementsAddressFactory::CreatePegInAddress(
-    const Script& claim_script, const Script& fedpegscript) const {
+    AddressType address_type, const Script& claim_script, const Script& fedpegscript) const {
   // tweak add claim_script with fedpegscript
   Script tweak_fedpegscript =
       ContractHashUtil::GetContractScript(claim_script, fedpegscript);
-  return CreatePegInAddress(tweak_fedpegscript);
+  return CreatePegInAddress(address_type, tweak_fedpegscript);
 }
 
 Address ElementsAddressFactory::CreatePegInAddress(
-    const Script& tweak_fedpegscript) const {
+    AddressType address_type, const Script& tweak_fedpegscript) const {
+  // FIXME(fujita-cg): implements of processing by address_type
   // create peg-in address(P2CH = P2SH-P2WSH)
   Script witness_program =
       ScriptUtil::CreateP2wshLockingScript(tweak_fedpegscript);
