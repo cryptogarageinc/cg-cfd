@@ -629,11 +629,13 @@ ExtractScriptData TransactionStructApiBase::ExtractLockingScript(
     extract_data.script_type = LockingScriptType::kTrue;
     return extract_data;
   }
+#ifndef CFD_DISABLE_ELEMENTS
   if (locking_script.IsEmpty()) {
     // empty
     extract_data.script_type = LockingScriptType::kFee;
     return extract_data;
   }
+#endif  // CFD_DISABLE_ELEMENTS
   if (locking_script.IsP2shScript()) {
     // P2shScript
     extract_data.script_type = LockingScriptType::kPayToScriptHash;
@@ -732,6 +734,8 @@ std::string TransactionStructApiBase::ConvertLockingScriptTypeString(
     case LockingScriptType::kFee:
       return "fee";
 #endif  // CFD_DISABLE_ELEMENTS
+    default:
+      break;
   }
   return "";
 }

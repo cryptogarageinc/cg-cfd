@@ -39,32 +39,21 @@ namespace cfd {
 namespace api {
 
 using cfd::ConfidentialTransactionController;
-using cfd::ElementsAddressFactory;
 using cfd::SignParameter;
-using cfd::api::AddressApi;
 using cfd::api::TransactionApiBase;
 using cfd::core::Address;
 using cfd::core::AddressType;
-using cfd::core::Amount;
-using cfd::core::BlindFactor;
 using cfd::core::BlindParameter;
-using cfd::core::BlockHash;
 using cfd::core::ByteData;
 using cfd::core::ByteData160;
-using cfd::core::ByteData256;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
-using cfd::core::ConfidentialAssetId;
-using cfd::core::ConfidentialNonce;
 using cfd::core::ConfidentialTransaction;
 using cfd::core::ConfidentialTxIn;
 using cfd::core::ConfidentialTxInReference;
 using cfd::core::ConfidentialTxOut;
 using cfd::core::ConfidentialTxOutReference;
 using cfd::core::ConfidentialValue;
-using cfd::core::ElementsAddressType;
-using cfd::core::ElementsConfidentialAddress;
-using cfd::core::ElementsNetType;
 using cfd::core::ExtKey;
 using cfd::core::HashType;
 using cfd::core::HashUtil;
@@ -72,14 +61,9 @@ using cfd::core::IssuanceBlindingKeyPair;
 using cfd::core::IssuanceParameter;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
-using cfd::core::RangeProofInfo;
 using cfd::core::Script;
-using cfd::core::ScriptBuilder;
-using cfd::core::ScriptElement;
-using cfd::core::ScriptOperator;
 using cfd::core::ScriptUtil;
 using cfd::core::SigHashType;
-using cfd::core::Transaction;
 using cfd::core::Txid;
 using cfd::core::UnblindParameter;
 using cfd::core::WitnessVersion;
@@ -376,15 +360,61 @@ ConfidentialTransactionController ElementsTransactionApi::UnblindTransaction(
   return ctxc;
 }
 
-ConfidentialTransactionController ElementsTransactionApi::SetRawIssueAsset() {
-  // FIXME
-  return ConfidentialTransactionController(0, 0);
+ConfidentialTransactionController ElementsTransactionApi::SetRawIssueAsset(
+    const std::string& tx_hex,
+    const std::vector<TxInIssuanceParameters>& issuances,
+    std::vector<IssuanceOutput>* issuance_output) {
+  ConfidentialTransactionController ctxc(tx_hex);
+
+  for (const auto& issuance : issuances) {
+    Script asset_locking_script = issuance.asset_txout.GetLockingScript();
+    ByteData asset_nonce = issuance.asset_txout.GetNonce().GetData();
+    Script token_locking_script = issuance.token_txout.GetLockingScript();
+    ByteData token_nonce = issuance.token_txout.GetNonce().GetData();
+
+    IssuanceParameter issuance_param = ctxc.SetAssetIssuance(
+        issuance.txid, issuance.vout, issuance.asset_amount,
+        asset_locking_script, asset_nonce, issuance.token_amount,
+        token_locking_script, token_nonce, issuance.is_blind,
+        issuance.contract_hash, false);
+
+    if (issuance_output != nullptr) {
+      IssuanceOutput output;
+      output.txid = issuance.txid;
+      output.vout = issuance.vout;
+      output.output.asset = issuance_param.asset;
+      output.output.entropy = issuance_param.entropy;
+      output.output.token = issuance_param.token;
+      issuance_output->push_back(output);
+    }
+  }
+  return ctxc;
 }
 
-ConfidentialTransactionController
-ElementsTransactionApi::SetRawReissueAsset() {
-  // FIXME
-  return ConfidentialTransactionController(0, 0);
+ConfidentialTransactionController ElementsTransactionApi::SetRawReissueAsset(
+    const std::string& tx_hex,
+    const std::vector<TxInReissuanceParameters>& issuances,
+    std::vector<IssuanceOutput>* issuance_output) {
+  ConfidentialTransactionController ctxc(tx_hex);
+
+  for (const auto& issuance : issuances) {
+    Script locking_script = issuance.asset_txout.GetLockingScript();
+    ByteData nonce = issuance.asset_txout.GetNonce().GetData();
+
+    IssuanceParameter issuance_param = ctxc.SetAssetReissuance(
+        issuance.txid, issuance.vout, issuance.amount, locking_script, nonce,
+        issuance.blind_factor, issuance.entropy, false);
+
+    if (issuance_output != nullptr) {
+      IssuanceOutput output;
+      output.txid = issuance.txid;
+      output.vout = issuance.vout;
+      output.output.asset = issuance_param.asset;
+      output.output.entropy = issuance_param.entropy;
+      issuance_output->push_back(output);
+    }
+  }
+  return ctxc;
 }
 
 ConfidentialTransactionController
@@ -496,8 +526,10 @@ ElementsTransactionApi::CreateRawPegoutTransaction(
 
 Privkey ElementsTransactionApi::GetIssuanceBlindingKey(
     const Privkey& master_blinding_key, const Txid& txid, int32_t vout) {
-  // FIXME
-  return Privkey();
+  Privkey blinding_key = ConfidentialTransaction::GetIssuanceBlindingKey(
+      master_blinding_key, txid, vout);
+
+  return blinding_key;
 }
 
 }  // namespace api
@@ -511,11 +543,13 @@ namespace api {
 
 using cfd::ConfidentialTransactionController;
 using cfd::ElementsAddressFactory;
-using cfd::api::AddressApi;
 using cfd::api::ElementsTransactionApi;
 using cfd::api::IssuanceBlindKeys;
+using cfd::api::IssuanceOutput;
 using cfd::api::TxInBlindParameters;
+using cfd::api::TxInIssuanceParameters;
 using cfd::api::TxInPeginParameters;
+using cfd::api::TxInReissuanceParameters;
 using cfd::api::TxOutBlindKeys;
 using cfd::api::TxOutPegoutParameters;
 using cfd::api::TxOutUnblindKeys;
@@ -525,7 +559,6 @@ using cfd::core::Address;
 using cfd::core::AddressType;
 using cfd::core::Amount;
 using cfd::core::BlindFactor;
-using cfd::core::BlindParameter;
 using cfd::core::BlockHash;
 using cfd::core::ByteData;
 using cfd::core::ByteData160;
@@ -543,29 +576,19 @@ using cfd::core::ConfidentialValue;
 using cfd::core::ElementsAddressType;
 using cfd::core::ElementsConfidentialAddress;
 using cfd::core::ElementsNetType;
-using cfd::core::ExtKey;
 using cfd::core::HashType;
-using cfd::core::HashUtil;
-using cfd::core::IssuanceBlindingKeyPair;
 using cfd::core::IssuanceParameter;
 using cfd::core::NetType;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
 using cfd::core::RangeProofInfo;
 using cfd::core::Script;
-using cfd::core::ScriptBuilder;
 using cfd::core::ScriptElement;
-using cfd::core::ScriptOperator;
-using cfd::core::ScriptUtil;
 using cfd::core::SigHashType;
-using cfd::core::Transaction;
 using cfd::core::Txid;
-using cfd::core::UnblindParameter;
-using cfd::core::WitnessVersion;
 using cfd::core::logger::info;
 using cfd::core::logger::warn;
 using cfd::js::api::AddressStructApi;
-using cfd::js::api::TransactionStructApi;
 
 /**
  * @brief Issuance領域を表現する構造体
@@ -1345,13 +1368,13 @@ ElementsTransactionStructApi::UnblindTransaction(
       output.txid = issuance_output.txid.GetHex();
       output.vout = issuance_output.vout;
       output.asset = issuance_output.asset.GetHex();
-          output.assetamount =
+      output.assetamount =
           issuance_output.asset_amount.GetAmount().GetSatoshiValue();
       output.token = issuance_output.token.GetHex();
-            output.tokenamount =
+      output.tokenamount =
           issuance_output.token_amount.GetAmount().GetSatoshiValue();
-        response.issuance_outputs.push_back(output);
-      }
+      response.issuance_outputs.push_back(output);
+    }
     return response;
   };
 
@@ -1368,60 +1391,78 @@ SetRawIssueAssetResponseStruct ElementsTransactionStructApi::SetRawIssueAsset(
   auto call_func = [](const SetRawIssueAssetRequestStruct& request)
       -> SetRawIssueAssetResponseStruct {  // NOLINT
     SetRawIssueAssetResponseStruct response;
-    ConfidentialTransactionController ctxc(request.tx);
+
     ElementsAddressFactory address_factory;
+    std::vector<TxInIssuanceParameters> issuance_param;
+    std::vector<IssuanceOutput> issuance_output;
 
-    for (IssuanceDataRequestStruct req_issuance : request.issuances) {
-      Script asset_locking_script;
-      ByteData asset_nonce;
+    for (IssuanceDataRequestStruct issuance : request.issuances) {
+      ConfidentialTxOut asset_txout;
+      ConfidentialTxOut token_txout;
+      Amount asset_amount =
+          Amount::CreateBySatoshiAmount(issuance.asset_amount);
+      Amount token_amount =
+          Amount::CreateBySatoshiAmount(issuance.token_amount);
 
       if (ElementsConfidentialAddress::IsConfidentialAddress(
-              req_issuance.asset_address)) {
-        ElementsConfidentialAddress confidential_addr(
-            req_issuance.asset_address);
-        asset_locking_script = confidential_addr.GetLockingScript();
-        if (!req_issuance.is_remove_nonce) {
-          asset_nonce = confidential_addr.GetConfidentialKey().GetData();
+              issuance.asset_address)) {
+        ElementsConfidentialAddress confidential_addr(issuance.asset_address);
+        if (issuance.is_remove_nonce) {
+          asset_txout = ConfidentialTxOut(
+              confidential_addr.GetUnblindedAddress(), ConfidentialAssetId(),
+              asset_amount);
+        } else {
+          asset_txout = ConfidentialTxOut(
+              confidential_addr, ConfidentialAssetId(), asset_amount);
         }
       } else {
         Address unblind_addr =
-            address_factory.GetAddress(req_issuance.asset_address);
-        asset_locking_script = unblind_addr.GetLockingScript();
+            address_factory.GetAddress(issuance.asset_address);
+        asset_txout = ConfidentialTxOut(
+            unblind_addr, ConfidentialAssetId(), asset_amount);
       }
 
-      Script token_locking_script;
-      ByteData token_nonce;
-
       if (ElementsConfidentialAddress::IsConfidentialAddress(
-              req_issuance.token_address)) {
-        ElementsConfidentialAddress confidential_addr(
-            req_issuance.token_address);
-        token_locking_script = confidential_addr.GetLockingScript();
-        if (!req_issuance.is_remove_nonce) {
-          token_nonce = confidential_addr.GetConfidentialKey().GetData();
+              issuance.token_address)) {
+        ElementsConfidentialAddress confidential_addr(issuance.token_address);
+        if (issuance.is_remove_nonce) {
+          token_txout = ConfidentialTxOut(
+              confidential_addr.GetUnblindedAddress(), ConfidentialAssetId(),
+              token_amount);
+        } else {
+          token_txout = ConfidentialTxOut(
+              confidential_addr, ConfidentialAssetId(), token_amount);
         }
       } else {
         Address unblind_addr =
-            address_factory.GetAddress(req_issuance.token_address);
-        token_locking_script = unblind_addr.GetLockingScript();
+            address_factory.GetAddress(issuance.token_address);
+        token_txout = ConfidentialTxOut(
+            unblind_addr, ConfidentialAssetId(), token_amount);
       }
 
-      // Txin1つずつissuanceの設定を行う
-      IssuanceParameter issuance_param = ctxc.SetAssetIssuance(
-          Txid(req_issuance.txid), req_issuance.vout,
-          Amount::CreateBySatoshiAmount(req_issuance.asset_amount),
-          asset_locking_script, asset_nonce,
-          Amount::CreateBySatoshiAmount(req_issuance.token_amount),
-          token_locking_script, token_nonce, req_issuance.is_blind,
-          ByteData256(req_issuance.contract_hash), false,
-          req_issuance.is_remove_nonce);
+      TxInIssuanceParameters param;
+      param.txid = Txid(issuance.txid);
+      param.vout = issuance.vout;
+      param.asset_amount = asset_amount;
+      param.asset_txout = asset_txout;
+      param.token_amount = token_amount;
+      param.token_txout = token_txout;
+      param.contract_hash = ByteData256(issuance.contract_hash);
+      param.is_blind = issuance.is_blind;
+      issuance_param.push_back(param);
+    }
 
+    ElementsTransactionApi api;
+    ConfidentialTransactionController ctxc =
+        api.SetRawIssueAsset(request.tx, issuance_param, &issuance_output);
+
+    for (const auto& output : issuance_output) {
       IssuanceDataResponseStruct res_issuance;
-      res_issuance.txid = req_issuance.txid;
-      res_issuance.vout = req_issuance.vout;
-      res_issuance.asset = issuance_param.asset.GetHex();
-      res_issuance.entropy = issuance_param.entropy.GetHex();
-      res_issuance.token = issuance_param.token.GetHex();
+      res_issuance.txid = output.txid.GetHex();
+      res_issuance.vout = output.vout;
+      res_issuance.asset = output.output.asset.GetHex();
+      res_issuance.entropy = output.output.entropy.GetHex();
+      res_issuance.token = output.output.token.GetHex();
 
       response.issuances.push_back(res_issuance);
     }
@@ -1446,41 +1487,53 @@ SetRawReissueAssetResponseStruct
 ElementsTransactionStructApi::SetRawReissueAsset(
     const SetRawReissueAssetRequestStruct& request) {
   auto call_func = [](const SetRawReissueAssetRequestStruct& request)
-      -> SetRawReissueAssetResponseStruct {  // NOLINT
+      -> SetRawReissueAssetResponseStruct {
     SetRawReissueAssetResponseStruct response;
-    ConfidentialTransactionController ctxc(request.tx);
     ElementsAddressFactory address_factory;
+    std::vector<TxInReissuanceParameters> reissuance_param;
+    std::vector<IssuanceOutput> reissuance_output;
 
-    for (ReissuanceDataRequestStruct req_issuance : request.issuances) {
-      // Txin1つずつissuanceの設定を行う
-      Script locking_script;
-      ByteData nonce;
+    for (ReissuanceDataRequestStruct issuance : request.issuances) {
+      ConfidentialTxOut asset_txout;
+      Amount amount = Amount::CreateBySatoshiAmount(issuance.amount);
 
       if (ElementsConfidentialAddress::IsConfidentialAddress(
-              req_issuance.address)) {
-        ElementsConfidentialAddress confidential_addr(req_issuance.address);
-        locking_script = confidential_addr.GetLockingScript();
-        if (!req_issuance.is_remove_nonce) {
-          nonce = confidential_addr.GetConfidentialKey().GetData();
+              issuance.address)) {
+        ElementsConfidentialAddress confidential_addr(issuance.address);
+        if (issuance.is_remove_nonce) {
+          asset_txout = ConfidentialTxOut(
+              confidential_addr.GetUnblindedAddress(), ConfidentialAssetId(),
+              amount);
+        } else {
+          asset_txout = ConfidentialTxOut(
+              confidential_addr, ConfidentialAssetId(), amount);
         }
       } else {
-        Address unblind_addr =
-            address_factory.GetAddress(req_issuance.address);
-        locking_script = unblind_addr.GetLockingScript();
+        Address unblind_addr = address_factory.GetAddress(issuance.address);
+        asset_txout =
+            ConfidentialTxOut(unblind_addr, ConfidentialAssetId(), amount);
       }
 
-      IssuanceParameter issuance_param = ctxc.SetAssetReissuance(
-          Txid(req_issuance.txid), req_issuance.vout,
-          Amount::CreateBySatoshiAmount(req_issuance.amount), locking_script,
-          nonce, BlindFactor(req_issuance.asset_blinding_nonce),
-          BlindFactor(req_issuance.asset_entropy), false,
-          req_issuance.is_remove_nonce);
+      TxInReissuanceParameters param;
+      param.txid = Txid(issuance.txid);
+      param.vout = issuance.vout;
+      param.amount = amount;
+      param.asset_txout = asset_txout;
+      param.blind_factor = BlindFactor(issuance.asset_blinding_nonce);
+      param.entropy = BlindFactor(issuance.asset_entropy);
+      reissuance_param.push_back(param);
+    }
 
+    ElementsTransactionApi api;
+    ConfidentialTransactionController ctxc = api.SetRawReissueAsset(
+        request.tx, reissuance_param, &reissuance_output);
+
+    for (const auto& output : reissuance_output) {
       ReissuanceDataResponseStruct res_issuance;
-      res_issuance.txid = req_issuance.txid;
-      res_issuance.vout = req_issuance.vout;
-      res_issuance.asset = issuance_param.asset.GetHex();
-      res_issuance.entropy = issuance_param.entropy.GetHex();
+      res_issuance.txid = output.txid.GetHex();
+      res_issuance.vout = output.vout;
+      res_issuance.asset = output.output.asset.GetHex();
+      res_issuance.entropy = output.output.entropy.GetHex();
       response.issuances.push_back(res_issuance);
     }
 
@@ -1488,6 +1541,7 @@ ElementsTransactionStructApi::SetRawReissueAsset(
     if (request.is_random_sort_tx_out) {
       ctxc.RandomSortTxOut();
     }
+
     response.hex = ctxc.GetHex();
     return response;
   };
@@ -1692,11 +1746,14 @@ GetIssuanceBlindingKeyResponseStruct
 ElementsTransactionStructApi::GetIssuanceBlindingKey(
     const GetIssuanceBlindingKeyRequestStruct& request) {
   auto call_func = [](const GetIssuanceBlindingKeyRequestStruct& request)
-      -> GetIssuanceBlindingKeyResponseStruct {  // NOLINT
+      -> GetIssuanceBlindingKeyResponseStruct {
     GetIssuanceBlindingKeyResponseStruct response;
-    Privkey blinding_key = ConfidentialTransaction::GetIssuanceBlindingKey(
+
+    ElementsTransactionApi api;
+    Privkey blinding_key = api.GetIssuanceBlindingKey(
         Privkey(request.master_blinding_key), Txid(request.txid),
         request.vout);
+
     response.blinding_key = blinding_key.GetHex();
     return response;
   };
