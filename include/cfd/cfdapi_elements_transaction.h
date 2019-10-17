@@ -145,31 +145,26 @@ struct UnblindIssuanceOutputs {
  *  @brief Issuance input
  */
 struct TxInIssuanceParameters {
-  Txid txid;                    //!< txid
-  uint32_t vout;                //!< vout
-  Amount asset_amount;          //!< asset amount
-  Script asset_locking_script;  //!< asset locking script
-  ByteData asset_nonce;         //!< asset nonce
-  Amount token_amount;          //!< token amount
-  Script token_locking_script;  //!< token locking script
-  ByteData token_nonce;         //!< token nonce
-  ByteData256 contract_hash;    //!< contract hash
-  bool is_blind;                //!< blind flag
-  bool is_remove_nonce;         //!< nonce remove flag
+  Txid txid;                      //!< txid
+  uint32_t vout;                  //!< vout
+  Amount asset_amount;            //!< asset amount
+  ConfidentialTxOut asset_txout;  //!< asset output
+  Amount token_amount;            //!< token amount
+  ConfidentialTxOut token_txout;  //!< token output
+  ByteData256 contract_hash;      //!< contract hash
+  bool is_blind;                  //!< blind flag
 };
 
 /**
  *  @brief Reissuance input
  */
 struct TxInReissuanceParameters {
-  Txid txid;                 //!< txid
-  uint32_t vout;             //!< vout
-  Amount amount;             //!< amount
-  Script locking_script;     //!< locking script
-  ByteData nonce;            //!< nonce
-  BlindFactor blind_factor;  //!< blind factor
-  BlindFactor entropy;       //!< entropy
-  bool is_remove_nonce;      //!< nonce remove flag
+  Txid txid;                      //!< txid
+  uint32_t vout;                  //!< vout
+  Amount amount;                  //!< amount
+  ConfidentialTxOut asset_txout;  //!< asset output
+  BlindFactor blind_factor;       //!< blind factor
+  BlindFactor entropy;            //!< entropy
 };
 
 /**
