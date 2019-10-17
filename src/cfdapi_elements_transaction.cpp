@@ -308,15 +308,110 @@ ElementsTransactionApi::SetRawReissueAsset() {
 }
 
 ConfidentialTransactionController
-ElementsTransactionApi::CreateRawPeginTransaction() {
-  // FIXME
-  return ConfidentialTransactionController(0, 0);
+ElementsTransactionApi::CreateRawPeginTransaction(
+    uint32_t version, uint32_t locktime,
+    const std::vector<ConfidentialTxIn>& txins,
+    const std::vector<TxInPeginParameters>& pegins,
+    const std::vector<ConfidentialTxOut>& txouts,
+    const ConfidentialTxOut& txout_fee) const {
+  ConfidentialTransactionController ctxc =
+      CreateRawTransaction(version, locktime, txins, txouts, txout_fee);
+
+  for (const auto& pegin_data : pegins) {
+    ctxc.AddPeginWitness(
+        pegin_data.txid, pegin_data.vout, pegin_data.amount, pegin_data.asset,
+        pegin_data.mainchain_blockhash, pegin_data.claim_script,
+        pegin_data.mainchain_raw_tx, pegin_data.mainchain_txoutproof);
+  }
+
+  return ctxc;
 }
 
 ConfidentialTransactionController
-ElementsTransactionApi::CreateRawPegoutTransaction() {
-  // FIXME
-  return ConfidentialTransactionController(0, 0);
+ElementsTransactionApi::CreateRawPegoutTransaction(
+    uint32_t version, uint32_t locktime,
+    const std::vector<ConfidentialTxIn>& txins,
+    const std::vector<ConfidentialTxOut>& txouts,
+    const TxOutPegoutParameters& pegout_data,
+    const ConfidentialTxOut& txout_fee, Address* pegout_address) const {
+  ConfidentialTxOut empty_fee;
+  ConfidentialTransactionController ctxc =
+      CreateRawTransaction(version, locktime, txins, txouts, empty_fee);
+
+  // PegoutのTxOut追加
+  const std::string pegout_addr_string = pegout_data.btc_address.GetAddress();
+
+  if (pegout_data.online_pubkey.IsValid() &&
+      !pegout_data.master_online_key.IsInvalid()) {
+    Address pegout_addr;
+    if (pegout_addr_string.empty()) {
+      // TODO(k-matsuzawa): ExtKeyの正式対応が入るまでの暫定対応
+      // pegoutのtemplateに従い、xpub/counterから生成する
+      // descriptor parse
+      std::string desc = pegout_data.bitcoin_descriptor;
+      std::string::size_type start_point = desc.rfind('(');
+      std::string arg_type;
+      std::string xpub;
+      if (start_point == std::string::npos) {
+        xpub = desc;
+      } else {
+        arg_type = desc.substr(0, start_point);
+        xpub = desc.substr(start_point + 1);
+      }
+      std::string::size_type end_point = xpub.find('/');
+      if (end_point == std::string::npos) {
+        end_point = xpub.find(')');
+        if (end_point != std::string::npos) {
+          xpub = xpub.substr(0, end_point);
+        }
+      } else {
+        xpub = xpub.substr(0, end_point);
+      }
+      // info(CFD_LOG_SOURCE, "arg_type={}, xpub={}", arg_type, xpub);
+      // key生成
+      ExtKey ext_key =
+          ExtKey(xpub).DerivePubkey(0).DerivePubkey(pegout_data.bip32_counter);
+      Pubkey pubkey = ext_key.GetPubkey();
+
+      // Addressクラス生成
+      if (arg_type == "sh(wpkh") {
+        Script wpkh_script = ScriptUtil::CreateP2wpkhLockingScript(pubkey);
+        ByteData160 wpkh_hash = HashUtil::Hash160(wpkh_script);
+        pegout_addr = Address(
+            pegout_data.net_type, AddressType::kP2shAddress, wpkh_hash);
+      } else if (arg_type == "wpkh") {
+        pegout_addr =
+            Address(pegout_data.net_type, WitnessVersion::kVersion0, pubkey);
+      } else {  // if (arg_type == "pkh(")
+        // pkh
+        pegout_addr = Address(pegout_data.net_type, pubkey);
+      }
+    } else {
+      pegout_addr = pegout_data.btc_address;
+    }
+
+    ctxc.AddPegoutTxOut(
+        pegout_data.amount, pegout_data.asset, pegout_data.genesisblock_hash,
+        pegout_addr, pegout_data.net_type, pegout_data.online_pubkey,
+        pegout_data.master_online_key, pegout_data.bitcoin_descriptor,
+        pegout_data.bip32_counter, pegout_data.whitelist);
+    if (pegout_address != nullptr) {
+      *pegout_address = pegout_addr;
+    }
+
+  } else {
+    ctxc.AddPegoutTxOut(
+        pegout_data.amount, pegout_data.asset, pegout_data.genesisblock_hash,
+        pegout_data.btc_address);
+  }
+
+  // amountが0のfeeは無効と判定
+  if (txout_fee.GetConfidentialValue().GetAmount() != 0) {
+    ctxc.AddTxOutFee(
+        txout_fee.GetConfidentialValue().GetAmount(), txout_fee.GetAsset());
+  }
+
+  return ctxc;
 }
 
 uint32_t ElementsTransactionApi::GetWitnessStackNum() {
@@ -350,7 +445,9 @@ using cfd::ElementsAddressFactory;
 using cfd::api::AddressApi;
 using cfd::api::ElementsTransactionApi;
 using cfd::api::TxInBlindParameters;
+using cfd::api::TxInPeginParameters;
 using cfd::api::TxOutBlindKeys;
+using cfd::api::TxOutPegoutParameters;
 using cfd::core::Address;
 using cfd::core::AddressType;
 using cfd::core::Amount;
@@ -1031,9 +1128,6 @@ ElementsTransactionStructApi::BlindTransaction(
       -> BlindRawTransactionResponseStruct {  // NOLINT
     BlindRawTransactionResponseStruct response;
 
-    const std::vector<BlindTxInRequestStruct>& txins = request.txins;
-    const std::vector<BlindTxOutRequestStruct>& txouts = request.txouts;
-
     std::vector<TxInBlindParameters> txin_blind_keys;
     std::vector<TxOutBlindKeys> txout_blind_keys;
     bool is_issuance = false;
@@ -1314,64 +1408,71 @@ ElementsTransactionStructApi::CreateRawPeginTransaction(  // NOLINT
       -> ElementsCreateRawPeginResponseStruct {  // NOLINT
     ElementsCreateRawPeginResponseStruct response;
     // Transaction作成
-    ConfidentialTransactionController ctxc(request.version, request.locktime);
-    ElementsAddressFactory address_factory;
+    std::vector<ConfidentialTxIn> txins;
+    std::vector<ConfidentialTxOut> txouts;
+    std::vector<TxInPeginParameters> pegins;
 
     // TxInの追加
-    const uint32_t kLockTimeDisabledSequence =
-        ctxc.GetLockTimeDisabledSequence();
-    for (ElementsPeginTxInStruct txin_req : request.txins) {
+    for (const auto& txin_req : request.txins) {
       Txid txid(txin_req.txid);
-      uint32_t vout = txin_req.vout;
-
-      // TxInのunlocking_scriptは空で作成
-      if (kLockTimeDisabledSequence == txin_req.sequence) {
-        ctxc.AddTxIn(txid, vout, ctxc.GetDefaultSequence());
-      } else {
-        ctxc.AddTxIn(txid, vout, txin_req.sequence);
-      }
+      txins.emplace_back(txid, txin_req.vout, txin_req.sequence);
 
       // PeginWitnessの追加
       if (txin_req.is_pegin) {
         info(
             CFD_LOG_SOURCE, "rm btcWitness[{}]",
             txin_req.is_remove_mainchain_tx_witness);
-        ByteData mainchain_tx =
-            ByteData(txin_req.peginwitness.mainchain_raw_transaction);
-        mainchain_tx = ConfidentialTransaction::GetBitcoinTransaction(
-            mainchain_tx, txin_req.is_remove_mainchain_tx_witness);
-
-        ctxc.AddPeginWitness(
-            txid, vout,
-            Amount::CreateBySatoshiAmount(txin_req.peginwitness.amount),
-            ConfidentialAssetId(txin_req.peginwitness.asset),
-            BlockHash(txin_req.peginwitness.mainchain_genesis_block_hash),
-            Script(txin_req.peginwitness.claim_script), mainchain_tx,
-            ByteData(txin_req.peginwitness.mainchain_txoutproof));
+        TxInPeginParameters pegin_data;
+        pegin_data.txid = txid;
+        pegin_data.vout = txin_req.vout;
+        pegin_data.amount =
+            Amount::CreateBySatoshiAmount(txin_req.peginwitness.amount);
+        pegin_data.asset = ConfidentialAssetId(txin_req.peginwitness.asset);
+        pegin_data.mainchain_blockhash =
+            BlockHash(txin_req.peginwitness.mainchain_genesis_block_hash);
+        pegin_data.claim_script = Script(txin_req.peginwitness.claim_script);
+        pegin_data.mainchain_raw_tx =
+            ConfidentialTransaction::GetBitcoinTransaction(
+                ByteData(txin_req.peginwitness.mainchain_raw_transaction),
+                txin_req.is_remove_mainchain_tx_witness);
+        pegin_data.mainchain_txoutproof =
+            ByteData(txin_req.peginwitness.mainchain_txoutproof);
+        pegins.push_back(pegin_data);
       }
     }
 
     // TxOutの追加
-    for (ElementsPeginTxOutStruct txout_req : request.txouts) {
+    Script script;
+    for (const auto& txout_req : request.txouts) {
       const std::string addr = txout_req.address;
+      Amount amount(Amount::CreateBySatoshiAmount(txout_req.amount));
+      ConfidentialAssetId asset(txout_req.asset);
       if (ElementsConfidentialAddress::IsConfidentialAddress(addr)) {
-        ctxc.AddTxOut(
-            ElementsConfidentialAddress(addr),
-            Amount::CreateBySatoshiAmount(txout_req.amount),
-            ConfidentialAssetId(txout_req.asset), txout_req.is_remove_nonce);
+        ElementsConfidentialAddress confidential_addr(addr);
+        if (txout_req.is_remove_nonce) {
+          txouts.emplace_back(
+              confidential_addr.GetUnblindedAddress(), asset, amount);
+        } else {
+          txouts.emplace_back(confidential_addr, asset, amount);
+        }
       } else {
-        ctxc.AddTxOut(
-            address_factory.GetAddress(addr),
-            Amount::CreateBySatoshiAmount(txout_req.amount),
-            ConfidentialAssetId(txout_req.asset));
+        txouts.emplace_back(
+            ElementsAddressFactory().GetAddress(addr), asset, amount);
       }
     }
 
     // feeの追加
-    ElementsPeginTxOutFeeStruct fee_req = request.fee;
-    ctxc.AddTxOutFee(
-        Amount::CreateBySatoshiAmount(fee_req.amount),
-        ConfidentialAssetId(fee_req.asset));
+    ConfidentialTxOut txout_fee;
+    // amountが0のfeeは無効と判定
+    if (request.fee.amount != 0) {
+      txout_fee = ConfidentialTxOut(
+          ConfidentialAssetId(request.fee.asset),
+          Amount::CreateBySatoshiAmount(request.fee.amount));
+    }
+
+    ElementsTransactionApi api;
+    ConfidentialTransactionController ctxc = api.CreateRawPeginTransaction(
+        request.version, request.locktime, txins, pegins, txouts, txout_fee);
 
     // すべて設定後にTxoutのRandomSort
     if (request.is_random_sort_tx_out) {
@@ -1397,126 +1498,84 @@ ElementsTransactionStructApi::CreateRawPegoutTransaction(  // NOLINT
       -> ElementsCreateRawPegoutResponseStruct {  // NOLINT
     ElementsCreateRawPegoutResponseStruct response;
     // Transaction作成
-    ConfidentialTransactionController ctxc(request.version, request.locktime);
-    ElementsAddressFactory address_factory;
+    std::vector<ConfidentialTxIn> txins;
+    std::vector<ConfidentialTxOut> txouts;
+    TxOutPegoutParameters pegout_data;
 
     // TxInの追加
-    const uint32_t kLockTimeDisabledSequence =
-        ctxc.GetLockTimeDisabledSequence();
-    for (ElementsPegoutTxInStruct txin_req : request.txins) {
-      Txid txid(txin_req.txid);
-      uint32_t vout = txin_req.vout;
-
-      // TxInのunlocking_scriptは空で作成
-      if (kLockTimeDisabledSequence == txin_req.sequence) {
-        ctxc.AddTxIn(txid, vout, ctxc.GetDefaultSequence());
-      } else {
-        ctxc.AddTxIn(txid, vout, txin_req.sequence);
-      }
+    for (const auto& txin_req : request.txins) {
+      txins.emplace_back(
+          Txid(txin_req.txid), txin_req.vout, txin_req.sequence);
     }
 
     // TxOutの追加
-    for (ElementsPegoutTxOutStruct txout_req : request.txouts) {
+    Script script;
+    for (const auto& txout_req : request.txouts) {
       const std::string addr = txout_req.address;
+      Amount amount(Amount::CreateBySatoshiAmount(txout_req.amount));
+      ConfidentialAssetId asset(txout_req.asset);
       if (ElementsConfidentialAddress::IsConfidentialAddress(addr)) {
-        ctxc.AddTxOut(
-            ElementsConfidentialAddress(addr),
-            Amount::CreateBySatoshiAmount(txout_req.amount),
-            ConfidentialAssetId(txout_req.asset), txout_req.is_remove_nonce);
+        ElementsConfidentialAddress confidential_addr(addr);
+        if (txout_req.is_remove_nonce) {
+          txouts.emplace_back(
+              confidential_addr.GetUnblindedAddress(), asset, amount);
+        } else {
+          txouts.emplace_back(confidential_addr, asset, amount);
+        }
       } else {
-        ctxc.AddTxOut(
-            address_factory.GetAddress(addr),
-            Amount::CreateBySatoshiAmount(txout_req.amount),
-            ConfidentialAssetId(txout_req.asset));
+        txouts.emplace_back(
+            ElementsAddressFactory().GetAddress(addr), asset, amount);
       }
     }
 
     // PegoutのTxOut追加
-    const std::string pegout_address = request.pegout.btc_address;
-    NetType net_type =
+    pegout_data.amount = Amount::CreateBySatoshiAmount(request.pegout.amount);
+    pegout_data.asset = ConfidentialAssetId(request.pegout.asset);
+    pegout_data.genesisblock_hash =
+        BlockHash(request.pegout.mainchain_genesis_block_hash);
+    if (!request.pegout.btc_address.empty()) {
+      pegout_data.btc_address = Address(request.pegout.btc_address);
+    }
+    pegout_data.net_type =
         AddressStructApi::ConvertNetType(request.pegout.network);
-
     if (!request.pegout.online_pubkey.empty() &&
         !request.pegout.master_online_key.empty()) {
-      Privkey master_online_key;
       if (request.pegout.master_online_key.size() ==
           Privkey::kPrivkeySize * 2) {
         // hex
-        master_online_key = Privkey(request.pegout.master_online_key);
+        pegout_data.master_online_key =
+            Privkey(request.pegout.master_online_key);
       } else {
         // Wif
-        master_online_key =
-            Privkey::FromWif(request.pegout.master_online_key, net_type);
+        pegout_data.master_online_key = Privkey::FromWif(
+            request.pegout.master_online_key, pegout_data.net_type);
       }
-      Address pegout_addr;
-      if (pegout_address.empty()) {
-        // TODO(k-matsuzawa): ExtKeyの正式対応が入るまでの暫定対応
-        // pegoutのtemplateに従い、xpub/counterから生成する
-        // descriptor parse
-        std::string desc = request.pegout.bitcoin_descriptor;
-        std::string::size_type start_point = desc.rfind('(');
-        std::string arg_type;
-        std::string xpub;
-        if (start_point == std::string::npos) {
-          xpub = desc;
-        } else {
-          arg_type = desc.substr(0, start_point);
-          xpub = desc.substr(start_point + 1);
-        }
-        std::string::size_type end_point = xpub.find('/');
-        if (end_point == std::string::npos) {
-          end_point = xpub.find(')');
-          if (end_point != std::string::npos) {
-            xpub = xpub.substr(0, end_point);
-          }
-        } else {
-          xpub = xpub.substr(0, end_point);
-        }
-        // info(CFD_LOG_SOURCE, "arg_type={}, xpub={}", arg_type, xpub);
-        // key生成
-        ExtKey ext_key = ExtKey(xpub).DerivePubkey(0).DerivePubkey(
-            request.pegout.bip32_counter);
-        Pubkey pubkey = ext_key.GetPubkey();
-
-        // Addressクラス生成
-        if (arg_type == "sh(wpkh") {
-          Script wpkh_script = ScriptUtil::CreateP2wpkhLockingScript(pubkey);
-          ByteData160 wpkh_hash = HashUtil::Hash160(wpkh_script);
-          pegout_addr =
-              Address(net_type, AddressType::kP2shAddress, wpkh_hash);
-        } else if (arg_type == "wpkh") {
-          pegout_addr = Address(net_type, WitnessVersion::kVersion0, pubkey);
-        } else {  // if (arg_type == "pkh(")
-          // pkh
-          pegout_addr = Address(net_type, pubkey);
-        }
-      } else {
-        pegout_addr = Address(pegout_address);
-      }
-
-      ctxc.AddPegoutTxOut(
-          Amount::CreateBySatoshiAmount(request.pegout.amount),
-          ConfidentialAssetId(request.pegout.asset),
-          BlockHash(request.pegout.mainchain_genesis_block_hash), pegout_addr,
-          net_type, Pubkey(request.pegout.online_pubkey), master_online_key,
-          request.pegout.bitcoin_descriptor, request.pegout.bip32_counter,
-          ByteData(request.pegout.whitelist));
-      response.btc_address = pegout_addr.GetAddress();
-
-    } else {
-      ctxc.AddPegoutTxOut(
-          Amount::CreateBySatoshiAmount(request.pegout.amount),
-          ConfidentialAssetId(request.pegout.asset),
-          BlockHash(request.pegout.mainchain_genesis_block_hash),
-          Address(pegout_address));
-      response.ignore_items.insert("btcAddress");
+      pegout_data.online_pubkey = Pubkey(request.pegout.online_pubkey);
+      pegout_data.bitcoin_descriptor = request.pegout.bitcoin_descriptor;
+      pegout_data.bip32_counter = request.pegout.bip32_counter;
+      pegout_data.whitelist = ByteData(request.pegout.whitelist);
     }
 
     // feeの追加
-    ElementsPegoutTxOutFeeStruct fee_req = request.fee;
-    ctxc.AddTxOutFee(
-        Amount::CreateBySatoshiAmount(fee_req.amount),
-        ConfidentialAssetId(fee_req.asset));
+    ConfidentialTxOut txout_fee;
+    // amountが0のfeeは無効と判定
+    if (request.fee.amount != 0) {
+      txout_fee = ConfidentialTxOut(
+          ConfidentialAssetId(request.fee.asset),
+          Amount::CreateBySatoshiAmount(request.fee.amount));
+    }
+
+    Address pegout_addr;
+    ElementsTransactionApi api;
+    ConfidentialTransactionController ctxc = api.CreateRawPegoutTransaction(
+        request.version, request.locktime, txins, txouts, pegout_data,
+        txout_fee, &pegout_addr);
+    if (!request.pegout.online_pubkey.empty() &&
+        !request.pegout.master_online_key.empty()) {
+      response.btc_address = pegout_addr.GetAddress();
+    } else {
+      response.ignore_items.insert("btcAddress");
+    }
 
     response.hex = ctxc.GetHex();
     return response;
