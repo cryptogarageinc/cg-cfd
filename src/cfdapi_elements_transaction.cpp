@@ -137,13 +137,29 @@ ConfidentialTransactionController ElementsTransactionApi::CreateRawTransaction(
   return ctxc;
 }
 
+uint32_t ElementsTransactionApi::GetWitnessStackNum(
+    const std::string& tx_hex, const Txid& txid, uint32_t vout) const {
+  return TransactionApiBase::GetWitnessStackNum<
+      ConfidentialTransactionController>(
+      cfd::api::CreateController, tx_hex, txid, vout);
+}
+
 ConfidentialTransactionController ElementsTransactionApi::AddSign(
-    const std::string& hex, const Txid& txid, const uint32_t vout,
+    const std::string& hex, const Txid& txid, uint32_t vout,
     const std::vector<SignParameter>& sign_params, bool is_witness,
     bool clear_stack) const {
   return TransactionApiBase::AddSign<ConfidentialTransactionController>(
       cfd::api::CreateController, hex, txid, vout, sign_params, is_witness,
       clear_stack);
+}
+
+ConfidentialTransactionController ElementsTransactionApi::UpdateWitnessStack(
+    const std::string& tx_hex, const Txid& txid, uint32_t vout,
+    const SignParameter& update_sign_param, uint32_t stack_index) const {
+  return TransactionApiBase::UpdateWitnessStack<
+      ConfidentialTransactionController>(
+      cfd::api::CreateController, tx_hex, txid, vout, update_sign_param,
+      stack_index);
 }
 
 ByteData ElementsTransactionApi::CreateSignatureHash(
@@ -166,6 +182,15 @@ ByteData ElementsTransactionApi::CreateSignatureHash(
     const std::string& tx_hex, const ConfidentialTxInReference& txin,
     const ByteData& key_data, const ConfidentialValue& value,
     HashType hash_type, const SigHashType& sighash_type) const {
+  return CreateSignatureHash(
+      tx_hex, txin.GetTxid(), txin.GetVout(), key_data, value, hash_type,
+      sighash_type);
+}
+
+ByteData ElementsTransactionApi::CreateSignatureHash(
+    const std::string& tx_hex, const Txid& txid, uint32_t vout,
+    const ByteData& key_data, const ConfidentialValue& value,
+    HashType hash_type, const SigHashType& sighash_type) const {
   std::string sig_hash;
   ConfidentialTransactionController txc(tx_hex);
   bool is_witness = false;
@@ -179,12 +204,12 @@ ByteData ElementsTransactionApi::CreateSignatureHash(
       }
       if (value.HasBlinding()) {
         sig_hash = txc.CreateSignatureHash(
-            txin.GetTxid(), txin.GetVout(), Pubkey(key_data), sighash_type,
-            value.GetData(), is_witness);
+            txid, vout, Pubkey(key_data), sighash_type, value.GetData(),
+            is_witness);
       } else {
         sig_hash = txc.CreateSignatureHash(
-            txin.GetTxid(), txin.GetVout(), Pubkey(key_data), sighash_type,
-            value.GetAmount(), is_witness);
+            txid, vout, Pubkey(key_data), sighash_type, value.GetAmount(),
+            is_witness);
       }
       break;
     case HashType::kP2sh:
@@ -195,12 +220,12 @@ ByteData ElementsTransactionApi::CreateSignatureHash(
       }
       if (value.HasBlinding()) {
         sig_hash = txc.CreateSignatureHash(
-            txin.GetTxid(), txin.GetVout(), Script(key_data), sighash_type,
-            value.GetData(), is_witness);
+            txid, vout, Script(key_data), sighash_type, value.GetData(),
+            is_witness);
       } else {
         sig_hash = txc.CreateSignatureHash(
-            txin.GetTxid(), txin.GetVout(), Script(key_data), sighash_type,
-            value.GetAmount(), is_witness);
+            txid, vout, Script(key_data), sighash_type, value.GetAmount(),
+            is_witness);
       }
       break;
     default:
@@ -220,10 +245,20 @@ ConfidentialTransactionController ElementsTransactionApi::AddMultisigSign(
     const std::vector<SignParameter>& sign_list, AddressType address_type,
     const Script& witness_script, const Script redeem_script,
     bool clear_stack) {
+  return AddMultisigSign(
+      tx_hex, txin.GetTxid(), txin.GetVout(), sign_list, address_type,
+      witness_script, redeem_script, clear_stack);
+}
+
+ConfidentialTransactionController ElementsTransactionApi::AddMultisigSign(
+    const std::string& tx_hex, const Txid& txid, uint32_t vout,
+    const std::vector<SignParameter>& sign_list, AddressType address_type,
+    const Script& witness_script, const Script redeem_script,
+    bool clear_stack) {
   std::string result =
       TransactionApiBase::AddMultisigSign<ConfidentialTransactionController>(
-          tx_hex, txin, sign_list, address_type, witness_script, redeem_script,
-          clear_stack, CreateController);
+          CreateController, tx_hex, txid, vout, sign_list, address_type,
+          witness_script, redeem_script, clear_stack);
   return ConfidentialTransactionController(result);
 }
 
@@ -412,17 +447,6 @@ ElementsTransactionApi::CreateRawPegoutTransaction(
   }
 
   return ctxc;
-}
-
-uint32_t ElementsTransactionApi::GetWitnessStackNum() {
-  // FIXME
-  return 0;
-}
-
-ConfidentialTransactionController
-ElementsTransactionApi::UpdateWitnessStack() {
-  // FIXME
-  return ConfidentialTransactionController(0, 0);
 }
 
 Privkey ElementsTransactionApi::GetIssuanceBlindingKey(
@@ -951,9 +975,14 @@ ElementsTransactionStructApi::GetWitnessStackNum(
     const GetWitnessStackNumRequestStruct& request) {
   auto call_func = [](const GetWitnessStackNumRequestStruct& request)
       -> GetWitnessStackNumResponseStruct {  // NOLINT
-    return TransactionStructApiBase::GetWitnessStackNum<
-        ConfidentialTransactionController>(
-        request, cfd::api::CreateController);
+    GetWitnessStackNumResponseStruct response;
+
+    ElementsTransactionApi api;
+    uint32_t count = api.GetWitnessStackNum(
+        request.tx, Txid(request.txin.txid), request.txin.vout);
+
+    response.count = count;
+    return response;
   };
 
   GetWitnessStackNumResponseStruct result;
@@ -1044,9 +1073,21 @@ ElementsTransactionStructApi::UpdateWitnessStack(
     const UpdateWitnessStackRequestStruct& request) {
   auto call_func = [](const UpdateWitnessStackRequestStruct& request)
       -> UpdateWitnessStackResponseStruct {  // NOLINT
-    return TransactionStructApiBase::UpdateWitnessStack<
-        ConfidentialTransactionController>(
-        request, cfd::api::CreateController);
+    UpdateWitnessStackResponseStruct response;
+
+    // Witnessの更新
+    const WitnessStackDataStruct& stack_req = request.txin.witness_stack;
+    SignParameter sign_data;
+    sign_data = TransactionStructApiBase::ConvertSignDataStructToSignParameter(
+        stack_req);
+
+    ElementsTransactionApi api;
+    ConfidentialTransactionController ctx = api.UpdateWitnessStack(
+        request.tx, Txid(request.txin.txid), request.txin.vout, sign_data,
+        stack_req.index);
+
+    response.hex = ctx.GetHex();
+    return response;
   };
 
   UpdateWitnessStackResponseStruct result;

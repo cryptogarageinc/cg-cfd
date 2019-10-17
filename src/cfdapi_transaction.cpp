@@ -92,6 +92,12 @@ TransactionController TransactionApi::CreateRawTransaction(
   return txc;
 }
 
+uint32_t TransactionApi::GetWitnessStackNum(
+    const std::string& tx_hex, const Txid& txid, const uint32_t vout) const {
+  return TransactionApiBase::GetWitnessStackNum<TransactionController>(
+      cfd::api::CreateController, tx_hex, txid, vout);
+}
+
 TransactionController TransactionApi::AddSign(
     const std::string& hex, const Txid& txid, const uint32_t vout,
     const std::vector<SignParameter>& sign_params, bool is_witness,
@@ -99,6 +105,14 @@ TransactionController TransactionApi::AddSign(
   return TransactionApiBase::AddSign<TransactionController>(
       cfd::api::CreateController, hex, txid, vout, sign_params, is_witness,
       clear_stack);
+}
+
+TransactionController TransactionApi::UpdateWitnessStack(
+    const std::string& tx_hex, const Txid& txid, const uint32_t vout,
+    const SignParameter& update_sign_param, uint32_t stack_index) const {
+  return TransactionApiBase::UpdateWitnessStack<TransactionController>(
+      cfd::api::CreateController, tx_hex, txid, vout, update_sign_param,
+      stack_index);
 }
 
 ByteData TransactionApi::CreateSignatureHash(
@@ -121,10 +135,17 @@ ByteData TransactionApi::CreateSignatureHash(
     const std::string& tx_hex, const TxInReference& txin,
     const ByteData& key_data, const Amount& amount, HashType hash_type,
     const SigHashType& sighash_type) const {
+  return CreateSignatureHash(
+      tx_hex, txin.GetTxid(), txin.GetVout(), key_data, amount, hash_type,
+      sighash_type);
+}
+
+ByteData TransactionApi::CreateSignatureHash(
+    const std::string& tx_hex, const Txid& txid, uint32_t vout,
+    const ByteData& key_data, const Amount& amount, HashType hash_type,
+    const SigHashType& sighash_type) const {
   std::string sig_hash;
   int64_t amount_value = amount.GetSatoshiValue();
-  const Txid& txid = txin.GetTxid();
-  uint32_t vout = txin.GetVout();
   TransactionController txc(tx_hex);
 
   if (hash_type == HashType::kP2pkh) {
@@ -162,10 +183,20 @@ TransactionController TransactionApi::AddMultisigSign(
     const std::vector<SignParameter>& sign_list, AddressType address_type,
     const Script& witness_script, const Script redeem_script,
     bool clear_stack) {
+  return AddMultisigSign(
+      tx_hex, txin.GetTxid(), txin.GetVout(), sign_list, address_type,
+      witness_script, redeem_script, clear_stack);
+}
+
+TransactionController TransactionApi::AddMultisigSign(
+    const std::string& tx_hex, const Txid& txid, uint32_t vout,
+    const std::vector<SignParameter>& sign_list, AddressType address_type,
+    const Script& witness_script, const Script redeem_script,
+    bool clear_stack) {
   std::string result =
       TransactionApiBase::AddMultisigSign<TransactionController>(
-          tx_hex, txin, sign_list, address_type, witness_script, redeem_script,
-          clear_stack, CreateController);
+          CreateController, tx_hex, txid, vout, sign_list, address_type,
+          witness_script, redeem_script, clear_stack);
   return TransactionController(result);
 }
 
@@ -383,21 +414,21 @@ DecodeRawTransactionResponseStruct TransactionStructApi::DecodeRawTransaction(
                 net_type, Pubkey(script_element[index].GetBinaryData()));
             res_txout.script_pub_key.addresses.push_back(addr.GetAddress());
           }
-        } else if (CheckP2pkhScript(locking_script)) {
+        } else if (locking_script.IsP2pkhScript()) {
           res_txout.script_pub_key.req_sigs = 1;
           res_txout.script_pub_key.type = "pubkeyhash";
           Address addr(
               net_type, AddressType::kP2pkhAddress,
               ByteData160(script_element[2].GetBinaryData().GetBytes()));
           res_txout.script_pub_key.addresses.push_back(addr.GetAddress());
-        } else if (CheckP2shScript(locking_script)) {
+        } else if (locking_script.IsP2shScript()) {
           res_txout.script_pub_key.req_sigs = 1;
           res_txout.script_pub_key.type = "scripthash";
           Address addr(
               net_type, AddressType::kP2shAddress,
               ByteData160(script_element[1].GetBinaryData().GetBytes()));
           res_txout.script_pub_key.addresses.push_back(addr.GetAddress());
-        } else if (CheckPubkeyScript(locking_script)) {
+        } else if (locking_script.IsP2pkScript()) {
           res_txout.script_pub_key.req_sigs = 1;
           res_txout.script_pub_key.type = "pubkey";
           Address addr(net_type, Pubkey(script_element[0].GetBinaryData()));
@@ -430,8 +461,14 @@ GetWitnessStackNumResponseStruct TransactionStructApi::GetWitnessStackNum(
     const GetWitnessStackNumRequestStruct& request) {
   auto call_func = [](const GetWitnessStackNumRequestStruct& request)
       -> GetWitnessStackNumResponseStruct {  // NOLINT
-    return TransactionStructApiBase::GetWitnessStackNum<TransactionController>(
-        request, cfd::api::CreateController);
+    GetWitnessStackNumResponseStruct response;
+
+    TransactionApi api;
+    uint32_t count = api.GetWitnessStackNum(
+        request.tx, Txid(request.txin.txid), request.txin.vout);
+
+    response.count = count;
+    return response;
   };
 
   GetWitnessStackNumResponseStruct result;
@@ -479,8 +516,21 @@ UpdateWitnessStackResponseStruct TransactionStructApi::UpdateWitnessStack(
     const UpdateWitnessStackRequestStruct& request) {
   auto call_func = [](const UpdateWitnessStackRequestStruct& request)
       -> UpdateWitnessStackResponseStruct {  // NOLINT
-    return TransactionStructApiBase::UpdateWitnessStack<TransactionController>(
-        request, cfd::api::CreateController);
+    UpdateWitnessStackResponseStruct response;
+
+    // Witnessの更新
+    const WitnessStackDataStruct& stack_req = request.txin.witness_stack;
+    SignParameter sign_data;
+    sign_data = TransactionStructApiBase::ConvertSignDataStructToSignParameter(
+        stack_req);
+
+    TransactionApi api;
+    TransactionController txc = api.UpdateWitnessStack(
+        request.tx, Txid(request.txin.txid), request.txin.vout, sign_data,
+        stack_req.index);
+
+    response.hex = txc.GetHex();
+    return response;
   };
 
   UpdateWitnessStackResponseStruct result;
@@ -623,77 +673,6 @@ bool TransactionStructApi::CheckMultiSigScript(const Script& script) {
           break;
         }
       }
-    }
-  }
-  return is_match;
-}
-
-bool TransactionStructApi::CheckP2pkhScript(const Script& script) {
-  // OP_DUP OP_HASH160 [HASH160] OP_EQUALVERIFY OP_CHECKSIG
-  bool is_match = false;
-  std::vector<ScriptElement> script_element = script.GetElementList();
-  uint32_t length = static_cast<uint32_t>(script.GetData().GetDataSize());
-
-  if (script_element.size() != 5) {
-    // unmatch count
-  } else if (length != kScriptHashP2pkhLength) {
-    // unmatch count
-  } else if (script_element[0].GetOpCode() != ScriptOperator::OP_DUP) {
-    // unmatch opcode
-  } else if (script_element[1].GetOpCode() != ScriptOperator::OP_HASH160) {
-    // unmatch opcode
-  } else if (script_element[3].GetOpCode() != ScriptOperator::OP_EQUALVERIFY) {
-    // unmatch opcode
-  } else if (script_element[4].GetOpCode() != ScriptOperator::OP_CHECKSIG) {
-    // unmatch opcode
-  } else if (!script_element[2].IsBinary()) {
-    // unmatch type
-  } else {
-    // サイズは比較済み
-    is_match = true;
-  }
-  return is_match;
-}
-
-bool TransactionStructApi::CheckP2shScript(const Script& script) {
-  // OP_HASH160 [HASH160] OP_EQUAL
-  bool is_match = false;
-  std::vector<ScriptElement> script_element = script.GetElementList();
-  uint32_t length = static_cast<uint32_t>(script.GetData().GetDataSize());
-
-  if (script_element.size() != 3) {
-    // unmatch count
-  } else if (length != kScriptHashP2shLength) {
-    // unmatch count
-  } else if (script_element[0].GetOpCode() != ScriptOperator::OP_HASH160) {
-    // unmatch opcode
-  } else if (script_element[2].GetOpCode() != ScriptOperator::OP_EQUAL) {
-    // unmatch opcode
-  } else if (!script_element[1].IsBinary()) {
-    // unmatch type
-  } else {
-    // サイズは比較済み
-    is_match = true;
-  }
-  return is_match;
-}
-
-bool TransactionStructApi::CheckPubkeyScript(const Script& script) {
-  // <pubkey> OP_CHECKSIG
-  bool is_match = false;
-  std::vector<ScriptElement> script_element = script.GetElementList();
-
-  if (script_element.size() != 2) {
-    // unmatch count
-  } else if (script_element[1].GetOpCode() != ScriptOperator::OP_CHECKSIG) {
-    // unmatch opcode
-  } else {
-    size_t data_size = script_element[0].GetBinaryData().GetDataSize();
-    if (script_element[0].IsBinary() &&
-        ((data_size == Pubkey::kCompressedPubkeySize) ||
-         (data_size == Pubkey::kPubkeySize))) {
-      // Pubkey
-      is_match = true;
     }
   }
   return is_match;

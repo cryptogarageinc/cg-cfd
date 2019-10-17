@@ -124,6 +124,16 @@ class CFD_EXPORT ElementsTransactionApi {
       const ConfidentialTxOut& txout_fee) const;
 
   /**
+   * @brief WitnessStack数を出力する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txid            target tx input txid
+   * @param[in] vout            target tx input vout
+   * @return WitnessStack数
+   */
+  uint32_t GetWitnessStackNum(
+      const std::string& tx_hex, const Txid& txid, uint32_t vout) const;
+
+  /**
    * @brief hexで与えられたtxに、SignDataを付与した
    *     ConfidentialTransctionControllerを作成する.
    * @param[in] tx_hex          tx hex string
@@ -135,9 +145,22 @@ class CFD_EXPORT ElementsTransactionApi {
    * @return SignDataが付与されたTransactionController
    */
   ConfidentialTransactionController AddSign(
-      const std::string& tx_hex, const Txid& txid, const uint32_t vout,
+      const std::string& tx_hex, const Txid& txid, uint32_t vout,
       const std::vector<SignParameter>& sign_params, bool is_witness = true,
       bool clear_stack = false) const;
+
+  /**
+   * @brief WitnessStackの情報を更新する.
+   * @param[in] tx_hex              tx hex string
+   * @param[in] txid                target tx input txid
+   * @param[in] vout                target tx input vout
+   * @param[in] update_sign_param   sign data
+   * @param[in] stack_index         witness stack index
+   * @return TransactionController
+   */
+  ConfidentialTransactionController UpdateWitnessStack(
+      const std::string& tx_hex, const Txid& txid, uint32_t vout,
+      const SignParameter& update_sign_param, uint32_t stack_index) const;
 
   /**
    * @brief tx情報およびパラメータから、SigHashを作成する.
@@ -181,6 +204,21 @@ class CFD_EXPORT ElementsTransactionApi {
       const std::string& tx_hex, const ConfidentialTxInReference& txin,
       const ByteData& key_data, const ConfidentialValue& value,
       HashType hash_type, const SigHashType& sighash_type) const;
+  /**
+   * @brief tx情報およびパラメータから、SigHashを作成する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txid            target tx input txid
+   * @param[in] vout            target tx input vout
+   * @param[in] key_data        key data (pubkey or redeem script)
+   * @param[in] value           value (amount or commitment)
+   * @param[in] hash_type       hash type
+   * @param[in] sighash_type    sighash type
+   * @return sighash
+   */
+  ByteData CreateSignatureHash(
+      const std::string& tx_hex, const Txid& txid, uint32_t vout,
+      const ByteData& key_data, const ConfidentialValue& value,
+      HashType hash_type, const SigHashType& sighash_type) const;
 
   /**
    * @brief Multisig署名情報を追加する.
@@ -200,6 +238,29 @@ class CFD_EXPORT ElementsTransactionApi {
    */
   ConfidentialTransactionController AddMultisigSign(
       const std::string& tx_hex, const ConfidentialTxInReference& txin,
+      const std::vector<SignParameter>& sign_list, AddressType address_type,
+      const Script& witness_script, const Script redeem_script = Script(),
+      bool clear_stack = true);
+
+  /**
+   * @brief Multisig署名情報を追加する.
+   * @details 追加するsignatureの順序は、redeem
+   * scriptのpubkeyとsign_list内のrelatedPubkeyで
+   *   対応をとって自動的に整列される.
+   * (relatedPubkeyが設定されていない場合は、relatedPubkeyが
+   *   設定されているsignatureを追加した後にsignParamの順序でsignatureを追加)
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txid            target tx input txid
+   * @param[in] vout            target tx input vout
+   * @param[in] sign_list       sign data list
+   * @param[in] address_type    address type. (support is P2sh-P2wsh or P2wsh)
+   * @param[in] witness_script  witness script
+   * @param[in] redeem_script   redeem script
+   * @param[in] clear_stack     clear stack data before add.
+   * @return Transaction
+   */
+  ConfidentialTransactionController AddMultisigSign(
+      const std::string& tx_hex, const Txid& txid, uint32_t vout,
       const std::vector<SignParameter>& sign_list, AddressType address_type,
       const Script& witness_script, const Script redeem_script = Script(),
       bool clear_stack = true);
