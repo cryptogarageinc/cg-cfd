@@ -33,12 +33,14 @@ using cfd::ConfidentialTransactionController;
 using cfd::SignParameter;
 using cfd::core::BlindParameter;
 using cfd::core::ByteData;
+using cfd::core::ConfidentialAssetId;
 using cfd::core::ConfidentialTxIn;
 using cfd::core::ConfidentialTxInReference;
 using cfd::core::ConfidentialTxOut;
 using cfd::core::ConfidentialValue;
 using cfd::core::HashType;
 using cfd::core::IssuanceBlindingKeyPair;
+using cfd::core::IssuanceParameter;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
 using cfd::core::Script;
@@ -96,6 +98,43 @@ struct TxOutPegoutParameters {
   std::string bitcoin_descriptor;  //!< bitcoin descriptor
   uint32_t bip32_counter;          //!< bip32 counter
   ByteData whitelist;              //!< claim script
+};
+
+/**
+ * @brief TxOut Unblinding keys
+ */
+struct TxOutUnblindKeys {
+  uint32_t index;        //!< txout index
+  Privkey blinding_key;  //!< blinding key
+};
+
+/**
+ * @brief Issuance Blinding keys
+ */
+struct IssuanceBlindKeys {
+  Txid txid;                             //!< txid
+  uint32_t vout;                         //!< vout
+  IssuanceBlindingKeyPair issuance_key;  //!< issuance blinding keys
+};
+
+/**
+ * @brief Unblind output
+ */
+struct UnblindOutputs {
+  uint32_t index;              //!< txout index
+  BlindParameter blind_param;  //!< blinding parameter
+};
+
+/**
+ * @brief Issuance Unblind output
+ */
+struct UnblindIssuanceOutputs {
+  Txid txid;                       //!< txid
+  uint32_t vout;                   //!< vout
+  ConfidentialAssetId asset;       //!< asset id
+  ConfidentialValue asset_amount;  //!< asset amount
+  ConfidentialAssetId token;       //!< token asset id
+  ConfidentialValue token_amount;  //!< token amount
 };
 
 /**
@@ -280,10 +319,20 @@ class CFD_EXPORT ElementsTransactionApi {
       bool is_issuance_blinding = false);
 
   /**
-   *
-   * @return
+   * @brief Elements用RawTransactionをUnblindする.
+   * @param[in]  tx_hex                 transaction hex string
+   * @param[in]  txout_unblind_keys     txout blinding data
+   * @param[in]  issuance_blind_keys    issuance blinding data
+   * @param[out] blind_outputs          blind parameter
+   * @param[out] issuance_outputs       issuance parameter
+   * @return Transaction
    */
-  ConfidentialTransactionController UnblindTransaction();
+  ConfidentialTransactionController UnblindTransaction(
+      const std::string& tx_hex,
+      const std::vector<TxOutUnblindKeys>& txout_unblind_keys,
+      const std::vector<IssuanceBlindKeys>& issuance_blind_keys,
+      std::vector<UnblindOutputs>* blind_outputs,
+      std::vector<UnblindIssuanceOutputs>* issuance_outputs);
 
   /**
    *

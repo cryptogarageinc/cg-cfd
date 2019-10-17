@@ -325,10 +325,55 @@ ConfidentialTransactionController ElementsTransactionApi::BlindTransaction(
   return txc;
 }
 
-ConfidentialTransactionController
-ElementsTransactionApi::UnblindTransaction() {
-  // FIXME
-  return ConfidentialTransactionController(0, 0);
+ConfidentialTransactionController ElementsTransactionApi::UnblindTransaction(
+    const std::string& tx_hex,
+    const std::vector<TxOutUnblindKeys>& txout_unblind_keys,
+    const std::vector<IssuanceBlindKeys>& issuance_blind_keys,
+    std::vector<UnblindOutputs>* blind_outputs,
+    std::vector<UnblindIssuanceOutputs>* issuance_outputs) {
+  ConfidentialTransactionController ctxc(tx_hex);
+
+  if (!txout_unblind_keys.empty() && blind_outputs != nullptr) {
+    UnblindParameter unblind_param;
+    for (const auto& txout : txout_unblind_keys) {
+      // TxOutをUnblind
+      const Privkey blinding_key(txout.blinding_key);
+      unblind_param = ctxc.UnblindTxOut(txout.index, blinding_key);
+
+      if (!unblind_param.asset.GetHex().empty()) {
+        UnblindOutputs output;
+        output.index = txout.index;
+        output.blind_param.asset = unblind_param.asset;
+        output.blind_param.vbf = unblind_param.vbf;
+        output.blind_param.abf = unblind_param.abf;
+        output.blind_param.value = unblind_param.value;
+        blind_outputs->push_back(output);
+      }
+    }
+  }
+
+  if (!issuance_blind_keys.empty() && issuance_outputs != nullptr) {
+    for (const auto& issuance : issuance_blind_keys) {
+      uint32_t txin_index = ctxc.GetTransaction().GetTxInIndex(
+          Txid(issuance.txid), issuance.vout);
+
+      std::vector<UnblindParameter> issuance_param = ctxc.UnblindIssuance(
+          txin_index, issuance.issuance_key.asset_key,
+          issuance.issuance_key.token_key);
+
+      UnblindIssuanceOutputs output;
+      output.txid = issuance.txid;
+      output.vout = issuance.vout;
+      output.asset = issuance_param[0].asset;
+      output.asset_amount = issuance_param[0].value;
+      if (issuance_param.size() > 1) {
+        output.token = issuance_param[1].asset;
+        output.token_amount = issuance_param[1].value;
+      }
+      issuance_outputs->push_back(output);
+    }
+  }
+  return ctxc;
 }
 
 ConfidentialTransactionController ElementsTransactionApi::SetRawIssueAsset() {
@@ -468,10 +513,14 @@ using cfd::ConfidentialTransactionController;
 using cfd::ElementsAddressFactory;
 using cfd::api::AddressApi;
 using cfd::api::ElementsTransactionApi;
+using cfd::api::IssuanceBlindKeys;
 using cfd::api::TxInBlindParameters;
 using cfd::api::TxInPeginParameters;
 using cfd::api::TxOutBlindKeys;
 using cfd::api::TxOutPegoutParameters;
+using cfd::api::TxOutUnblindKeys;
+using cfd::api::UnblindIssuanceOutputs;
+using cfd::api::UnblindOutputs;
 using cfd::core::Address;
 using cfd::core::AddressType;
 using cfd::core::Amount;
@@ -1235,65 +1284,74 @@ ElementsTransactionStructApi::UnblindTransaction(
   auto call_func = [](const UnblindRawTransactionRequestStruct& request)
       -> UnblindRawTransactionResponseStruct {
     UnblindRawTransactionResponseStruct response;
-    ConfidentialTransactionController ctxc(request.tx);
-    const ConfidentialTransaction& tx = ctxc.GetTransaction();
+
+    std::vector<TxOutUnblindKeys> txout_unblind_keys;
+    std::vector<IssuanceBlindKeys> issuance_blind_keys;
 
     if (!request.txouts.empty()) {
-      UnblindParameter unblind_param;
       for (const auto& txout : request.txouts) {
-        // TxOutをUnblind
-        const Privkey blinding_key(txout.blinding_key);
-        unblind_param = ctxc.UnblindTxOut(txout.index, blinding_key);
-
-        if (!unblind_param.asset.GetHex().empty()) {
-          UnblindOutputStruct output;
-          output.index = txout.index;
-          output.asset = unblind_param.asset.GetHex();
-          output.blind_factor = unblind_param.vbf.GetHex();
-          output.asset_blind_factor = unblind_param.abf.GetHex();
-          output.amount = unblind_param.value.GetAmount().GetSatoshiValue();
-          response.outputs.push_back(output);
-        }
+        TxOutUnblindKeys blind_keys;
+        blind_keys.index = txout.index;
+        blind_keys.blinding_key = Privkey(txout.blinding_key);
+        txout_unblind_keys.push_back(blind_keys);
       }
     }
 
-    // TxIn Unblind(Issuanceの場合)
-    if (request.issuances.size() != 0) {
-      for (UnblindIssuanceStruct issuance : request.issuances) {
-        uint32_t txin_index =
-            tx.GetTxInIndex(Txid(issuance.txid), issuance.vout);
+    if (!request.issuances.empty()) {
+      for (const auto& issuance : request.issuances) {
+        IssuanceBlindKeys issuance_keys;
+        issuance_keys.txid = Txid(issuance.txid);
+        issuance_keys.vout = issuance.vout;
+
         bool is_find = false;
-        UnblindIssuanceOutputStruct output;
-        Privkey asset_blinding_key;
-        Privkey token_blinding_key;
         if (!issuance.asset_blinding_key.empty()) {
-          asset_blinding_key = Privkey(issuance.asset_blinding_key);
+          issuance_keys.issuance_key.asset_key =
+              Privkey(issuance.asset_blinding_key);
           is_find = true;
         }
         if (!issuance.token_blinding_key.empty()) {
-          token_blinding_key = Privkey(issuance.token_blinding_key);
+          issuance_keys.issuance_key.token_key =
+              Privkey(issuance.token_blinding_key);
           is_find = true;
         }
-        if (is_find) {
-          std::vector<UnblindParameter> issuance_outputs =
-              ctxc.UnblindIssuance(
-                  txin_index, asset_blinding_key, token_blinding_key);
 
-          output.txid = issuance.txid;
-          output.vout = issuance.vout;
-          output.asset = issuance_outputs[0].asset.GetHex();
-          output.assetamount =
-              issuance_outputs[0].value.GetAmount().GetSatoshiValue();
-          if (issuance_outputs.size() > 1) {
-            output.token = issuance_outputs[1].asset.GetHex();
-            output.tokenamount =
-                issuance_outputs[1].value.GetAmount().GetSatoshiValue();
-          }
+        if (is_find) {
+          issuance_blind_keys.push_back(issuance_keys);
         }
-        response.issuance_outputs.push_back(output);
       }
     }
+
+    std::vector<UnblindOutputs> blind_outputs;
+    std::vector<UnblindIssuanceOutputs> issuance_outputs;
+    ElementsTransactionApi api;
+    ConfidentialTransactionController ctxc = api.UnblindTransaction(
+        request.tx, txout_unblind_keys, issuance_blind_keys, &blind_outputs,
+        &issuance_outputs);
     response.hex = ctxc.GetHex();
+
+    for (const auto& blind_output : blind_outputs) {
+      UnblindOutputStruct output;
+      output.index = blind_output.index;
+      output.asset = blind_output.blind_param.asset.GetHex();
+      output.blind_factor = blind_output.blind_param.vbf.GetHex();
+      output.asset_blind_factor = blind_output.blind_param.abf.GetHex();
+      output.amount =
+          blind_output.blind_param.value.GetAmount().GetSatoshiValue();
+      response.outputs.push_back(output);
+    }
+
+    for (const auto& issuance_output : issuance_outputs) {
+      UnblindIssuanceOutputStruct output;
+      output.txid = issuance_output.txid.GetHex();
+      output.vout = issuance_output.vout;
+      output.asset = issuance_output.asset.GetHex();
+          output.assetamount =
+          issuance_output.asset_amount.GetAmount().GetSatoshiValue();
+      output.token = issuance_output.token.GetHex();
+            output.tokenamount =
+          issuance_output.token_amount.GetAmount().GetSatoshiValue();
+        response.issuance_outputs.push_back(output);
+      }
     return response;
   };
 
