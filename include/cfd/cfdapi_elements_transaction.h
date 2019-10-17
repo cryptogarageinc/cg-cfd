@@ -31,8 +31,12 @@ namespace api {
 
 using cfd::ConfidentialTransactionController;
 using cfd::SignParameter;
+using cfd::core::Amount;
+using cfd::core::BlindFactor;
 using cfd::core::BlindParameter;
+using cfd::core::BlockHash;
 using cfd::core::ByteData;
+using cfd::core::ByteData256;
 using cfd::core::ConfidentialAssetId;
 using cfd::core::ConfidentialTxIn;
 using cfd::core::ConfidentialTxInReference;
@@ -135,6 +139,46 @@ struct UnblindIssuanceOutputs {
   ConfidentialValue asset_amount;  //!< asset amount
   ConfidentialAssetId token;       //!< token asset id
   ConfidentialValue token_amount;  //!< token amount
+};
+
+/**
+ *  @brief Issuance input
+ */
+struct TxInIssuanceParameters {
+  Txid txid;                    //!< txid
+  uint32_t vout;                //!< vout
+  Amount asset_amount;          //!< asset amount
+  Script asset_locking_script;  //!< asset locking script
+  ByteData asset_nonce;         //!< asset nonce
+  Amount token_amount;          //!< token amount
+  Script token_locking_script;  //!< token locking script
+  ByteData token_nonce;         //!< token nonce
+  ByteData256 contract_hash;    //!< contract hash
+  bool is_blind;                //!< blind flag
+  bool is_remove_nonce;         //!< nonce remove flag
+};
+
+/**
+ *  @brief Reissuance input
+ */
+struct TxInReissuanceParameters {
+  Txid txid;                 //!< txid
+  uint32_t vout;             //!< vout
+  Amount amount;             //!< amount
+  Script locking_script;     //!< locking script
+  ByteData nonce;            //!< nonce
+  BlindFactor blind_factor;  //!< blind factor
+  BlindFactor entropy;       //!< entropy
+  bool is_remove_nonce;      //!< nonce remove flag
+};
+
+/**
+ *  @brief Issueance / Reissuance output
+ */
+struct IssuanceOutput {
+  Txid txid;                 //!< txid
+  uint32_t vout;             //!< vout
+  IssuanceParameter output;  //!< issuance output
 };
 
 /**
@@ -335,16 +379,28 @@ class CFD_EXPORT ElementsTransactionApi {
       std::vector<UnblindIssuanceOutputs>* issuance_outputs);
 
   /**
-   *
+   * @brief Elements用RawTransactionにIssuance情報を設定する.
+   * @param[in]  tx_hex                 transaction hex string
+   * @param[in]  issuances              issuance parameter
+   * @param[out] issuance_output        issuance output data
    * @return
    */
-  ConfidentialTransactionController SetRawIssueAsset();
+  ConfidentialTransactionController SetRawIssueAsset(
+      const std::string& tx_hex,
+      const std::vector<TxInIssuanceParameters>& issuances,
+      std::vector<IssuanceOutput>* issuance_output);
 
   /**
-   *
+   * @brief Elements用RawTransactionにReissuance情報を設定する.
+   * @param[in]  tx_hex                 transaction hex string
+   * @param[in]  issuances              issuance parameter
+   * @param[out] issuance_output        issuance output data
    * @return
    */
-  ConfidentialTransactionController SetRawReissueAsset();
+  ConfidentialTransactionController SetRawReissueAsset(
+      const std::string& tx_hex,
+      const std::vector<TxInReissuanceParameters>& issuances,
+      std::vector<IssuanceOutput>* issuance_output);
 
   /**
    * @brief Elements用のRaw Pegin Transactionを作成する.
