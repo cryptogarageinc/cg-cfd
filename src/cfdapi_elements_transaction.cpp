@@ -298,7 +298,7 @@ ConfidentialTransactionController ElementsTransactionApi::UnblindTransaction(
     std::vector<UnblindIssuanceOutputs>* issuance_outputs) {
   ConfidentialTransactionController ctxc(tx_hex);
 
-  if (!txout_unblind_keys.empty()) {
+  if (!txout_unblind_keys.empty() && blind_outputs != nullptr) {
     UnblindParameter unblind_param;
     for (const auto& txout : txout_unblind_keys) {
       // TxOutをUnblind
@@ -317,7 +317,7 @@ ConfidentialTransactionController ElementsTransactionApi::UnblindTransaction(
     }
   }
 
-  if (!issuance_blind_keys.empty()) {
+  if (!issuance_blind_keys.empty() && issuance_outputs != nullptr) {
     for (const auto& issuance : issuance_blind_keys) {
       uint32_t txin_index = ctxc.GetTransaction().GetTxInIndex(
           Txid(issuance.txid), issuance.vout);
