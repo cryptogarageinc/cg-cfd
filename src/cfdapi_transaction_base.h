@@ -142,7 +142,9 @@ enum LockingScriptType {
   kWitnessV0KeyHash,     //!< p2wpkh locking script
   kWitnessUnknown,       //!< invalid witness ver locking script
   kTrue,                 //!< can spend anyone script
+#ifndef CFD_DISABLE_ELEMENTS
   kFee,                  //!< type fee
+#endif  // CFD_DISABLE_ELEMENTS
 };
 
 /**
