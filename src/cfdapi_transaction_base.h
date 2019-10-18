@@ -43,6 +43,35 @@ using cfd::core::Txid;
 class TransactionApiBase {
  public:
   /**
+   * @brief Outputs number of elements in witness stack.
+   * @param[in] create_controller a callback to create a transaction controller.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txid            target tx input txid
+   * @param[in] vout            target tx input vout
+   * @return number of the witness stack.
+   */
+  template <class T>
+  static uint32_t GetWitnessStackNum(
+      std::function<T(const std::string&)> create_controller,
+      const std::string& tx_hex, const Txid& txid, uint32_t vout);
+
+  /**
+   * @brief Update witness stack.
+   * @param[in] create_controller a callback to create a transaction controller.
+   * @param[in] tx_hex              tx hex string
+   * @param[in] txid                target tx input txid
+   * @param[in] vout                target tx input vout
+   * @param[in] update_sign_param   sign parameter to update the input
+   * @param[in] stack_index         witness stack index
+   * @return Transaction controller
+   */
+  template <class T>
+  static T UpdateWitnessStack(
+      std::function<T(const std::string&)> create_controller,
+      const std::string& tx_hex, const Txid& txid, uint32_t vout,
+      const SignParameter& update_sign_param, uint32_t stack_index);
+
+  /**
    * @brief Add signature information based on parameter information.
    * @param[in] create_controller   transaction controller create function
    * @param[in] hex                 transaction hex
@@ -52,40 +81,39 @@ class TransactionApiBase {
    * @param[in] is_witness          flag to add sign parameters to
    *     witness or unlocking script
    * @param[in] clear_stack         flag of clear all stacks
-   * @return structure containing Transaction hex data
+   * @return Transaction controller
    */
   template <class T>
   static T AddSign(
       std::function<T(const std::string&)> create_controller,
-      const std::string& hex, const Txid& txid, const uint32_t vout,
+      const std::string& hex, const Txid& txid, uint32_t vout,
       const std::vector<SignParameter>& sign_params, bool is_witness = true,
       bool clear_stack = true);
 
- public:
   /**
    * @brief Add Segwit multisig signature information.
    * @details the order of signatures to be added is automatically aligned
    * with the corresponding pubkey in redeemscript and relatedPubkey in
    * signParam. (If relatedPubkey is not set, signatures are added in order of
    * signParam after adding signature with relatedPubkey).
+   * @param[in] create_controller a callback to create a transaction controller.
    * @param[in] tx_hex          tx hex string
-   * @param[in] txin            target tx input
-   * @param[in] sign_list       value (amount or commitment)
+   * @param[in] txid            txid of input to add sign parameters to
+   * @param[in] vout            vout of input to add sign parameters to
+   * @param[in] sign_list       sign parameters to add the input
    * @param[in] address_type    address type. (support is P2sh-P2wsh or P2wsh)
    * @param[in] witness_script  witness script
    * @param[in] redeem_script   redeem script
    * @param[in] clear_stack     clear stack data before add.
-   * @param[in] create_controller a callback to create a transaction controller.
-   * @return structure that holds Transaction and Segwit multisig signature
-   * information.
+   * @return Transaction controller
    */
   template <class T>
   static std::string AddMultisigSign(
-      const std::string& tx_hex, const AbstractTxInReference& txin,
+      std::function<T(const std::string&)> create_controller,
+      const std::string& tx_hex, const Txid& txid, uint32_t vout,
       const std::vector<SignParameter>& sign_list, AddressType address_type,
       const Script& witness_script, const Script redeem_script,
-      bool clear_stack,
-      std::function<T(const std::string&)> create_controller);
+      bool clear_stack);
 };
 
 }  // namespace api
@@ -114,7 +142,9 @@ enum LockingScriptType {
   kWitnessV0KeyHash,     //!< p2wpkh locking script
   kWitnessUnknown,       //!< invalid witness ver locking script
   kTrue,                 //!< can spend anyone script
+#ifndef CFD_DISABLE_ELEMENTS
   kFee,                  //!< type fee
+#endif  // CFD_DISABLE_ELEMENTS
 };
 
 /**
@@ -132,29 +162,6 @@ struct ExtractScriptData {
  */
 class TransactionStructApiBase {
  public:
-  /**
-   * @brief Outputs number of elements in witness stack based on JSON parameters.
-   * @param[in] request structure containing Transaction and TxIn information.
-   * @param[in] create_controller a callback to create a transaction controller.
-   * @return number of elements in the witness stack.
-   */
-  template <class T>
-  static GetWitnessStackNumResponseStruct GetWitnessStackNum(
-      const GetWitnessStackNumRequestStruct& request,
-      std::function<T(const std::string&)> create_controller);
-
-  /**
-   * @brief Update witness stack based on JSON parameters.
-   * @param[in] request structure containing Transaction and witness stack
-   * information.
-   * @param[in] create_controller a callback to create a transaction controller.
-   * @return Transactionのhexデータを格納した構造体
-   */
-  template <class T>
-  static UpdateWitnessStackResponseStruct UpdateWitnessStack(
-      const UpdateWitnessStackRequestStruct& request,
-      std::function<T(const std::string&)> create_controller);
-
   /**
    * @brief Convert signature information to a signature.
    * @param[in] hex_string              Signature information

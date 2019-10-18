@@ -7,7 +7,9 @@
 #include <string>
 
 #include "cfd/cfdapi_address.h"
+#include "cfdcore/cfdcore_bytedata.h"
 #include "cfdcore/cfdcore_key.h"
+#include "cfdcore/cfdcore_transaction_common.h"
 
 #include "cfd/cfd_common.h"
 #include "cfd/cfdapi_key.h"
@@ -42,9 +44,12 @@ namespace js {
 namespace api {
 
 using cfd::api::KeyApi;
+using cfd::core::ByteData;
+using cfd::core::ByteData256;
 using cfd::core::NetType;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
+using cfd::core::SignatureUtil;
 using cfd::js::api::AddressStructApi;
 
 CreateKeyPairResponseStruct KeyStructApi::CreateKeyPair(
@@ -78,6 +83,38 @@ CreateKeyPairResponseStruct KeyStructApi::CreateKeyPair(
   CreateKeyPairResponseStruct result;
   result = ExecuteStructApi<
       CreateKeyPairRequestStruct, CreateKeyPairResponseStruct>(
+      request, call_func, std::string(__FUNCTION__));
+  return result;
+}
+
+CalculateEcSignatureResponseStruct KeyStructApi::CalculateEcSignature(
+    const CalculateEcSignatureRequestStruct& request) {
+  auto call_func = [](const CalculateEcSignatureRequestStruct& request)
+      -> CalculateEcSignatureResponseStruct {  // NOLINT
+    CalculateEcSignatureResponseStruct response;
+
+    std::string privkey_data = request.privkey_data.privkey;
+    const bool is_wif = request.privkey_data.wif;
+    const bool is_compressed = request.privkey_data.is_compressed;
+    Privkey privkey;
+    if (is_wif) {
+      const NetType net_type =
+          AddressStructApi::ConvertNetType(request.privkey_data.network);
+      privkey = Privkey::FromWif(privkey_data, net_type, is_compressed);
+
+    } else {
+      privkey = Privkey(privkey_data);
+    }
+    ByteData data = SignatureUtil::CalculateEcSignature(
+        ByteData256(request.sighash), privkey, request.is_grind_r);
+
+    response.signature = data.GetHex();
+    return response;
+  };
+
+  CalculateEcSignatureResponseStruct result;
+  result = ExecuteStructApi<
+      CalculateEcSignatureRequestStruct, CalculateEcSignatureResponseStruct>(
       request, call_func, std::string(__FUNCTION__));
   return result;
 }

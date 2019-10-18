@@ -31,17 +31,150 @@ namespace api {
 
 using cfd::ConfidentialTransactionController;
 using cfd::SignParameter;
+using cfd::core::Amount;
+using cfd::core::BlindFactor;
+using cfd::core::BlindParameter;
+using cfd::core::BlockHash;
 using cfd::core::ByteData;
+using cfd::core::ByteData256;
+using cfd::core::ConfidentialAssetId;
 using cfd::core::ConfidentialTxIn;
 using cfd::core::ConfidentialTxInReference;
 using cfd::core::ConfidentialTxOut;
 using cfd::core::ConfidentialValue;
 using cfd::core::HashType;
+using cfd::core::IssuanceBlindingKeyPair;
+using cfd::core::IssuanceParameter;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
 using cfd::core::Script;
 using cfd::core::SigHashType;
 using cfd::core::Txid;
+
+/**
+ * @brief TxIn Blinding parameters
+ */
+struct TxInBlindParameters {
+  Txid txid;                             //!< txid
+  uint32_t vout;                         //!< vout
+  BlindParameter blind_param;            //!< blinding parameter
+  bool is_issuance;                      //!< issuance flag
+  IssuanceBlindingKeyPair issuance_key;  //!< issuance blinding keys
+};
+
+/**
+ * @brief TxOut Blinding keys
+ */
+struct TxOutBlindKeys {
+  uint32_t index;       //!< txout index
+  Pubkey blinding_key;  //!< blinding key
+};
+
+/**
+ * @brief TxIn pegin parameters
+ */
+struct TxInPeginParameters {
+  Txid txid;                      //!< txid
+  uint32_t vout;                  //!< vout
+  Amount amount;                  //!< amount
+  ConfidentialAssetId asset;      //!< asset
+  BlockHash mainchain_blockhash;  //!< mainchain genesis block hash
+  Script claim_script;            //!< claim script
+  /**
+   * @brief mainchain raw transaction.
+   * @see ConfidentialTransaction::GetBitcoinTransaction
+   */
+  ByteData mainchain_raw_tx;
+  ByteData mainchain_txoutproof;  //!< mainchain txoutproof
+};
+
+/**
+ * @brief TxOut pegout parameters
+ */
+struct TxOutPegoutParameters {
+  Amount amount;                   //!< amount
+  ConfidentialAssetId asset;       //!< asset
+  BlockHash genesisblock_hash;     //!< mainchain genesis block hash
+  Address btc_address;             //!< mainchain bitcoin address
+  NetType net_type;                //!< mainchain network type
+  Pubkey online_pubkey;            //!< online pubkey
+  Privkey master_online_key;       //!< master online key
+  std::string bitcoin_descriptor;  //!< bitcoin descriptor
+  uint32_t bip32_counter;          //!< bip32 counter
+  ByteData whitelist;              //!< claim script
+};
+
+/**
+ * @brief TxOut Unblinding keys
+ */
+struct TxOutUnblindKeys {
+  uint32_t index;        //!< txout index
+  Privkey blinding_key;  //!< blinding key
+};
+
+/**
+ * @brief Issuance Blinding keys
+ */
+struct IssuanceBlindKeys {
+  Txid txid;                             //!< txid
+  uint32_t vout;                         //!< vout
+  IssuanceBlindingKeyPair issuance_key;  //!< issuance blinding keys
+};
+
+/**
+ * @brief Unblind output
+ */
+struct UnblindOutputs {
+  uint32_t index;              //!< txout index
+  BlindParameter blind_param;  //!< blinding parameter
+};
+
+/**
+ * @brief Issuance Unblind output
+ */
+struct UnblindIssuanceOutputs {
+  Txid txid;                       //!< txid
+  uint32_t vout;                   //!< vout
+  ConfidentialAssetId asset;       //!< asset id
+  ConfidentialValue asset_amount;  //!< asset amount
+  ConfidentialAssetId token;       //!< token asset id
+  ConfidentialValue token_amount;  //!< token amount
+};
+
+/**
+ *  @brief Issuance input
+ */
+struct TxInIssuanceParameters {
+  Txid txid;                      //!< txid
+  uint32_t vout;                  //!< vout
+  Amount asset_amount;            //!< asset amount
+  ConfidentialTxOut asset_txout;  //!< asset output
+  Amount token_amount;            //!< token amount
+  ConfidentialTxOut token_txout;  //!< token output
+  ByteData256 contract_hash;      //!< contract hash
+  bool is_blind;                  //!< blind flag
+};
+
+/**
+ *  @brief Reissuance input
+ */
+struct TxInReissuanceParameters {
+  Txid txid;                      //!< txid
+  uint32_t vout;                  //!< vout
+  Amount amount;                  //!< amount
+  ConfidentialTxOut asset_txout;  //!< asset output
+  BlindFactor blind_factor;       //!< blind factor
+  BlindFactor entropy;            //!< entropy
+};
+
+/**
+ *  @brief Issueance / Reissuance output
+ */
+struct IssuanceOutput {
+  Txid txid;                 //!< txid
+  uint32_t vout;             //!< vout
+  IssuanceParameter output;  //!< issuance output
+};
 
 /**
  * @brief Elements用Transaction関連の関数群クラス
@@ -69,6 +202,16 @@ class CFD_EXPORT ElementsTransactionApi {
       const ConfidentialTxOut& txout_fee) const;
 
   /**
+   * @brief WitnessStack数を出力する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txid            target tx input txid
+   * @param[in] vout            target tx input vout
+   * @return WitnessStack数
+   */
+  uint32_t GetWitnessStackNum(
+      const std::string& tx_hex, const Txid& txid, uint32_t vout) const;
+
+  /**
    * @brief hexで与えられたtxに、SignDataを付与した
    *     ConfidentialTransctionControllerを作成する.
    * @param[in] tx_hex          tx hex string
@@ -80,9 +223,22 @@ class CFD_EXPORT ElementsTransactionApi {
    * @return SignDataが付与されたTransactionController
    */
   ConfidentialTransactionController AddSign(
-      const std::string& tx_hex, const Txid& txid, const uint32_t vout,
+      const std::string& tx_hex, const Txid& txid, uint32_t vout,
       const std::vector<SignParameter>& sign_params, bool is_witness = true,
       bool clear_stack = false) const;
+
+  /**
+   * @brief WitnessStackの情報を更新する.
+   * @param[in] tx_hex              tx hex string
+   * @param[in] txid                target tx input txid
+   * @param[in] vout                target tx input vout
+   * @param[in] update_sign_param   sign data
+   * @param[in] stack_index         witness stack index
+   * @return TransactionController
+   */
+  ConfidentialTransactionController UpdateWitnessStack(
+      const std::string& tx_hex, const Txid& txid, uint32_t vout,
+      const SignParameter& update_sign_param, uint32_t stack_index) const;
 
   /**
    * @brief tx情報およびパラメータから、SigHashを作成する.
@@ -126,6 +282,21 @@ class CFD_EXPORT ElementsTransactionApi {
       const std::string& tx_hex, const ConfidentialTxInReference& txin,
       const ByteData& key_data, const ConfidentialValue& value,
       HashType hash_type, const SigHashType& sighash_type) const;
+  /**
+   * @brief tx情報およびパラメータから、SigHashを作成する.
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txid            target tx input txid
+   * @param[in] vout            target tx input vout
+   * @param[in] key_data        key data (pubkey or redeem script)
+   * @param[in] value           value (amount or commitment)
+   * @param[in] hash_type       hash type
+   * @param[in] sighash_type    sighash type
+   * @return sighash
+   */
+  ByteData CreateSignatureHash(
+      const std::string& tx_hex, const Txid& txid, uint32_t vout,
+      const ByteData& key_data, const ConfidentialValue& value,
+      HashType hash_type, const SigHashType& sighash_type) const;
 
   /**
    * @brief Multisig署名情報を追加する.
@@ -149,16 +320,143 @@ class CFD_EXPORT ElementsTransactionApi {
       const Script& witness_script, const Script redeem_script = Script(),
       bool clear_stack = true);
 
-  /*
+  /**
+   * @brief Multisig署名情報を追加する.
+   * @details 追加するsignatureの順序は、redeem
+   * scriptのpubkeyとsign_list内のrelatedPubkeyで
+   *   対応をとって自動的に整列される.
+   * (relatedPubkeyが設定されていない場合は、relatedPubkeyが
+   *   設定されているsignatureを追加した後にsignParamの順序でsignatureを追加)
+   * @param[in] tx_hex          tx hex string
+   * @param[in] txid            target tx input txid
+   * @param[in] vout            target tx input vout
+   * @param[in] sign_list       sign data list
+   * @param[in] address_type    address type. (support is P2sh-P2wsh or P2wsh)
+   * @param[in] witness_script  witness script
+   * @param[in] redeem_script   redeem script
+   * @param[in] clear_stack     clear stack data before add.
+   * @return Transaction
+   */
+  ConfidentialTransactionController AddMultisigSign(
+      const std::string& tx_hex, const Txid& txid, uint32_t vout,
+      const std::vector<SignParameter>& sign_list, AddressType address_type,
+      const Script& witness_script, const Script redeem_script = Script(),
+      bool clear_stack = true);
+
+  /**
+   * @brief Elements用RawTransactionをBlindする.
+   * @param[in] tx_hex                 transaction hex string
+   * @param[in] txin_blind_keys        txin blinding data
+   * @param[in] txout_blind_keys       txout blinding data
+   * @param[in] is_issuance_blinding   issuance有無
+   * @return Transaction
+   */
+  ConfidentialTransactionController BlindTransaction(
+      const std::string& tx_hex,
+      const std::vector<TxInBlindParameters>& txin_blind_keys,
+      const std::vector<TxOutBlindKeys>& txout_blind_keys,
+      bool is_issuance_blinding = false);
+
+  /**
+   * @brief Elements用RawTransactionをUnblindする.
+   * @param[in]  tx_hex                 transaction hex string
+   * @param[in]  txout_unblind_keys     txout blinding data
+   * @param[in]  issuance_blind_keys    issuance blinding data
+   * @param[out] blind_outputs          blind parameter
+   * @param[out] issuance_outputs       issuance parameter
+   * @return Transaction
+   */
+  ConfidentialTransactionController UnblindTransaction(
+      const std::string& tx_hex,
+      const std::vector<TxOutUnblindKeys>& txout_unblind_keys,
+      const std::vector<IssuanceBlindKeys>& issuance_blind_keys,
+      std::vector<UnblindOutputs>* blind_outputs,
+      std::vector<UnblindIssuanceOutputs>* issuance_outputs);
+
+  /**
+   * @brief Elements用RawTransactionにIssuance情報を設定する.
+   * @param[in]  tx_hex                 transaction hex string
+   * @param[in]  issuances              issuance parameter
+   * @param[out] issuance_output        issuance output data
+   * @return
+   */
+  ConfidentialTransactionController SetRawIssueAsset(
+      const std::string& tx_hex,
+      const std::vector<TxInIssuanceParameters>& issuances,
+      std::vector<IssuanceOutput>* issuance_output);
+
+  /**
+   * @brief Elements用RawTransactionにReissuance情報を設定する.
+   * @param[in]  tx_hex                 transaction hex string
+   * @param[in]  issuances              issuance parameter
+   * @param[out] issuance_output        issuance output data
+   * @return
+   */
+  ConfidentialTransactionController SetRawReissueAsset(
+      const std::string& tx_hex,
+      const std::vector<TxInReissuanceParameters>& issuances,
+      std::vector<IssuanceOutput>* issuance_output);
+
+  /**
+   * @brief Elements用のRaw Pegin Transactionを作成する.
+   * @param[in] version     tx version
+   * @param[in] locktime    lock time
+   * @param[in] txins       tx input list
+   * @param[in] pegins      tx pegin input list
+   * @param[in] txouts      tx output list
+   * @param[in] txout_fee   tx output fee
+   * @return Pegin Transaction
+   */
+  ConfidentialTransactionController CreateRawPeginTransaction(
+      uint32_t version, uint32_t locktime,
+      const std::vector<ConfidentialTxIn>& txins,
+      const std::vector<TxInPeginParameters>& pegins,
+      const std::vector<ConfidentialTxOut>& txouts,
+      const ConfidentialTxOut& txout_fee) const;
+
+  /**
+   * @brief Elements用のRaw Pegout Transactionを作成する.
+   * @param[in] version     tx version
+   * @param[in] locktime    lock time
+   * @param[in] txins       tx input list
+   * @param[in] txouts      tx output list
+   * @param[in] pegout_data tx pegout data
+   * @param[in] txout_fee   tx output fee
+   * @param[out] pegout_address   pegout address
+   * @return Pegout Transaction
+   */
+  ConfidentialTransactionController CreateRawPegoutTransaction(
+      uint32_t version, uint32_t locktime,
+      const std::vector<ConfidentialTxIn>& txins,
+      const std::vector<ConfidentialTxOut>& txouts,
+      const TxOutPegoutParameters& pegout_data,
+      const ConfidentialTxOut& txout_fee,
+      Address* pegout_address = nullptr) const;
+
+  /**
+   *
+   * @return
+   */
+  uint32_t GetWitnessStackNum();
+
+  /**
+   *
+   * @return
+   */
+  ConfidentialTransactionController UpdateWitnessStack();
+
+  /**
    * @brief Issue用BlindingKeyを作成する.
    * @param[in] master_blinding_key master blindingKey
    * @param[in] txid                issuance utxo txid
    * @param[in] vout                issuance utxo vout
    * @return blinding key
    */
-  // 別クラスに分ける。Struct系のAPIを ～StructApi というクラスにした方が良い
-  // Privkey GetIssuanceBlindingKey(const Privkey& master_blinding_key,
-  //     const Txid& txid, int32_t vout);
+  Privkey GetIssuanceBlindingKey(
+      const Privkey& master_blinding_key, const Txid& txid, int32_t vout);
+
+  // CreateDestroyAmountTransaction
+  // see CreateRawTransaction and ConfidentialTxOut::CreateDestroyAmountTxOut
 };
 
 }  // namespace api
