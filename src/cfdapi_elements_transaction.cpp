@@ -54,7 +54,7 @@ using cfd::core::ConfidentialTxInReference;
 using cfd::core::ConfidentialTxOut;
 using cfd::core::ConfidentialTxOutReference;
 using cfd::core::ConfidentialValue;
-using cfd::core::ExtKey;
+using cfd::core::ExtPubkey;
 using cfd::core::HashType;
 using cfd::core::HashUtil;
 using cfd::core::IssuanceBlindingKeyPair;
@@ -479,8 +479,8 @@ ElementsTransactionApi::CreateRawPegoutTransaction(
       }
       // info(CFD_LOG_SOURCE, "arg_type={}, xpub={}", arg_type, xpub);
       // key生成
-      ExtKey ext_key =
-          ExtKey(xpub).DerivePubkey(0).DerivePubkey(pegout_data.bip32_counter);
+      std::vector<uint32_t> path = {0, pegout_data.bip32_counter};
+      ExtPubkey ext_key = ExtPubkey(xpub).DerivePubkey(path);
       Pubkey pubkey = ext_key.GetPubkey();
 
       // Addressクラス生成
