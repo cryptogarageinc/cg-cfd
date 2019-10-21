@@ -1140,7 +1140,8 @@ class FileInfo(object):
           one_up_dir = os.path.dirname(one_up_dir)
 
         prefix = os.path.commonprefix([root_dir, project_dir])
-        return fullname[len(prefix) + 1:]
+        sep_len = 0 if(prefix[-1:] == "/") else 1
+        return fullname[len(prefix) + sep_len:]
 
       # Not SVN <= 1.6? Try to find a git, hg, or svn top level directory by
       # searching up from the current path.
@@ -1156,9 +1157,14 @@ class FileInfo(object):
           os.path.exists(os.path.join(root_dir, ".hg")) or
           os.path.exists(os.path.join(root_dir, ".svn"))):
         prefix = os.path.commonprefix([root_dir + '/external', project_dir])
+        prefix2 = os.path.commonprefix([root_dir, project_dir])
         # sys.stderr.write('[%s]\n' % (prefix))
         # prefix = os.path.commonprefix([root_dir, project_dir])
-        return fullname[len(prefix) + 1:]
+        if(prefix[-1:] == "/"):   prefix = prefix[:-1]
+        if(prefix2[-1:] == "/"):  prefix2 = prefix2[:-1]
+        if (prefix == prefix2):   prefix = '/'.join(prefix2.split('/')[0:-1])
+        sep_len = 0 if(prefix[-1:] == "/") else 1
+        return fullname[len(prefix) + sep_len:]
 
     # Don't know what to do; header guard warnings may be wrong...
     return fullname
