@@ -120,6 +120,36 @@ class CFD_EXPORT HDWalletApi {
   std::string CreateExtPubkey(
       const std::string& extkey, NetType net_type) const;
 
+  /**
+   * @brief 拡張秘密鍵から秘密鍵を取得する.
+   * @param[in] extkey            extended key
+   * @param[in] net_type          network type
+   * @param[in] wif               WIF format flag
+   * @param[in] is_compressed     key compressed flag
+   * @return privkey
+   */
+  std::string GetPrivkeyFromExtkey(
+      const std::string& extkey, NetType net_type, bool wif = true,
+      bool is_compressed = true) const;
+
+  /**
+   * @brief 拡張鍵から公開鍵を取得する.
+   * @param[in] extkey            extended key
+   * @param[in] net_type          network type
+   * @return pubkey
+   */
+  std::string GetPubkeyFromExtkey(
+      const std::string& extkey, NetType net_type) const;
+
+  /**
+   * @brief 秘密鍵から公開鍵を取得する.
+   * @param[in] privkey           private key (WIF or hex)
+   * @param[in] is_compressed     key compressed flag (for WIF format)
+   * @return pubkey
+   */
+  std::string GetPubkeyFromPrivkey(
+      const std::string& privkey, bool is_compressed = true) const;
+
  private:
   /**
    * @brief 拡張秘密鍵かどうかを判定する.
