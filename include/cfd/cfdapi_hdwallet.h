@@ -14,23 +14,40 @@
 
 #include "cfd/cfd_common.h"
 #include "cfdcore/cfdcore_bytedata.h"
+#include "cfdcore/cfdcore_hdwallet.h"
+#include "cfdcore/cfdcore_key.h"
 
 namespace cfd {
 namespace api {
 
 using cfd::core::ByteData;
+using cfd::core::NetType;
+
+/**
+ * @brief 拡張鍵の種類を定義する。
+ */
+enum ExtKeyType {
+  kExtPrivkey = 0,  //!< extended privkey
+  kExtPubkey        //!< extended pubkey
+};
+
 /**
  * @brief HDWallet関数群クラス
  */
 class CFD_EXPORT HDWalletApi {
  public:
   /**
+   * @brief コンストラクタ.
+   */
+  HDWalletApi() {}
+
+  /**
    * @brief BIP39 で利用できる wordlist を取得するAPI.
    * @param[in] language  取得するwordlistの言語
    * @return wordlist
    */
-  static std::vector<std::string> GetMnemonicWordlist(
-      const std::string& language);
+  std::vector<std::string> GetMnemonicWordlist(
+      const std::string& language) const;
 
   /**
    * @brief mnemonic から hdwallet Seedを生成する.
@@ -44,10 +61,10 @@ class CFD_EXPORT HDWalletApi {
    *     languageが指定されている場合のみ返却
    * @return seedのByteData
    */
-  static ByteData ConvertMnemonicToSeed(
+  ByteData ConvertMnemonicToSeed(
       const std::vector<std::string>& mnemonic, const std::string& passphrase,
       bool strict_check = true, const std::string& language = "en",
-      bool use_ideographic_space = false, ByteData* entropy = nullptr);
+      bool use_ideographic_space = false, ByteData* entropy = nullptr) const;
 
   /**
    * @brief entropyからmnemonicを生成する.
@@ -55,12 +72,72 @@ class CFD_EXPORT HDWalletApi {
    * @param[in] language    language to use mnemonic
    * @return mnemonic配列
    */
-  static std::vector<std::string> ConvertEntropyToMnemonic(
-      const ByteData& entropy, const std::string& language);
+  std::vector<std::string> ConvertEntropyToMnemonic(
+      const ByteData& entropy, const std::string& language) const;
+
+  /**
+   * @brief seedから拡張鍵を生成する.
+   * @param[in] seed              seed
+   * @param[in] net_type          network type
+   * @param[in] output_key_type   output extkey type
+   * @return extkey
+   */
+  std::string CreateExtkeyFromSeed(
+      const ByteData& seed, NetType net_type,
+      ExtKeyType output_key_type) const;
+
+  /**
+   * @brief 拡張鍵から派生拡張鍵を生成する.
+   * @param[in] extkey            extended key
+   * @param[in] net_type          network type
+   * @param[in] output_key_type   output extkey type
+   * @param[in] child_number      child number
+   * @param[in] hardened          強化鍵生成フラグ
+   * @return extkey
+   */
+  std::string CreateExtkeyFromParent(
+      const std::string& extkey, NetType net_type, ExtKeyType output_key_type,
+      uint32_t child_number, bool hardened) const;
+
+  /**
+   * @brief 拡張鍵から派生拡張鍵を生成する.
+   * @param[in] extkey            extended key
+   * @param[in] net_type          network type
+   * @param[in] output_key_type   output extkey type
+   * @param[in] child_number_list child number list
+   * @return extkey
+   */
+  std::string CreateExtkeyFromParentPath(
+      const std::string& extkey, NetType net_type, ExtKeyType output_key_type,
+      const std::vector<uint32_t>& child_number_list) const;
+
+  /**
+   * @brief 拡張秘密鍵から同階層の拡張公開鍵を生成する.
+   * @param[in] extkey            extended key
+   * @param[in] net_type          network type
+   * @return extkey
+   */
+  std::string CreateExtPubkey(
+      const std::string& extkey, NetType net_type) const;
 
  private:
-  HDWalletApi();
+  /**
+   * @brief 拡張秘密鍵かどうかを判定する.
+   * @param[in] extkey            extended key
+   * @retval true  拡張秘密鍵である
+   * @retval false 拡張秘密鍵ではない
+   */
+  static bool IsExtPrivkey(const std::string& extkey);
+  /**
+   * @brief 指定networkにおける拡張鍵のversion値を取得する.
+   * @param[in] key_type          extended key type
+   * @param[in] net_type          network type
+   * @return version information
+   */
+  static uint32_t GetExtkeyVersion(ExtKeyType key_type, NetType net_type);
 };
+
 }  // namespace api
 }  // namespace cfd
+
 #endif  // CFD_INCLUDE_CFD_CFDAPI_HDWALLET_H_
