@@ -117,4 +117,5 @@ class TransactionApiBase {
 
 }  // namespace api
 }  // namespace cfd
+
 #endif  // CFD_SRC_CFDAPI_TRANSACTION_BASE_H_
