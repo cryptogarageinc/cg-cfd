@@ -28,6 +28,9 @@ using cfd::core::GetElementsAddressFormatList;
 using cfd::core::Pubkey;
 using cfd::core::Script;
 using cfd::core::ScriptUtil;
+using cfd::core::NetType;
+using cfd::core::AddressFormatData;
+using cfd::core::WitnessVersion;
 
 ElementsAddressFactory::ElementsAddressFactory()
     : AddressFactory(NetType::kMainnet, GetElementsAddressFormatList()) {

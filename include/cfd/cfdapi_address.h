@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "cfd/cfd_common.h"
-#include "cfd/cfdapi_struct.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_key.h"
 
@@ -74,60 +73,6 @@ class CFD_EXPORT AddressApi {
 };
 
 }  // namespace api
-}  // namespace cfd
-
-/**
- * @brief cfdapi名前空間
- */
-namespace cfd {
-namespace js {
-namespace api {
-
-using cfd::core::AddressType;
-
-/**
- * @brief Address関連の関数群クラス
- */
-class CFD_EXPORT AddressStructApi {
- public:
-  /**
-   * @brief JSONパラメータの情報を元に、Addressを作成する
-   * @param[in] request Addressを構築するパラメータ
-   * @return Addressのhexデータを格納した構造体
-   */
-  static CreateAddressResponseStruct CreateAddress(
-      const CreateAddressRequestStruct& request);
-
-  /**
-   * @brief JSONパラメータの情報を元に、Multisigを作成する
-   * @param[in] request Multisigを構築するパラメータ
-   * @return MultisigAddressとredeem scriptのhexデータを格納した構造体
-   */
-  static CreateMultisigResponseStruct CreateMultisig(
-      const CreateMultisigRequestStruct& request);
-
-  /**
-   * @brief bitcoinネットワーク文字列を、NetType構造体へ変換する.
-   * @param[in] network_type ネットワーク文字列
-   * @return 引数に対応するNetType構造体
-   * @throws CfdException 指定文字列以外が渡された場合
-   */
-  static cfd::core::NetType ConvertNetType(const std::string& network_type);
-
-  /**
-   * @brief Convert address type from string to AddressType.
-   * @param[in] address_type the address type as a string.
-   * @return the converted AddressType.
-   * @throws CfdException if address_type does not match any known AddressType.
-   */
-  static AddressType ConvertAddressType(const std::string& address_type);
-
- private:
-  AddressStructApi();
-};
-
-}  // namespace api
-}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_INCLUDE_CFD_CFDAPI_ADDRESS_H_
