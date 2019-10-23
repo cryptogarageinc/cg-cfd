@@ -37,4 +37,3 @@ Privkey KeyApi::CreateKeyPair(
 
 }  // namespace api
 }  // namespace cfd
-
