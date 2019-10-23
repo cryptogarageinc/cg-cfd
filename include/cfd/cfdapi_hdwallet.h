@@ -39,7 +39,7 @@ class CFD_EXPORT HDWalletApi {
   /**
    * @brief コンストラクタ.
    */
-  HDWalletApi(){};
+  HDWalletApi() {}
 
   /**
    * @brief BIP39 で利用できる wordlist を取得するAPI.
