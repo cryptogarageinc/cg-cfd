@@ -45,5 +45,4 @@ class CFD_EXPORT KeyApi {
 }  // namespace api
 }  // namespace cfd
 
-
 #endif  // CFD_INCLUDE_CFD_CFDAPI_KEY_H_
