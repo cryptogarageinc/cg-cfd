@@ -130,6 +130,8 @@ std::string HDWalletApi::CreateExtkeyFromParent(
 std::string HDWalletApi::CreateExtkeyFromParentPath(
     const std::string& extkey, NetType net_type, ExtKeyType output_key_type,
     const std::vector<uint32_t>& child_number_list) const {
+  static const std::string kBase58Error = " base58 decode error";
+  static const std::string kKeyTypeError = "keytype error.";
   std::string result;
   uint32_t check_version;
   uint32_t version;
@@ -144,8 +146,12 @@ std::string HDWalletApi::CreateExtkeyFromParentPath(
   ExtPubkey pubkey;
   try {
     privkey = ExtPrivkey(extkey);
-  } catch (...) {
-    // fail
+  } catch (const CfdException& except) {
+    std::string errmsg(except.what());
+    if ((errmsg.find(kBase58Error) == std::string::npos) &&
+        (errmsg.find(kKeyTypeError) == std::string::npos)) {
+      throw except;
+    }
   }
 
   if (privkey.IsValid()) {
@@ -160,11 +166,15 @@ std::string HDWalletApi::CreateExtkeyFromParentPath(
   } else {
     try {
       pubkey = ExtPubkey(extkey);
-    } catch (...) {
-      warn(CFD_LOG_SOURCE, "Illegal extkey. base58 decode error.");
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Illegal extkey. base58 decode error.");
+    } catch (const CfdException& pub_except) {
+      std::string errmsg(pub_except.what());
+      if (errmsg.find(kBase58Error) != std::string::npos) {
+        warn(CFD_LOG_SOURCE, "Illegal extkey. base58 decode error.");
+        throw CfdException(
+            CfdError::kCfdIllegalArgumentError,
+            "Illegal extkey. base58 decode error.");
+      }
+      throw pub_except;
     }
 
     if (output_key_type == ExtKeyType::kExtPrivkey) {
