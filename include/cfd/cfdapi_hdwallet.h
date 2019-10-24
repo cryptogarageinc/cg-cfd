@@ -122,13 +122,6 @@ class CFD_EXPORT HDWalletApi {
 
  private:
   /**
-   * @brief 拡張秘密鍵かどうかを判定する.
-   * @param[in] extkey            extended key
-   * @retval true  拡張秘密鍵である
-   * @retval false 拡張秘密鍵ではない
-   */
-  static bool IsExtPrivkey(const std::string& extkey);
-  /**
    * @brief 指定networkにおける拡張鍵のversion値を取得する.
    * @param[in] key_type          extended key type
    * @param[in] net_type          network type
