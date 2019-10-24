@@ -130,8 +130,8 @@ std::string HDWalletApi::CreateExtkeyFromParent(
 std::string HDWalletApi::CreateExtkeyFromParentPath(
     const std::string& extkey, NetType net_type, ExtKeyType output_key_type,
     const std::vector<uint32_t>& child_number_list) const {
-  static const std::string kBase58Error = " base58 decode error";
-  static const std::string kKeyTypeError = "keytype error.";
+  static const std::string kBase58Error = " base58 decode error.";
+  static const std::string kKeyTypeError = " keytype error.";
   std::string result;
   uint32_t check_version;
   uint32_t version;
