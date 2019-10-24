@@ -31,6 +31,11 @@ using cfd::core::Privkey;
 using cfd::core::Pubkey;
 using cfd::core::logger::warn;
 
+/// base58 error message
+static const std::string kBase58Error = " base58 decode error.";
+/// key type error message
+static const std::string kKeyTypeError = " keytype error.";
+
 std::vector<std::string> HDWalletApi::GetMnemonicWordlist(
     const std::string& language) const {
   try {
@@ -132,8 +137,6 @@ std::string HDWalletApi::CreateExtkeyFromParent(
 std::string HDWalletApi::CreateExtkeyFromParentPath(
     const std::string& extkey, NetType net_type, ExtKeyType output_key_type,
     const std::vector<uint32_t>& child_number_list) const {
-  static const std::string kBase58Error = " base58 decode error.";
-  static const std::string kKeyTypeError = " keytype error.";
   std::string result;
   uint32_t check_version;
   uint32_t version;
@@ -248,14 +251,36 @@ std::string HDWalletApi::GetPrivkeyFromExtkey(
 std::string HDWalletApi::GetPubkeyFromExtkey(
     const std::string& extkey, NetType net_type) const {
   std::string result;
+  ExtPrivkey ext_privkey;
   ExtPubkey ext_pubkey;
 
-  if (IsExtPrivkey(extkey)) {
-    ExtPrivkey ext_privkey(extkey);
+  try {
+    ext_privkey = ExtPrivkey(extkey);
+  } catch (const CfdException& except) {
+    std::string errmsg(except.what());
+    if ((errmsg.find(kBase58Error) == std::string::npos) &&
+        (errmsg.find(kKeyTypeError) == std::string::npos)) {
+      throw except;
+    }
+  }
+
+  if (ext_privkey.IsValid()) {
     ext_pubkey = ext_privkey.GetExtPubkey();
   } else {
-    ext_pubkey = ExtPubkey(extkey);
+    try {
+      ext_pubkey = ExtPubkey(extkey);
+    } catch (const CfdException& pub_except) {
+      std::string errmsg(pub_except.what());
+      if (errmsg.find(kBase58Error) != std::string::npos) {
+        warn(CFD_LOG_SOURCE, "Illegal extkey. base58 decode error.");
+        throw CfdException(
+            CfdError::kCfdIllegalArgumentError,
+            "Illegal extkey. base58 decode error.");
+      }
+      throw pub_except;
+    }
   }
+
   uint32_t version = ext_pubkey.GetVersion();
   uint32_t check_version = GetExtkeyVersion(ExtKeyType::kExtPubkey, net_type);
   if (version != check_version) {
@@ -264,39 +289,6 @@ std::string HDWalletApi::GetPubkeyFromExtkey(
         CfdError::kCfdIllegalArgumentError, "extkey networkType unmatch.");
   }
   return ext_pubkey.GetPubkey().GetHex();
-}
-
-std::string HDWalletApi::GetPubkeyFromPrivkey(
-    const std::string& privkey, bool is_compressed) const {
-  Privkey key;
-  try {
-    key = Privkey::FromWif(privkey, NetType::kMainnet, is_compressed);
-  } catch (...) {
-    // do nothing
-  }
-  if (key.IsInvalid()) {
-    try {
-      key = Privkey::FromWif(privkey, NetType::kTestnet, is_compressed);
-    } catch (...) {
-      // do nothing
-    }
-  }
-  if (key.IsInvalid()) {
-    key = Privkey(privkey);
-  }
-
-  return key.GeneratePubkey(is_compressed).GetHex();
-}
-
-bool HDWalletApi::IsExtPrivkey(const std::string& extkey) {
-  bool is_privkey = false;
-  try {
-    ExtPrivkey privkey(extkey);
-    is_privkey = privkey.IsValid();
-  } catch (...) {
-    // fail
-  }
-  return is_privkey;
 }
 
 uint32_t HDWalletApi::GetExtkeyVersion(ExtKeyType key_type, NetType net_type) {
