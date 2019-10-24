@@ -27,6 +27,8 @@ using cfd::core::CfdException;
 using cfd::core::ExtPrivkey;
 using cfd::core::ExtPubkey;
 using cfd::core::HDWallet;
+using cfd::core::Privkey;
+using cfd::core::Pubkey;
 using cfd::core::logger::warn;
 
 std::vector<std::string> HDWalletApi::GetMnemonicWordlist(
@@ -211,10 +213,7 @@ std::string HDWalletApi::CreateExtkeyFromParentPath(
 std::string HDWalletApi::CreateExtPubkey(
     const std::string& extkey, NetType net_type) const {
   ExtPrivkey privkey(extkey);
-  uint32_t check_version = ExtPrivkey::kVersionTestnetPrivkey;
-  if ((net_type == NetType::kMainnet) || (net_type == NetType::kLiquidV1)) {
-    check_version = ExtPrivkey::kVersionMainnetPrivkey;
-  }
+  uint32_t check_version = GetExtkeyVersion(ExtKeyType::kExtPrivkey, net_type);
   if (privkey.GetVersion() != check_version) {
     warn(
         CFD_LOG_SOURCE, "Version unmatch. key version: {}",
@@ -223,6 +222,81 @@ std::string HDWalletApi::CreateExtPubkey(
         CfdError::kCfdIllegalArgumentError, "extkey networkType unmatch.");
   }
   return privkey.GetExtPubkey().ToString();
+}
+
+std::string HDWalletApi::GetPrivkeyFromExtkey(
+    const std::string& extkey, NetType net_type, bool wif,
+    bool is_compressed) const {
+  ExtPrivkey ext_privkey(extkey);
+  uint32_t check_version = GetExtkeyVersion(ExtKeyType::kExtPrivkey, net_type);
+  if (ext_privkey.GetVersion() != check_version) {
+    warn(
+        CFD_LOG_SOURCE, "Version unmatch. key version: {}",
+        ext_privkey.GetVersion());
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError, "extkey networkType unmatch.");
+  }
+
+  Privkey privkey = ext_privkey.GetPrivkey();
+  if (wif) {
+    return privkey.ConvertWif(net_type, is_compressed);
+  } else {
+    return privkey.GetHex();
+  }
+}
+
+std::string HDWalletApi::GetPubkeyFromExtkey(
+    const std::string& extkey, NetType net_type) const {
+  std::string result;
+  ExtPubkey ext_pubkey;
+
+  if (IsExtPrivkey(extkey)) {
+    ExtPrivkey ext_privkey(extkey);
+    ext_pubkey = ext_privkey.GetExtPubkey();
+  } else {
+    ext_pubkey = ExtPubkey(extkey);
+  }
+  uint32_t version = ext_pubkey.GetVersion();
+  uint32_t check_version = GetExtkeyVersion(ExtKeyType::kExtPubkey, net_type);
+  if (version != check_version) {
+    warn(CFD_LOG_SOURCE, "Version unmatch. key version: {}", version);
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError, "extkey networkType unmatch.");
+  }
+  return ext_pubkey.GetPubkey().GetHex();
+}
+
+std::string HDWalletApi::GetPubkeyFromPrivkey(
+    const std::string& privkey, bool is_compressed) const {
+  Privkey key;
+  try {
+    key = Privkey::FromWif(privkey, NetType::kMainnet, is_compressed);
+  } catch (...) {
+    // do nothing
+  }
+  if (key.IsInvalid()) {
+    try {
+      key = Privkey::FromWif(privkey, NetType::kTestnet, is_compressed);
+    } catch (...) {
+      // do nothing
+    }
+  }
+  if (key.IsInvalid()) {
+    key = Privkey(privkey);
+  }
+
+  return key.GeneratePubkey(is_compressed).GetHex();
+}
+
+bool HDWalletApi::IsExtPrivkey(const std::string& extkey) {
+  bool is_privkey = false;
+  try {
+    ExtPrivkey privkey(extkey);
+    is_privkey = privkey.IsValid();
+  } catch (...) {
+    // fail
+  }
+  return is_privkey;
 }
 
 uint32_t HDWalletApi::GetExtkeyVersion(ExtKeyType key_type, NetType net_type) {
