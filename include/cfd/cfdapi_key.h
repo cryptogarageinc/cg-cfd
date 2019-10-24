@@ -41,6 +41,15 @@ class CFD_EXPORT KeyApi {
   Privkey CreateKeyPair(
       bool is_compressed, Pubkey* pubkey, std::string* wif = nullptr,
       NetType net_type = NetType::kMainnet);
+
+  /**
+   * @brief 秘密鍵から公開鍵を取得する.
+   * @param[in] privkey           private key (WIF or hex)
+   * @param[in] is_compressed     key compressed flag (for WIF format)
+   * @return pubkey
+   */
+  std::string GetPubkeyFromPrivkey(
+      const std::string& privkey, bool is_compressed = true) const;
 };
 }  // namespace api
 }  // namespace cfd
