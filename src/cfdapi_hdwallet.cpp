@@ -32,9 +32,9 @@ using cfd::core::Pubkey;
 using cfd::core::logger::warn;
 
 /// base58 error message
-static const std::string kBase58Error = " base58 decode error.";
+static constexpr const char* kBase58Error = " base58 decode error.";
 /// key type error message
-static const std::string kKeyTypeError = " keytype error.";
+static constexpr const char* kKeyTypeError = " keytype error.";
 
 std::vector<std::string> HDWalletApi::GetMnemonicWordlist(
     const std::string& language) const {
