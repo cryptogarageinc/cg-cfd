@@ -132,6 +132,8 @@ std::string HDWalletApi::CreateExtkeyFromParent(
 std::string HDWalletApi::CreateExtkeyFromParentPath(
     const std::string& extkey, NetType net_type, ExtKeyType output_key_type,
     const std::vector<uint32_t>& child_number_list) const {
+  static const std::string kBase58Error = " base58 decode error.";
+  static const std::string kKeyTypeError = " keytype error.";
   std::string result;
   uint32_t check_version;
   uint32_t version;
@@ -142,8 +144,19 @@ std::string HDWalletApi::CreateExtkeyFromParentPath(
         CfdError::kCfdIllegalArgumentError, "child_number_list empty.");
   }
 
-  if (IsExtPrivkey(extkey)) {
-    ExtPrivkey privkey(extkey);
+  ExtPrivkey privkey;
+  ExtPubkey pubkey;
+  try {
+    privkey = ExtPrivkey(extkey);
+  } catch (const CfdException& except) {
+    std::string errmsg(except.what());
+    if ((errmsg.find(kBase58Error) == std::string::npos) &&
+        (errmsg.find(kKeyTypeError) == std::string::npos)) {
+      throw except;
+    }
+  }
+
+  if (privkey.IsValid()) {
     if (output_key_type == ExtKeyType::kExtPrivkey) {
       result = privkey.DerivePrivkey(child_number_list).ToString();
     } else {
@@ -152,15 +165,28 @@ std::string HDWalletApi::CreateExtkeyFromParentPath(
     version = privkey.GetVersion();
     check_version = GetExtkeyVersion(ExtKeyType::kExtPrivkey, net_type);
 
-  } else if (output_key_type == ExtKeyType::kExtPrivkey) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Illegal output_key_type. Cannot create privkey from pubkey.");
-    throw CfdException(
-        CfdError::kCfdIllegalArgumentError,
-        "Illegal output_key_type. Cannot create privkey from pubkey.");
-
   } else {
+    try {
+      pubkey = ExtPubkey(extkey);
+    } catch (const CfdException& pub_except) {
+      std::string errmsg(pub_except.what());
+      if (errmsg.find(kBase58Error) != std::string::npos) {
+        warn(CFD_LOG_SOURCE, "Illegal extkey. base58 decode error.");
+        throw CfdException(
+            CfdError::kCfdIllegalArgumentError,
+            "Illegal extkey. base58 decode error.");
+      }
+      throw pub_except;
+    }
+
+    if (output_key_type == ExtKeyType::kExtPrivkey) {
+      warn(
+          CFD_LOG_SOURCE,
+          "Illegal output_key_type. Cannot create privkey from pubkey.");
+      throw CfdException(
+          CfdError::kCfdIllegalArgumentError,
+          "Illegal output_key_type. Cannot create privkey from pubkey.");
+    }
     for (const uint32_t child_num : child_number_list) {
       // libwallyでもエラー検知されるが、エラーを把握しやすくするため確認
       if ((child_num & ExtPrivkey::kHardenedKey) != 0) {
@@ -171,7 +197,6 @@ std::string HDWalletApi::CreateExtkeyFromParentPath(
             "Illegal child_number. Hardened is privkey only.");
       }
     }
-    ExtPubkey pubkey(extkey);
     result = pubkey.DerivePubkey(child_number_list).ToString();
     version = pubkey.GetVersion();
     check_version = GetExtkeyVersion(ExtKeyType::kExtPubkey, net_type);
