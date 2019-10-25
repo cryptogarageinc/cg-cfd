@@ -1140,7 +1140,8 @@ class FileInfo(object):
           one_up_dir = os.path.dirname(one_up_dir)
 
         prefix = os.path.commonprefix([root_dir, project_dir])
-        return fullname[len(prefix) + 1:]
+        sep_len = 0 if(prefix[-1:] == "/") else 1
+        return fullname[len(prefix) + sep_len:]
 
       # Not SVN <= 1.6? Try to find a git, hg, or svn top level directory by
       # searching up from the current path.
@@ -1156,9 +1157,14 @@ class FileInfo(object):
           os.path.exists(os.path.join(root_dir, ".hg")) or
           os.path.exists(os.path.join(root_dir, ".svn"))):
         prefix = os.path.commonprefix([root_dir + '/external', project_dir])
+        prefix2 = os.path.commonprefix([root_dir, project_dir])
         # sys.stderr.write('[%s]\n' % (prefix))
         # prefix = os.path.commonprefix([root_dir, project_dir])
-        return fullname[len(prefix) + 1:]
+        if(prefix[-1:] == "/"):   prefix = prefix[:-1]
+        if(prefix2[-1:] == "/"):  prefix2 = prefix2[:-1]
+        if (prefix == prefix2):   prefix = '/'.join(prefix2.split('/')[0:-1])
+        sep_len = 0 if(prefix[-1:] == "/") else 1
+        return fullname[len(prefix) + sep_len:]
 
     # Don't know what to do; header guard warnings may be wrong...
     return fullname
@@ -1246,18 +1252,20 @@ def Error(filename, linenum, category, confidence, message):
   """
   if _ShouldPrintError(category, confidence, linenum):
     _cpplint_state.IncrementErrorCount(category)
+    errstr = ''
     if _cpplint_state.output_format == 'vs7':
       # sys.stderr.write('%s(%s): error cpplint: [%s] %s [%d]\n' % (
-      print('%s(%s): error cpplint: [%s] %s [%d]' % (
-          filename, linenum, category, message, confidence))
+      errstr = '%s(%s): error cpplint: [%s] %s [%d]\n' % (filename, linenum, category, message, confidence)
     elif _cpplint_state.output_format == 'eclipse':
       # sys.stderr.write('%s:%s: warning: %s  [%s] [%d]\n' % (
-      print('%s:%s: warning: %s  [%s] [%d]' % (
-          filename, linenum, message, category, confidence))
+      errstr = '%s:%s: warning: %s  [%s] [%d]\n' % (filename, linenum, category, message, confidence)
     else:
       # sys.stderr.write('%s:%s:  %s  [%s] [%d]\n' % (
-      print('%s:%s:  %s  [%s] [%d]' % (
-          filename, linenum, message, category, confidence))
+      errstr = '%s:%s:  %s  [%s] [%d]\n' % (filename, linenum, category, message, confidence)
+    try:
+      sys.stderr.write(errstr)
+    except:
+      sys.stderr.buffer.write(errstr.encode('utf-8'))   # python3
 
 
 # Matches standard C++ escape sequences per 2.13.2.3 of the C++ standard.

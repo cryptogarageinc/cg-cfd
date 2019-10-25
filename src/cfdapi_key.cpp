@@ -8,15 +8,21 @@
 
 #include "cfd/cfdapi_address.h"
 #include "cfdcore/cfdcore_bytedata.h"
+#include "cfdcore/cfdcore_exception.h"
 #include "cfdcore/cfdcore_key.h"
 #include "cfdcore/cfdcore_transaction_common.h"
 
 #include "cfd/cfd_common.h"
 #include "cfd/cfdapi_key.h"
-#include "cfdapi_internal.h"  // NOLINT
 
 namespace cfd {
 namespace api {
+
+using cfd::core::ByteData;
+using cfd::core::CfdError;
+using cfd::core::CfdException;
+using cfd::core::NetType;
+using cfd::core::Privkey;
 
 Privkey KeyApi::CreateKeyPair(
     bool is_compressed, Pubkey* pubkey, std::string* wif, NetType net_type) {
@@ -36,89 +42,34 @@ Privkey KeyApi::CreateKeyPair(
   return privkey;
 }
 
-}  // namespace api
-}  // namespace cfd
+std::string KeyApi::GetPubkeyFromPrivkey(
+    const std::string& privkey, bool is_compressed) const {
+  static const std::string kWifError = "Error WIF to Private key.";
+  Privkey key;
 
-namespace cfd {
-namespace js {
-namespace api {
-
-using cfd::api::KeyApi;
-using cfd::core::ByteData;
-using cfd::core::ByteData256;
-using cfd::core::NetType;
-using cfd::core::Privkey;
-using cfd::core::Pubkey;
-using cfd::core::SignatureUtil;
-using cfd::js::api::AddressStructApi;
-
-CreateKeyPairResponseStruct KeyStructApi::CreateKeyPair(
-    const CreateKeyPairRequestStruct& request) {
-  auto call_func = [](const CreateKeyPairRequestStruct& request)
-      -> CreateKeyPairResponseStruct {  // NOLINT
-    CreateKeyPairResponseStruct response;
-
-    // generate random private key
-    const bool is_compressed = request.is_compressed;
-    const bool is_wif = request.wif;
-    Pubkey pubkey;
-    KeyApi api;
-    if (is_wif) {
-      const NetType net_type =
-          AddressStructApi::ConvertNetType(request.network);
-      std::string wif;
-      Privkey privkey =
-          api.CreateKeyPair(is_compressed, &pubkey, &wif, net_type);
-      response.privkey = wif;
-
-    } else {
-      Privkey privkey = api.CreateKeyPair(is_compressed, &pubkey);
-      response.privkey = privkey.GetHex();
+  try {
+    key = Privkey::FromWif(privkey, NetType::kMainnet, is_compressed);
+  } catch (const CfdException& except1) {
+    std::string errmsg(except1.what());
+    if (errmsg.find(kWifError) == std::string::npos) {
+      throw except1;
     }
-
-    response.pubkey = pubkey.GetHex();
-    return response;
-  };
-
-  CreateKeyPairResponseStruct result;
-  result = ExecuteStructApi<
-      CreateKeyPairRequestStruct, CreateKeyPairResponseStruct>(
-      request, call_func, std::string(__FUNCTION__));
-  return result;
-}
-
-CalculateEcSignatureResponseStruct KeyStructApi::CalculateEcSignature(
-    const CalculateEcSignatureRequestStruct& request) {
-  auto call_func = [](const CalculateEcSignatureRequestStruct& request)
-      -> CalculateEcSignatureResponseStruct {  // NOLINT
-    CalculateEcSignatureResponseStruct response;
-
-    std::string privkey_data = request.privkey_data.privkey;
-    const bool is_wif = request.privkey_data.wif;
-    const bool is_compressed = request.privkey_data.is_compressed;
-    Privkey privkey;
-    if (is_wif) {
-      const NetType net_type =
-          AddressStructApi::ConvertNetType(request.privkey_data.network);
-      privkey = Privkey::FromWif(privkey_data, net_type, is_compressed);
-
-    } else {
-      privkey = Privkey(privkey_data);
+  }
+  if (key.IsInvalid()) {
+    try {
+      key = Privkey::FromWif(privkey, NetType::kTestnet, is_compressed);
+    } catch (const CfdException& except2) {
+      std::string errmsg(except2.what());
+      if (errmsg.find(kWifError) == std::string::npos) {
+        throw except2;
+      }
     }
-    ByteData data = SignatureUtil::CalculateEcSignature(
-        ByteData256(request.sighash), privkey, request.is_grind_r);
-
-    response.signature = data.GetHex();
-    return response;
-  };
-
-  CalculateEcSignatureResponseStruct result;
-  result = ExecuteStructApi<
-      CalculateEcSignatureRequestStruct, CalculateEcSignatureResponseStruct>(
-      request, call_func, std::string(__FUNCTION__));
-  return result;
+  }
+  if (key.IsInvalid()) {
+    key = Privkey(ByteData(privkey));
+  }
+  return key.GeneratePubkey(is_compressed).GetHex();
 }
 
 }  // namespace api
-}  // namespace js
 }  // namespace cfd

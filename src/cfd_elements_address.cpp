@@ -19,15 +19,18 @@
 namespace cfd {
 
 using cfd::core::Address;
+using cfd::core::AddressFormatData;
 using cfd::core::ConfidentialKey;
 using cfd::core::ContractHashUtil;
 using cfd::core::ElementsAddressType;
 using cfd::core::ElementsConfidentialAddress;
 using cfd::core::ElementsNetType;
 using cfd::core::GetElementsAddressFormatList;
+using cfd::core::NetType;
 using cfd::core::Pubkey;
 using cfd::core::Script;
 using cfd::core::ScriptUtil;
+using cfd::core::WitnessVersion;
 
 ElementsAddressFactory::ElementsAddressFactory()
     : AddressFactory(NetType::kMainnet, GetElementsAddressFormatList()) {

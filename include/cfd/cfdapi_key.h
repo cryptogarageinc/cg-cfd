@@ -12,7 +12,6 @@
 #include <string>
 
 #include "cfd/cfd_common.h"
-#include "cfd/cfdapi_struct.h"
 
 namespace cfd {
 namespace api {
@@ -42,44 +41,17 @@ class CFD_EXPORT KeyApi {
   Privkey CreateKeyPair(
       bool is_compressed, Pubkey* pubkey, std::string* wif = nullptr,
       NetType net_type = NetType::kMainnet);
-};
-}  // namespace api
-}  // namespace cfd
-
-/**
- * @brief cfdapi名前空間
- */
-namespace cfd {
-namespace js {
-namespace api {
-
-/**
- * @brief 鍵情報関連の関数群クラス
- */
-class CFD_EXPORT KeyStructApi {
- public:
-  /**
-   * @brief 秘密鍵と公開鍵のペアを生成する.
-   * @param[in] request key pairを構築するパラメータ
-   * @return privkeyとpubkeyのデータを格納した構造体
-   */
-  static CreateKeyPairResponseStruct CreateKeyPair(
-      const CreateKeyPairRequestStruct& request);
 
   /**
-   * @brief ec signatureを生成する.
-   * @param[in] request ec signatureを計算するためのパラメータ
-   * @return ec signature
+   * @brief 秘密鍵から公開鍵を取得する.
+   * @param[in] privkey           private key (WIF or hex)
+   * @param[in] is_compressed     key compressed flag (for WIF format)
+   * @return pubkey
    */
-  static CalculateEcSignatureResponseStruct CalculateEcSignature(
-      const CalculateEcSignatureRequestStruct& request);
-
- private:
-  KeyStructApi();
+  std::string GetPubkeyFromPrivkey(
+      const std::string& privkey, bool is_compressed = true) const;
 };
-
 }  // namespace api
-}  // namespace js
 }  // namespace cfd
 
 #endif  // CFD_INCLUDE_CFD_CFDAPI_KEY_H_
