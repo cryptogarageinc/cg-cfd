@@ -1252,18 +1252,20 @@ def Error(filename, linenum, category, confidence, message):
   """
   if _ShouldPrintError(category, confidence, linenum):
     _cpplint_state.IncrementErrorCount(category)
+    errstr = ''
     if _cpplint_state.output_format == 'vs7':
       # sys.stderr.write('%s(%s): error cpplint: [%s] %s [%d]\n' % (
-      print('%s(%s): error cpplint: [%s] %s [%d]' % (
-          filename, linenum, category, message, confidence))
+      errstr = '%s(%s): error cpplint: [%s] %s [%d]\n' % (filename, linenum, category, message, confidence)
     elif _cpplint_state.output_format == 'eclipse':
       # sys.stderr.write('%s:%s: warning: %s  [%s] [%d]\n' % (
-      print('%s:%s: warning: %s  [%s] [%d]' % (
-          filename, linenum, message, category, confidence))
+      errstr = '%s:%s: warning: %s  [%s] [%d]\n' % (filename, linenum, category, message, confidence)
     else:
       # sys.stderr.write('%s:%s:  %s  [%s] [%d]\n' % (
-      print('%s:%s:  %s  [%s] [%d]' % (
-          filename, linenum, message, category, confidence))
+      errstr = '%s:%s:  %s  [%s] [%d]\n' % (filename, linenum, category, message, confidence)
+    try:
+      sys.stderr.write(errstr)
+    except:
+      sys.stderr.buffer.write(errstr.encode('utf-8'))   # python3
 
 
 # Matches standard C++ escape sequences per 2.13.2.3 of the C++ standard.
