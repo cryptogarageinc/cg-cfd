@@ -13,7 +13,7 @@ if(CFDCORE_TARGET_VERSION)
 set(CFDCORE_TARGET_TAG  ${CFDCORE_TARGET_VERSION})
 message(STATUS "[external project debug] cfd-core target=${CFDCORE_TARGET_VERSION}")
 else()
-set(CFDCORE_TARGET_TAG  v0.0.7)
+set(CFDCORE_TARGET_TAG  v0.0.8)
 endif()
 
 set(TEMPLATE_PROJECT_NAME           cfd-core)
