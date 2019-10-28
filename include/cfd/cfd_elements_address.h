@@ -30,6 +30,7 @@ using cfd::core::NetType;
 using cfd::core::Pubkey;
 using cfd::core::Script;
 using cfd::core::WitnessVersion;
+using cfd::core::AddressFormatData;
 
 /**
  * @brief Elements用Addressを生成するFactoryクラス
