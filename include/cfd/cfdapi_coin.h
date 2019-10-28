@@ -39,10 +39,9 @@ class CFD_EXPORT CoinApi {
    * @brief constructor
    */
   CoinApi() {}
-
 };
 
 }  // namespace api
 }  // namespace cfd
 
-#endif  // CFD_INCLUDE_CFD_CFDAPI_COINSELECTION_H_
+#endif  // CFD_INCLUDE_CFD_CFDAPI_COIN_H_

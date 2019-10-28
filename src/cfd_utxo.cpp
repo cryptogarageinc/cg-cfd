@@ -23,13 +23,11 @@ using cfd::core::ConfidentialAssetId;
 // -----------------------------------------------------------------------------
 // CoinSelectionOption
 // -----------------------------------------------------------------------------
-CoinSelectionOption() {
+CoinSelectionOption::CoinSelectionOption() {
   // do nothing
 }
 
-bool CoinSelectionOption::IsUseBnB() const {
-  return use_bnb_;
-}
+bool CoinSelectionOption::IsUseBnB() const { return use_bnb_; }
 
 size_t CoinSelectionOption::GetChangeOutputSize() const {
   return change_output_size_;
@@ -47,9 +45,7 @@ size_t CoinSelectionOption::GetTxNoInputsSize() const {
   return tx_noinputs_size_;
 }
 
-void CoinSelectionOption::SetUseBnB(bool use_bnb) {
-  use_bnb_ = use_bnb;
-}
+void CoinSelectionOption::SetUseBnB(bool use_bnb) { use_bnb_ = use_bnb; }
 
 void CoinSelectionOption::SetChangeOutputSize(size_t size) {
   change_output_size_ = size;
@@ -77,7 +73,6 @@ void CoinSelectionOption::SetFeeAsset(const ConfidentialAssetId& asset) {
 }
 #endif  // CFD_DISABLE_ELEMENTS
 
-
 // -----------------------------------------------------------------------------
 // CoinSelection
 // -----------------------------------------------------------------------------
@@ -89,23 +84,25 @@ CoinSelection::CoinSelection(bool use_bnb) : use_bnb_(use_bnb) {
   // do nothing
 }
 
-std::vector<Utxo> CoinSelection::SelectCoinsMinConf(const Amount& target_value,
-    const std::vector<Utxo>& utxos, const UtxoFilter& filter,
-    const CoinSelectionOption& option_params,
+std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
+    const Amount& target_value, const std::vector<Utxo>& utxos,
+    const UtxoFilter& filter, const CoinSelectionOption& option_params,
     Amount* select_value = nullptr, Amount* fee_value = nullptr) const {
   // FIXME
   return std::vector<Utxo>();
 }
 
-std::vector<Utxo> SelectCoinsBnB(const Amount& target_value, const std::vector<Utxo>& utxos,
+std::vector<Utxo> CoinSelection::SelectCoinsBnB(
+    const Amount& target_value, const std::vector<Utxo>& utxos,
     const Amount& cost_of_change, const Amount& not_input_fees,
-    Amount* select_value) {
+    Amount* select_value) const {
   // FIXME
   return std::vector<Utxo>();
 }
 
-std::vector<Utxo> KnapsackSolver(const Amount& target_value, const std::vector<Utxo>& utxos,
-    Amount* select_value) {
+std::vector<Utxo> CoinSelection::KnapsackSolver(
+    const Amount& target_value, const std::vector<Utxo>& utxos,
+    Amount* select_value) const {
   // FIXME
   return std::vector<Utxo>();
 }

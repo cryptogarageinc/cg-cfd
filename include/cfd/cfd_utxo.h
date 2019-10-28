@@ -21,11 +21,11 @@
 
 namespace cfd {
 
+using cfd::core::Address;
 using cfd::core::Amount;
 using cfd::core::BlockHash;
-using cfd::core::Txid;
 using cfd::core::Script;
-using cfd::core::Address;
+using cfd::core::Txid;
 #ifndef CFD_DISABLE_ELEMENTS
 using cfd::core::ConfidentialAssetId;
 #endif  // CFD_DISABLE_ELEMENTS
@@ -34,28 +34,28 @@ using cfd::core::ConfidentialAssetId;
  * @brief UTXO構造体
  */
 struct Utxo {
-  uint64_t block_height;    //<! blick高
-  std::string block_hash;   //<! block hash
-  std::string txid;         //<! txid
-  uint32_t vout;            //<! vout
-  std::string script;       //<! script
-  std::string address;      //<! address
-  std::string descriptor;   //<! output descriptor
-  uint64_t amount;          //<! amount
+  uint64_t block_height;   //!< blick高
+  std::string block_hash;  //!< block hash
+  std::string txid;        //!< txid
+  uint32_t vout;           //!< vout
+  std::string script;      //!< script
+  std::string address;     //!< address
+  std::string descriptor;  //!< output descriptor
+  uint64_t amount;         //!< amount
 #ifndef CFD_DISABLE_ELEMENTS
-  std::string asset;                  //<! asset
-#endif  // CFD_DISABLE_ELEMENTS
+  std::string asset;  //!< asset
+#endif                // CFD_DISABLE_ELEMENTS
 #if 0
-  int32_t status;           //<! utxo status (reserved)
+  int32_t status;           //!< utxo status (reserved)
   // elements
   std::string confidential_address;   //!< Confidential address
-  std::string asset_blind_factor;     //<! asset blind factor
-  std::string amount_blind_factor;    //<! blind vactor
+  std::string asset_blind_factor;     //!< asset blind factor
+  std::string amount_blind_factor;    //!< blind vactor
 #endif  // if 0
   // calculate
-  uint64_t effective_value;   //<! amountからfeeを除外した有効額
-  uint64_t fee;               //<! fee
-  uint64_t long_term_fee;     //<! 長期間後のfee
+  uint64_t effective_value;  //!< amountからfeeを除外した有効額
+  uint64_t fee;              //!< fee
+  uint64_t long_term_fee;    //!< 長期間後のfee
 };
 
 /**
@@ -64,15 +64,14 @@ struct Utxo {
 struct UtxoFilter {
 #ifndef CFD_DISABLE_ELEMENTS
   std::string include_asset;  //!< 利用するasset
-#endif  // CFD_DISABLE_ELEMENTS
-  uint32_t reserved;    //!< 予約領域
+#endif                        // CFD_DISABLE_ELEMENTS
+  uint32_t reserved;          //!< 予約領域
 };
 
 /**
  * @brief CoinSelectionのオプション情報を保持するクラス
  */
-class CFD_EXPORT CoinSelectionOption
-{
+class CFD_EXPORT CoinSelectionOption {
  public:
   /**
    * @brief コンストラクタ
@@ -108,7 +107,7 @@ class CFD_EXPORT CoinSelectionOption
 
   /**
    * @brief BnB 使用フラグを設定します.
-   * @param[in] asset   BnB 使用フラグ
+   * @param[in] use_bnb   BnB 使用フラグ
    */
   void SetUseBnB(bool use_bnb);
   /**
@@ -148,9 +147,9 @@ class CFD_EXPORT CoinSelectionOption
 #endif  // CFD_DISABLE_ELEMENTS
 
  private:
-  bool use_bnb_ = true;            //!< BnB 使用フラグ
-  size_t change_output_size_ = 0;  //!< 出力変更サイズ
-  size_t change_spend_size_ = 0;   //!< 受入変更サイズ
+  bool use_bnb_ = true;                  //!< BnB 使用フラグ
+  size_t change_output_size_ = 0;        //!< 出力変更サイズ
+  size_t change_spend_size_ = 0;         //!< 受入変更サイズ
   uint64_t effective_fee_baserate_ = 0;  //!< feeのbaserate
   /**
    * @brief txのTxIn除外時のサイズ.
@@ -159,7 +158,7 @@ class CFD_EXPORT CoinSelectionOption
   size_t tx_noinputs_size_ = 0;
 #ifndef CFD_DISABLE_ELEMENTS
   ConfidentialAssetId fee_asset_;  //!< feeとして利用するasset
-#endif  // CFD_DISABLE_ELEMENTS
+#endif                             // CFD_DISABLE_ELEMENTS
 };
 
 /**
@@ -176,7 +175,7 @@ class CFD_EXPORT CoinSelection {
    * @brief コンストラクタ
    * @param[in] use_bnb
    */
-  CoinSelection(bool use_bnb);
+  explicit CoinSelection(bool use_bnb);
 
   /**
    * @brief 最小のCoinを選択する。
@@ -188,10 +187,10 @@ class CFD_EXPORT CoinSelection {
    * @param[out] fee_value      UTXO収集成功時、fee金額
    * @return UTXO一覧。空の場合はエラー終了。
    */
-  std::vector<Utxo> SelectCoinsMinConf(const Amount& target_value,
-    const std::vector<Utxo>& utxos, const UtxoFilter& filter,
-    const CoinSelectionOption& option_params,
-    Amount* select_value = nullptr, Amount* fee_value = nullptr) const;
+  std::vector<Utxo> SelectCoinsMinConf(
+      const Amount& target_value, const std::vector<Utxo>& utxos,
+      const UtxoFilter& filter, const CoinSelectionOption& option_params,
+      Amount* select_value = nullptr, Amount* fee_value = nullptr) const;
 
   /**
    * @brief CoinSelection(BnB)を実施する。
@@ -203,9 +202,10 @@ class CFD_EXPORT CoinSelection {
    * @param[out] select_value   UTXO収集成功時、合計収集額
    * @return UTXO一覧。空の場合はエラー終了。
    */
-  std::vector<Utxo> SelectCoinsBnB(const Amount& target_value, const std::vector<Utxo>& utxos,
-    const Amount& cost_of_change, const Amount& not_input_fees,
-    Amount* select_value);
+  std::vector<Utxo> SelectCoinsBnB(
+      const Amount& target_value, const std::vector<Utxo>& utxos,
+      const Amount& cost_of_change, const Amount& not_input_fees,
+      Amount* select_value) const;
 
   /**
    * @brief CoinSelection(KnapsackSolver)を実施する。
@@ -214,11 +214,12 @@ class CFD_EXPORT CoinSelection {
    * @param[out] select_value   UTXO収集成功時、合計収集額
    * @return UTXO一覧。空の場合はエラー終了。
    */
-  std::vector<Utxo> KnapsackSolver(const Amount& target_value, const std::vector<Utxo>& utxos,
-    Amount* select_value);
+  std::vector<Utxo> KnapsackSolver(
+      const Amount& target_value, const std::vector<Utxo>& utxos,
+      Amount* select_value) const;
 
  private:
-  bool use_bnb_;    //<! BnB 利用フラグ
+  bool use_bnb_;  //!< BnB 利用フラグ
 };
 
 }  // namespace cfd
