@@ -87,7 +87,8 @@ TEST(SignParameter, CopyConstructorTest)
       SignDataType::kBinary, Pubkey(), false, SigHashType(), expect_bytedata);
 
   // copy constructor
-  SignParameter copy = sign_parameter;
+  SignParameter copy;
+  copy = sign_parameter;
 
   CompareSignparameter(sign_parameter, copy.GetData(), copy.GetDataType(),
       copy.GetRelatedPubkey(), copy.IsDerEncode(), copy.GetSigHashType(),
@@ -105,7 +106,8 @@ TEST(SignParameter, RelatedPubkeyTest)
       Pubkey(), true, expect_sighashtype, expect_signature);
 
   // copy constructor
-  SignParameter copy = sign_parameter;
+  SignParameter copy;
+  copy = sign_parameter;
 
   // set related pubkey
   const Pubkey expect_related_pubkey("0369809d2cfc44f823249169f44bf9de20fc6ed1d88482540831289947f7e82af5");
