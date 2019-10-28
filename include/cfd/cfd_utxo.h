@@ -34,23 +34,22 @@ using cfd::core::ConfidentialAssetId;
  * @brief UTXO構造体
  */
 struct Utxo {
-  uint64_t block_height;   //!< blick高
-  std::string block_hash;  //!< block hash
-  std::string txid;        //!< txid
-  uint32_t vout;           //!< vout
-  std::string script;      //!< script
-  std::string address;     //!< address
-  std::string descriptor;  //!< output descriptor
-  uint64_t amount;         //!< amount
+  uint64_t block_height;     //!< blick高
+  uint8_t block_hash[32];    //!< block hash
+  uint8_t txid[32];          //!< txid
+  uint32_t vout;             //!< vout
+  uint32_t script_length;    //!< script length
+  AddressType address_type;  //!< address type
+  uint64_t amount;           //!< amount
 #ifndef CFD_DISABLE_ELEMENTS
-  std::string asset;  //!< asset
+  uint8_t asset[33];  //!< asset
 #endif                // CFD_DISABLE_ELEMENTS
 #if 0
   int32_t status;           //!< utxo status (reserved)
   // elements
-  std::string confidential_address;   //!< Confidential address
-  std::string asset_blind_factor;     //!< asset blind factor
-  std::string amount_blind_factor;    //!< blind vactor
+  uint8_t confidential_key[33];      //!< Confidential key
+  uint8_t asset_blind_factor[33];    //!< asset blind factor
+  uint8_t amount_blind_factor[33];   //!< blind vactor
 #endif  // if 0
   // calculate
   uint64_t effective_value;  //!< amountからfeeを除外した有効額

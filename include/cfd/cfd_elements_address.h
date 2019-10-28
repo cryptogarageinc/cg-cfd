@@ -22,6 +22,7 @@
 namespace cfd {
 
 using cfd::core::Address;
+using cfd::core::AddressFormatData;
 using cfd::core::AddressType;
 using cfd::core::ConfidentialKey;
 using cfd::core::ElementsConfidentialAddress;
@@ -30,7 +31,6 @@ using cfd::core::NetType;
 using cfd::core::Pubkey;
 using cfd::core::Script;
 using cfd::core::WitnessVersion;
-using cfd::core::AddressFormatData;
 
 /**
  * @brief Elements用Addressを生成するFactoryクラス
