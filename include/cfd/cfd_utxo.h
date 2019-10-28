@@ -26,7 +26,6 @@ using cfd::core::Txid;
 using cfd::core::Script;
 using cfd::core::Address;
 using cfd::core::BlindFactor;
-using cfd::core::ConfidentialAddress;
 using cfd::core::ConfidentialAssetId;
 
 /**
@@ -55,7 +54,7 @@ struct Utxo {
   uint64_t effective_value;   //<! amountからfeeを除外した有効額
   uint64_t fee;               //<! fee
   uint64_t long_term_fee;     //<! 長期間後のfee
-}
+};
 
 /**
  * @brief UTXOのフィルタリング条件を指定する。
@@ -68,12 +67,12 @@ struct UtxoFilter {
 };
 
 
-struct CoinSelectionOption
+class CoinSelectionOption
 {
  public:
-  bool use_bnb = true;            //!< 
-  size_t change_output_size = 0;  //!< 
-  size_t change_spend_size = 0;   //!< 
+  bool use_bnb = true;            //!<
+  size_t change_output_size = 0;  //!<
+  size_t change_spend_size = 0;   //!<
   uint64_t effective_fee_baserate = 0;  //!< feeのbaserate
   /**
    * @brief txのTxIn除外時のサイズ.
@@ -102,7 +101,7 @@ class CFD_EXPORT CoinSelection {
 
   /**
    * @brief コンストラクタ
-   * @param[in] use_bnb   
+   * @param[in] use_bnb
    */
   CoinSelection(bool use_bnb);
 
@@ -133,7 +132,7 @@ class CFD_EXPORT CoinSelection {
    */
   std::vector<Utxo> SelectCoinsBnB(const Amount& target_value, const std::vector<Utxo>& utxos,
     const Amount& cost_of_change, const Amount& not_input_fees,
-    CAmount* select_value);
+    Amount* select_value);
 
   /**
    * @brief CoinSelection(KnapsackSolver)を実施する。
