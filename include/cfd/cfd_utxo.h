@@ -29,7 +29,6 @@ using cfd::core::Script;
 using cfd::core::Address;
 #ifndef CFD_DISABLE_ELEMENTS
 using cfd::core::BlindFactor;
-using cfd::core::ConfidentialAddress;
 using cfd::core::ConfidentialAssetId;
 #endif  // CFD_DISABLE_ELEMENTS
 
@@ -59,7 +58,7 @@ struct Utxo {
   uint64_t effective_value;   //<! amountからfeeを除外した有効額
   uint64_t fee;               //<! fee
   uint64_t long_term_fee;     //<! 長期間後のfee
-}
+};
 
 /**
  * @brief UTXOのフィルタリング条件を指定する。
@@ -173,7 +172,7 @@ class CFD_EXPORT CoinSelection {
 
   /**
    * @brief コンストラクタ
-   * @param[in] use_bnb   
+   * @param[in] use_bnb
    */
   CoinSelection(bool use_bnb);
 
@@ -204,7 +203,7 @@ class CFD_EXPORT CoinSelection {
    */
   std::vector<Utxo> SelectCoinsBnB(const Amount& target_value, const std::vector<Utxo>& utxos,
     const Amount& cost_of_change, const Amount& not_input_fees,
-    CAmount* select_value);
+    Amount* select_value);
 
   /**
    * @brief CoinSelection(KnapsackSolver)を実施する。
