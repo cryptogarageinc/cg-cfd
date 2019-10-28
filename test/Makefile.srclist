@@ -1,4 +1,5 @@
 TEST_CFD_SOURCES= \
+    test_cfd_abstracttx_controller.cpp \
     test_cfd_address.cpp \
     test_cfd_fee.cpp \
     test_cfd_signparameter.cpp \
