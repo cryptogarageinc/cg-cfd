@@ -1,17 +1,18 @@
 // Copyright 2019 CryptoGarage
 /**
- * @file cfdapi_coinselection.h
+ * @file cfdapi_coin.h
  *
- * @brief cfd-apiで利用するCoinSelection関連のクラス定義
+ * @brief cfd-apiで利用するCoin関連のクラス定義
  */
-#ifndef CFD_INCLUDE_CFD_CFDAPI_COINSELECTION_H_
-#define CFD_INCLUDE_CFD_CFDAPI_COINSELECTION_H_
+#ifndef CFD_INCLUDE_CFD_CFDAPI_COIN_H_
+#define CFD_INCLUDE_CFD_CFDAPI_COIN_H_
 
 #include <string>
 #include <vector>
 
 #include "cfd/cfd_common.h"
 #include "cfd/cfd_transaction.h"
+#include "cfd/cfd_utxo.h"
 #include "cfdcore/cfdcore_bytedata.h"
 #include "cfdcore/cfdcore_script.h"
 #include "cfdcore/cfdcore_util.h"
@@ -30,14 +31,14 @@ using cfd::core::SigHashType;
 using cfd::core::Txid;
 
 /**
- * @brief Transaction関連のAPIクラス
+ * @brief Coin関連のAPIクラス
  */
-class CFD_EXPORT CoinSelectionApi {
+class CFD_EXPORT CoinApi {
  public:
   /**
    * @brief constructor
    */
-  CoinSelectionApi() {}
+  CoinApi() {}
 
 };
 

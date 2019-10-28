@@ -7,6 +7,8 @@
 #ifndef CFD_INCLUDE_CFD_CFD_UTXO_H_
 #define CFD_INCLUDE_CFD_CFD_UTXO_H_
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -25,9 +27,11 @@ using cfd::core::BlockHash;
 using cfd::core::Txid;
 using cfd::core::Script;
 using cfd::core::Address;
+#ifndef CFD_DISABLE_ELEMENTS
 using cfd::core::BlindFactor;
 using cfd::core::ConfidentialAddress;
 using cfd::core::ConfidentialAssetId;
+#endif  // CFD_DISABLE_ELEMENTS
 
 /**
  * @brief UTXO構造体
@@ -64,30 +68,97 @@ struct UtxoFilter {
 #ifndef CFD_DISABLE_ELEMENTS
   ConfidentialAssetId include_asset;    //!< 利用するasset
 #endif  // CFD_DISABLE_ELEMENTS
-  uint32_t reserved;
+  uint32_t reserved;    //!< 予約領域
 };
 
-
-struct CoinSelectionOption
+/**
+ * @brief CoinSelectionのオプション情報を保持するクラス
+ */
+class CFD_EXPORT CoinSelectionOption
 {
  public:
-  bool use_bnb = true;            //!< 
-  size_t change_output_size = 0;  //!< 
-  size_t change_spend_size = 0;   //!< 
-  uint64_t effective_fee_baserate = 0;  //!< feeのbaserate
+  /**
+   * @brief コンストラクタ
+   */
+  CoinSelectionOption();
+
+  /**
+   * @brief BnB使用フラグを取得します.
+   * @retval true BnB使用
+   * @retval false BnB未使用
+   */
+  bool IsUseBnB() const;
+  /**
+   * @brief 出力変更サイズを取得します.
+   * @return 出力変更サイズ
+   */
+  size_t GetChangeOutputSize() const;
+  /**
+   * @brief 出力変更サイズを取得します.
+   * @return 出力変更サイズ
+   */
+  size_t GetChangeSpendSize() const;
+  /**
+   * @brief 効果的なfeeのbase rateを取得します.
+   * @return 効果的なfeeのbase rate
+   */
+  uint64_t GetEffectiveFeeBaseRate() const;
+  /**
+   * @brief 出力変更サイズを取得します.
+   * @return 出力変更サイズ
+   */
+  size_t GetTxNoInputsSize() const;
+  /**
+   * @brief feeに使用するassetを取得します.
+   * @return feeに使用するasset
+   */
+  ConfidentialAssetId GetFeeAsset() const;
+
+  /**
+   * @brief BnB 使用フラグを設定します.
+   * @param[in] asset   BnB 使用フラグ
+   */
+  void IsUseBnB(bool use_bnb);
+  /**
+   * @brief 出力変更サイズを設定します.
+   * @param[in] size    サイズ
+   */
+  void GetChangeOutputSize(size_t size);
+  /**
+   * @brief 受入変更サイズを設定します.
+   * @param[in] size    サイズ
+   */
+  void GetChangeSpendSize(size_t size) ;
+  /**
+   * @brief 効果的なfeeのbase rateを設定します.
+   * @param[in] base_rate   fee base rate
+   */
+  void GetEffectiveFeeBaseRate(uint64_t base_rate);
+  /**
+   * @brief tx合計サイズのうちTxIn分のサイズを差し引いたサイズを設定する。
+   * @param[in] size    ignore txin size.
+   * @see cfd::AbstractTransactionController::GetSizeIgnoreTxIn()
+   */
+  void GetTxNoInputsSize(size_t size);
+  /**
+   * @brief feeに使用するassetを設定します.
+   * @param[in] asset   asset
+   */
+  void SetFeeAsset(const ConfidentialAssetId& asset);
+
+ private:
+  bool use_bnb_ = true;            //!< BnB 使用フラグ
+  size_t change_output_size_ = 0;  //!< 出力変更サイズ
+  size_t change_spend_size_ = 0;   //!< 受入変更サイズ
+  uint64_t effective_fee_baserate_ = 0;  //!< feeのbaserate
   /**
    * @brief txのTxIn除外時のサイズ.
    * @details elementsなどの考慮を算出時点で行うこと。
    */
-  size_t tx_noinputs_size = 0;
+  size_t tx_noinputs_size_ = 0;
 #ifndef CFD_DISABLE_ELEMENTS
-  ConfidentialAssetId fee_asset;  //!< feeとして利用するasset
+  ConfidentialAssetId fee_asset_;  //!< feeとして利用するasset
 #endif  // CFD_DISABLE_ELEMENTS
-
-  /**
-   * @brief コンストラクタ定義
-   */
-  CoinSelectionOption();
 };
 
 /**

@@ -18,6 +18,6 @@ CFD_PKGINCLUDE_FILES = \
   cfdapi_address.h \
   cfdapi_hdwallet.h \
   cfdapi_key.h \
-  cfdapi_coinselection.h \
+  cfdapi_coin.h \
   $(CFD_ELEMENTS_PKGINCLUDE_FILES)
 
