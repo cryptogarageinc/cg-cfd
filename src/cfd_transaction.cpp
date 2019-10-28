@@ -229,6 +229,11 @@ const Transaction& TransactionController::GetTransaction() const {
   return transaction_;
 }
 
+uint32_t TransactionController::GetSizeIgnoreTxIn() const {
+  // FIXME 後で実装する
+  return 0;
+}
+
 const TxInReference TransactionController::GetTxIn(
     const Txid& txid, uint32_t vout) const {
   uint32_t index = transaction_.GetTxInIndex(txid, vout);

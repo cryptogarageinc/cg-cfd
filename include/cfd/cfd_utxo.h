@@ -16,7 +16,6 @@
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_amount.h"
 #include "cfdcore/cfdcore_coin.h"
-#include "cfdcore/cfdcore_elements_address.h"
 #include "cfdcore/cfdcore_elements_transaction.h"
 #include "cfdcore/cfdcore_script.h"
 
@@ -28,7 +27,6 @@ using cfd::core::Txid;
 using cfd::core::Script;
 using cfd::core::Address;
 #ifndef CFD_DISABLE_ELEMENTS
-using cfd::core::BlindFactor;
 using cfd::core::ConfidentialAssetId;
 #endif  // CFD_DISABLE_ELEMENTS
 
@@ -44,15 +42,15 @@ struct Utxo {
   std::string address;      //<! address
   std::string descriptor;   //<! output descriptor
   uint64_t amount;          //<! amount
+#ifndef CFD_DISABLE_ELEMENTS
+  std::string asset;                  //<! asset
+#endif  // CFD_DISABLE_ELEMENTS
 #if 0
   int32_t status;           //<! utxo status (reserved)
-#ifndef CFD_DISABLE_ELEMENTS
   // elements
-  ConfidentialAddress confidential_address;   //!< Confidential address
-  ConfidentialAssetId asset;                  //<! asset
-  BlindFactor asset_blind_factor;             //<! asset blind factor
-  BlindFactor amount_blind_factor;            //<! blind vactor
-#endif  // CFD_DISABLE_ELEMENTS
+  std::string confidential_address;   //!< Confidential address
+  std::string asset_blind_factor;     //<! asset blind factor
+  std::string amount_blind_factor;    //<! blind vactor
 #endif  // if 0
   // calculate
   uint64_t effective_value;   //<! amountからfeeを除外した有効額
@@ -65,7 +63,7 @@ struct Utxo {
  */
 struct UtxoFilter {
 #ifndef CFD_DISABLE_ELEMENTS
-  ConfidentialAssetId include_asset;    //!< 利用するasset
+  std::string include_asset;  //!< 利用するasset
 #endif  // CFD_DISABLE_ELEMENTS
   uint32_t reserved;    //!< 予約領域
 };
@@ -107,43 +105,47 @@ class CFD_EXPORT CoinSelectionOption
    * @return 出力変更サイズ
    */
   size_t GetTxNoInputsSize() const;
-  /**
-   * @brief feeに使用するassetを取得します.
-   * @return feeに使用するasset
-   */
-  ConfidentialAssetId GetFeeAsset() const;
 
   /**
    * @brief BnB 使用フラグを設定します.
    * @param[in] asset   BnB 使用フラグ
    */
-  void IsUseBnB(bool use_bnb);
+  void SetUseBnB(bool use_bnb);
   /**
    * @brief 出力変更サイズを設定します.
    * @param[in] size    サイズ
    */
-  void GetChangeOutputSize(size_t size);
+  void SetChangeOutputSize(size_t size);
   /**
    * @brief 受入変更サイズを設定します.
    * @param[in] size    サイズ
    */
-  void GetChangeSpendSize(size_t size) ;
+  void SetChangeSpendSize(size_t size);
   /**
    * @brief 効果的なfeeのbase rateを設定します.
    * @param[in] base_rate   fee base rate
    */
-  void GetEffectiveFeeBaseRate(uint64_t base_rate);
+  void SetEffectiveFeeBaseRate(uint64_t base_rate);
   /**
    * @brief tx合計サイズのうちTxIn分のサイズを差し引いたサイズを設定する。
    * @param[in] size    ignore txin size.
-   * @see cfd::AbstractTransactionController::GetSizeIgnoreTxIn()
+   * @see cfd::TransactionController::GetSizeIgnoreTxIn()
+   * @see cfd::ConfidentialTransactionController::GetSizeIgnoreTxIn()
    */
-  void GetTxNoInputsSize(size_t size);
+  void SetTxNoInputsSize(size_t size);
+
+#ifndef CFD_DISABLE_ELEMENTS
+  /**
+   * @brief feeに使用するassetを取得します.
+   * @return feeに使用するasset
+   */
+  ConfidentialAssetId GetFeeAsset() const;
   /**
    * @brief feeに使用するassetを設定します.
    * @param[in] asset   asset
    */
   void SetFeeAsset(const ConfidentialAssetId& asset);
+#endif  // CFD_DISABLE_ELEMENTS
 
  private:
   bool use_bnb_ = true;            //!< BnB 使用フラグ
@@ -216,7 +218,7 @@ class CFD_EXPORT CoinSelection {
     Amount* select_value);
 
  private:
-  bool use_bnb_ = true;     //<! BnB 利用フラグ
+  bool use_bnb_;    //<! BnB 利用フラグ
 };
 
 }  // namespace cfd
