@@ -373,6 +373,13 @@ class CFD_EXPORT ConfidentialTransactionController
   const ConfidentialTransaction& GetTransaction() const;
 
   /**
+   * @brief TxInを除外したサイズを取得する。
+   * @param[in] is_blinded    blind時の想定サイズを取得するフラグ
+   * @return TxInを除外したTxサイズ(Serialize)
+   */
+  uint32_t GetSizeIgnoreTxIn(bool is_blinded = false) const;
+
+  /**
    * @brief IssueAssetの情報を設定する.
    * @param[in] txid                 対象のTxInのtxid
    * @param[in] vout                 対象のTxInのvout

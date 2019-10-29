@@ -340,6 +340,12 @@ ConfidentialTransactionController::GetTransaction() const {
   return transaction_;
 }
 
+uint32_t ConfidentialTransactionController::GetSizeIgnoreTxIn(
+    bool is_blinded) const {
+  // FIXME 後で実装する
+  return 0;
+}
+
 IssuanceParameter ConfidentialTransactionController::SetAssetIssuance(
     const Txid& txid, uint32_t vout, const Amount& asset_amount,
     const Script& asset_locking_script, const ByteData& asset_nonce,
