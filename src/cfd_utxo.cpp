@@ -43,13 +43,6 @@ using cfd::core::logger::warn;
 //! SelectCoinsBnBの最大繰り返し回数
 static constexpr const size_t kBnBMaxTotalTries = 100000;
 
-// Descending order utxo comparator
-// struct {
-//   bool operator()(const Utxo& a, const Utxo& b) const {
-//     return a.effective_value > b.effective_value;
-//   }
-// } descending;
-
 // -----------------------------------------------------------------------------
 // CoinSelectionOption
 // -----------------------------------------------------------------------------
@@ -146,17 +139,23 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
     warn(
         CFD_LOG_SOURCE,
         "Failed to SelectCoinsBnB. Not enough utxos."
-        ": curr_available_value={}, actual_target={}",
-        curr_available_value, actual_target);
+        ": curr_available_value={},"
+        "actual_target={}",
+        curr_available_value.GetSatoshiValue(),
+        actual_target.GetSatoshiValue());
     throw CfdException(
         CfdError::kCfdIllegalStateError,
         "Failed to select coin. Not enough utxos.");
   }
 
+  // copy utxo pointer
+  std::vector<const Utxo*> p_utxos(utxos.size());
+  for (const Utxo& utxo : utxos) {
+    p_utxos.push_back(&utxo);
+  }
   // Sort the utxos
-  // std::sort(utxos.begin(), utxos.end(), descending);
-  std::sort(utxos.begin(), utxos.end(), [](const Utxo& a, const Utxo& b) {
-    return a.effective_value > b.effective_value;
+  std::sort(p_utxos.begin(), p_utxos.end(), [](const Utxo* a, const Utxo* b) {
+    return a->effective_value > b->effective_value;
   });
 
   Amount curr_waste = Amount::CreateBySatoshiAmount(0);
@@ -173,7 +172,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
             actual_target +
                 cost_of_change ||  //NOLINT Selected value is out of range, go back and try other branch
         (curr_waste > best_waste &&
-         (utxos.at(0).fee - utxos.at(0).long_term_fee) >
+         (p_utxos.at(0)->fee - p_utxos.at(0)->long_term_fee) >
              0)) {  //NOLINT Don't select things which we know will be more wasteful if the waste is increasing
       backtrack = true;
     } else if (
@@ -187,7 +186,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
       //NOLINT explore any more UTXOs to avoid burning money like that.
       if (curr_waste <= best_waste) {
         best_selection = curr_selection;
-        best_selection.resize(utxos.size());
+        best_selection.resize(p_utxos.size());
         best_waste = curr_waste;
       }
       curr_waste -=
@@ -202,7 +201,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
       while (!curr_selection.empty() && !curr_selection.back()) {
         curr_selection.pop_back();
         curr_available_value +=
-            utxos.at(curr_selection.size()).effective_value;
+            p_utxos.at(curr_selection.size())->effective_value;
       }
 
       if (curr_selection
@@ -212,27 +211,27 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
 
       // Output was included on previous iterations, try excluding now.
       curr_selection.back() = false;
-      const Utxo& utxo = utxos.at(curr_selection.size() - 1);
-      curr_value -= utxo.effective_value;
-      curr_waste -= utxo.fee - utxo.long_term_fee;
+      const Utxo* utxo = p_utxos.at(curr_selection.size() - 1);
+      curr_value -= utxo->effective_value;
+      curr_waste -= utxo->fee - utxo->long_term_fee;
     } else {  // Moving forwards, continuing down this branch
-      const Utxo& utxo = utxos.at(curr_selection.size());
+      const Utxo* utxo = p_utxos.at(curr_selection.size());
 
       // Remove this utxo from the curr_available_value utxo amount
-      curr_available_value -= utxo.effective_value;
+      curr_available_value -= utxo->effective_value;
 
       // NOLINT Avoid searching a branch if the previous UTXO has the same value and same waste and was excluded. Since the ratio of fee to
       // NOLINT long term fee is the same, we only need to check if one of those values match in order to know that the waste is the same.
       if (!curr_selection.empty() && !curr_selection.back() &&
-          utxo.effective_value ==
-              utxos.at(curr_selection.size() - 1).effective_value &&
-          utxo.fee == utxos.at(curr_selection.size() - 1).fee) {
+          utxo->effective_value ==
+              p_utxos.at(curr_selection.size() - 1)->effective_value &&
+          utxo->fee == p_utxos.at(curr_selection.size() - 1)->fee) {
         curr_selection.push_back(false);
       } else {
         // Inclusion branch first (Largest First Exploration)
         curr_selection.push_back(true);
-        curr_value += utxo.effective_value;
-        curr_waste += utxo.fee - utxo.long_term_fee;
+        curr_value += utxo->effective_value;
+        curr_waste += utxo->fee - utxo->long_term_fee;
       }
     }
   }
@@ -252,8 +251,8 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
   *select_value = Amount::CreateBySatoshiAmount(0);
   for (size_t i = 0; i < best_selection.size(); ++i) {
     if (best_selection.at(i)) {
-      results.push_back(utxos.at(i));
-      *select_value += static_cast<int64_t>(utxos.at(i).amount);
+      results.push_back(*(p_utxos.at(i)));
+      *select_value += static_cast<int64_t>(p_utxos.at(i)->amount);
     }
   }
 
