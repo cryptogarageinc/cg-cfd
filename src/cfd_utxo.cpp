@@ -24,6 +24,7 @@
 
 namespace cfd {
 
+using cfd::core::AddressType;
 using cfd::core::Amount;
 using cfd::core::BlockHash;
 using cfd::core::CfdError;
@@ -34,6 +35,8 @@ using cfd::core::Script;
 using cfd::core::Txid;
 #ifndef CFD_DISABLE_ELEMENTS
 using cfd::core::ConfidentialAssetId;
+using cfd::core::ConfidentialTxIn;
+using cfd::core::ConfidentialTxOutReference;
 #endif  // CFD_DISABLE_ELEMENTS
 using cfd::core::logger::warn;
 
@@ -148,6 +151,12 @@ void CoinSelectionOption::SetTxNoInputsSize(size_t size) {
   tx_noinputs_size_ = size;
 }
 
+void CoinSelectionOption::InitializeTxSize(const TransactionController& tx) {
+  tx_noinputs_size_ = tx.GetSizeIgnoreTxIn();
+  change_output_size_ = 22 + 1 + 8;  // p2wpkh
+  change_spend_size_ = TxIn::EstimateTxInSize(AddressType::kP2wpkhAddress);
+}
+
 #ifndef CFD_DISABLE_ELEMENTS
 ConfidentialAssetId CoinSelectionOption::GetFeeAsset() const {
   return fee_asset_;
@@ -155,6 +164,16 @@ ConfidentialAssetId CoinSelectionOption::GetFeeAsset() const {
 
 void CoinSelectionOption::SetFeeAsset(const ConfidentialAssetId& asset) {
   fee_asset_ = asset;
+}
+
+void CoinSelectionOption::InitializeConfidentialTxSize(
+    const ConfidentialTransactionController& tx) {
+  tx_noinputs_size_ = tx.GetSizeIgnoreTxIn();
+  ConfidentialTxOutReference txout;
+  // TODO(k-matsuzawa): 後で調整する
+  change_output_size_ = txout.GetSerializeSize(true);  // blind
+  change_spend_size_ =
+      ConfidentialTxIn::EstimateTxInSize(AddressType::kP2wpkhAddress);
 }
 #endif  // CFD_DISABLE_ELEMENTS
 
@@ -335,13 +354,13 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
   }
 
   // List of values less than target
-  Utxo lowest_larger;
+  const Utxo* lowest_larger = nullptr;
   std::vector<const Utxo*> applicable_groups;
   uint64_t n_total = 0;
   uint64_t n_target = target_value.GetSatoshiValue();
 
   std::vector<uint32_t> indexes =
-      RandomNumberUtil::GetRandomIndexes(utxos.size());
+      RandomNumberUtil::GetRandomIndexes(static_cast<uint32_t>(utxos.size()));
 
   for (size_t index = 0; index < indexes.size(); ++index) {
     if (utxos[index].amount == n_target) {
@@ -354,9 +373,9 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
       n_total += utxos[index].amount;
 
     } else if (
-        lowest_larger.amount == 0 ||
-        utxos[index].amount < lowest_larger.amount) {
-      lowest_larger = utxos[index];
+        lowest_larger == nullptr ||
+        utxos[index].amount < lowest_larger->amount) {
+      lowest_larger = &utxos[index];
     }
   }
 
@@ -371,7 +390,7 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
   }
 
   if (n_total < n_target) {
-    if (lowest_larger.amount == 0) {
+    if (lowest_larger == nullptr) {
       warn(
           CFD_LOG_SOURCE, "insufficient funds. total:{} target:{}", n_total,
           n_target);
@@ -379,16 +398,14 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
           CfdError::kCfdIllegalStateError, "insufficient funds.");
     }
 
-    ret_utxos.push_back(lowest_larger);
-    *select_value = Amount::CreateBySatoshiAmount(lowest_larger.amount);
+    ret_utxos.push_back(*lowest_larger);
+    *select_value = Amount::CreateBySatoshiAmount(lowest_larger->amount);
     return ret_utxos;
   }
 
   std::sort(
       applicable_groups.begin(), applicable_groups.end(),
-      [](const Utxo* a, const Utxo* b) {
-        return a->effective_value > b->effective_value;
-      });
+      [](const Utxo* a, const Utxo* b) { return a->amount > b->amount; });
   std::vector<char> vf_best;
   uint64_t n_best;
 
@@ -402,11 +419,11 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
 
   // NOLINT If we have a bigger coin and (either the stochastic approximation didn't find a good solution,
   // NOLINT                                or the next bigger coin is closer), return the bigger coin
-  if (lowest_larger.amount != 0 &&
+  if (lowest_larger != nullptr &&
       ((n_best != n_target && n_best < n_target + kMinChange) ||
-       lowest_larger.amount <= n_best)) {
-    ret_utxos.push_back(lowest_larger);
-    *select_value = Amount::CreateBySatoshiAmount(lowest_larger.amount);
+       lowest_larger->amount <= n_best)) {
+    ret_utxos.push_back(*lowest_larger);
+    *select_value = Amount::CreateBySatoshiAmount(lowest_larger->amount);
 
   } else {
     uint64_t ret_value = 0;
@@ -426,7 +443,50 @@ void CoinSelection::ConvertToUtxo(
     uint32_t vout, const Script& locking_script,
     const std::string& output_descriptor, const Amount& amount,
     const void* binary_data, Utxo* utxo) {
-  // FIXME
+  if (utxo == nullptr) {
+    warn(CFD_LOG_SOURCE, "utxo is nullptr.");
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
+        "Failed to convert utxo. utxo is nullptr.");
+  }
+  memset(utxo, 0, sizeof(*utxo));
+
+  utxo->block_height = block_height;
+  memcpy(
+      utxo->block_hash, block_hash.GetData().GetBytes().data(),
+      sizeof(utxo->block_hash));
+  memcpy(utxo->txid, txid.GetData().GetBytes().data(), sizeof(utxo->txid));
+  utxo->vout = vout;
+  const std::vector<uint8_t>& scrpt = locking_script.GetData().GetBytes();
+  if (scrpt.size() < sizeof(utxo->locking_script)) {
+    memcpy(utxo->locking_script, scrpt.data(), sizeof(utxo->locking_script));
+    utxo->script_length = static_cast<uint16_t>(scrpt.size());
+  }
+
+  if (locking_script.IsP2pkhScript()) {
+    utxo->address_type = AddressType::kP2pkhAddress;
+    utxo->uscript_size_max = 0;  // TODO(k-matsuzawa): 後で追加対応する
+  } else if (locking_script.IsP2shScript()) {
+    utxo->address_type = AddressType::kP2shAddress;
+    utxo->uscript_size_max = 0;  // TODO(k-matsuzawa): 後で追加対応する
+    if (output_descriptor.find("sh(wpkh(") == 0) {
+      utxo->address_type = AddressType::kP2shP2wpkhAddress;
+      utxo->witness_size_max = 0;  // TODO(k-matsuzawa): 後で追加対応する
+    } else if (output_descriptor.find("sh(wsh(") == 0) {
+      utxo->address_type = AddressType::kP2shP2wshAddress;
+      utxo->witness_size_max = 0;  // TODO(k-matsuzawa): 後で追加対応する
+    }
+  } else if (locking_script.IsP2wpkhScript()) {
+    utxo->address_type = AddressType::kP2wpkhAddress;
+    utxo->witness_size_max = 0;  // TODO(k-matsuzawa): 後で追加対応する
+  } else if (locking_script.IsP2wshScript()) {
+    utxo->address_type = AddressType::kP2wshAddress;
+    utxo->witness_size_max = 0;  // TODO(k-matsuzawa): 後で追加対応する
+  }
+  // TODO(k-matsuzawa): 後でOutputDescriptor対応する
+  utxo->amount = amount.GetSatoshiValue();
+  memcpy(&utxo->binary_data, &binary_data, sizeof(void*));
+  utxo->effective_value = utxo->amount;
 }
 
 #ifndef CFD_DISABLE_ELEMENTS
@@ -435,7 +495,11 @@ void CoinSelection::ConvertToUtxo(
     uint32_t vout, const Script& locking_script,
     const std::string& output_descriptor, const Amount& amount,
     const ConfidentialAssetId& asset, const void* binary_data, Utxo* utxo) {
-  // FIXME
+  ConvertToUtxo(
+      block_height, block_hash, txid, vout, locking_script, output_descriptor,
+      amount, binary_data, utxo);
+  utxo->blinded = asset.HasBlinding();
+  memcpy(utxo->asset, asset.GetData().GetBytes().data(), sizeof(utxo->asset));
 }
 #endif  // CFD_DISABLE_ELEMENTS
 

@@ -13,6 +13,8 @@
 #include <vector>
 
 #include "cfd/cfd_common.h"
+#include "cfd/cfd_elements_transaction.h"
+#include "cfd/cfd_transaction.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_amount.h"
 #include "cfdcore/cfdcore_coin.h"
@@ -21,12 +23,14 @@
 
 namespace cfd {
 
+using cfd::TransactionController;
 using cfd::core::Address;
 using cfd::core::Amount;
 using cfd::core::BlockHash;
 using cfd::core::Script;
 using cfd::core::Txid;
 #ifndef CFD_DISABLE_ELEMENTS
+using cfd::ConfidentialTransactionController;
 using cfd::core::ConfidentialAssetId;
 #endif  // CFD_DISABLE_ELEMENTS
 
@@ -142,6 +146,12 @@ class CFD_EXPORT CoinSelectionOption {
    */
   void SetTxNoInputsSize(size_t size);
 
+  /**
+   * @brief tx情報を用いてサイズ関連情報を初期化します。
+   * @param[in] tx    transaction controller
+   */
+  void InitializeTxSize(const TransactionController& tx);
+
 #ifndef CFD_DISABLE_ELEMENTS
   /**
    * @brief feeに使用するassetを取得します.
@@ -153,6 +163,13 @@ class CFD_EXPORT CoinSelectionOption {
    * @param[in] asset   asset
    */
   void SetFeeAsset(const ConfidentialAssetId& asset);
+
+  /**
+   * @brief tx情報を用いてサイズ関連情報を初期化します。
+   * @param[in] tx    transaction controller
+   */
+  void InitializeConfidentialTxSize(
+      const ConfidentialTransactionController& tx);
 #endif  // CFD_DISABLE_ELEMENTS
 
  private:
