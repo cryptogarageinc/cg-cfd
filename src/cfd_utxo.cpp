@@ -46,6 +46,9 @@ static constexpr const size_t kBnBMaxTotalTries = 100000;
 //! KnapsackSolver ApproximateBestSubsetの繰り返し回数
 static constexpr const int kApproximateBestSubsetIterations = 100000;
 
+//!  Change最小値
+static constexpr const uint64_t kMinChange = 1000000;  // MIN_CHANGE
+
 /**
  * 収集額に最も近い合計額となるUTXO一覧を決定する
  * @param[in]  utxos          収集額より小さいUTXO一覧
@@ -59,6 +62,12 @@ void ApproximateBestSubset(
     const std::vector<const Utxo*>& utxos, uint64_t n_total_value,
     uint64_t n_target_value, std::vector<char>* vf_best, uint64_t* n_best,
     int iterations = kApproximateBestSubsetIterations) {
+  if (vf_best == nullptr || n_best == nullptr) {
+    warn(CFD_LOG_SOURCE, "Outparameter(select_value) is nullptr.");
+    throw CfdException(CfdError::kCfdIllegalArgumentError,
+        "Failed to select coin. Outparameter is nullptr.");
+  }
+
   std::vector<char> vf_includes;
   *n_best = n_total_value;
 
@@ -67,6 +76,7 @@ void ApproximateBestSubset(
     vf_includes.assign(utxos.size(), false);
     uint64_t n_total = 0;
     bool is_reached_target = false;
+    uint32_t randomize_cashe = 0;
     for (int n_pass = 0; n_pass < 2 && !is_reached_target; n_pass++) {
       for (unsigned int i = 0; i < utxos.size(); i++) {
         // The solver here uses a randomized algorithm,
@@ -75,7 +85,7 @@ void ApproximateBestSubset(
         // that the rng is fast. We do not use a constant random sequence,
         // because there may be some privacy improvement by making
         // the selection random.
-        bool rand_bool = RandomNumberUtil::GetRandomBool();
+        bool rand_bool = RandomNumberUtil::GetRandomBool(&randomize_cashe);
         if (n_pass == 0 ? rand_bool : !vf_includes[i]) {
           n_total += utxos[i]->amount;
           vf_includes[i] = true;
@@ -170,6 +180,12 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
     const Amount& target_value, const std::vector<Utxo>& utxos,
     const Amount& cost_of_change, const Amount& not_input_fees,
     Amount* select_value) const {
+  if (select_value == nullptr) {
+    warn(CFD_LOG_SOURCE, "Outparameter(select_value) is nullptr.");
+    throw CfdException(CfdError::kCfdIllegalArgumentError,
+        "Failed to select coin. Outparameter is nullptr.");
+  }
+
   std::vector<Utxo> results;
   Amount curr_value = Amount::CreateBySatoshiAmount(0);
 
@@ -289,13 +305,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
 
   // Check for solution
   if (best_selection.empty()) {
-    // not enough amount
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to SelectCoinsBnB. Cannot find best solution.");
-    throw CfdException(
-        CfdError::kCfdIllegalStateError,
-        "Failed to SelectCoinsBnB. Cannot find best solution.");
+    return results;
   }
 
   // Set output set
@@ -314,6 +324,12 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
     const Amount& target_value, const std::vector<Utxo>& utxos,
     Amount* select_value) const {
   std::vector<Utxo> ret_utxos;
+
+  if (select_value == nullptr) {
+    warn(CFD_LOG_SOURCE, "Outparameter(select_value) is nullptr.");
+    throw CfdException(CfdError::kCfdIllegalArgumentError,
+        "Failed to select coin. Outparameter is nullptr.");
+  }
 
   // List of values less than target
   Utxo lowest_larger;
@@ -358,7 +374,6 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
           n_target);
       throw CfdException(
           CfdError::kCfdIllegalStateError, "insufficient funds.");
-      return ret_utxos;
     }
 
     ret_utxos.push_back(lowest_larger);

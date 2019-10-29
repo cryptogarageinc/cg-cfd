@@ -31,11 +31,6 @@ using cfd::core::ConfidentialAssetId;
 #endif  // CFD_DISABLE_ELEMENTS
 
 /**
- * @brief Change最小値
- */
-static constexpr int64_t kMinChange = 1000000;  // MIN_CHANGE
-
-/**
  * @brief 最小のデータのみを保持するUTXO構造体。
  * @details witness_size_max, uscript_size_max, address_type
  *  は専用APIで算出する。
