@@ -40,14 +40,15 @@ using cfd::core::logger::warn;
 // Inner definitions
 // -----------------------------------------------------------------------------
 
-static constexpr const size_t kBnBTotalTries = 100000;
+//! SelectCoinsBnBの最大繰り返し回数
+static constexpr const size_t kBnBMaxTotalTries = 100000;
 
-// Descending order comparator
-struct {
-  bool operator()(const Utxo& a, const Utxo& b) const {
-    return a.effective_value > b.effective_value;
-  }
-} descending;
+// Descending order utxo comparator
+// struct {
+//   bool operator()(const Utxo& a, const Utxo& b) const {
+//     return a.effective_value > b.effective_value;
+//   }
+// } descending;
 
 // -----------------------------------------------------------------------------
 // CoinSelectionOption
@@ -153,34 +154,37 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
   }
 
   // Sort the utxos
-  std::sort(utxos.begin(), utxos.end(), descending);
+  // std::sort(utxos.begin(), utxos.end(), descending);
+  std::sort(utxos.begin(), utxos.end(), [](const Utxo& a, const Utxo& b) {
+    return a.effective_value > b.effective_value;
+  });
 
   Amount curr_waste = Amount::CreateBySatoshiAmount(0);
   std::vector<bool> best_selection;
   Amount best_waste = Amount::CreateBySatoshiAmount(kMaxAmount);
 
   // Depth First search loop for choosing the UTXOs
-  for (size_t i = 0; i < kBnBTotalTries; ++i) {
+  for (size_t i = 0; i < kBnBMaxTotalTries; ++i) {
     // Conditions for starting a backtrack
     bool backtrack = false;
     if (curr_value + curr_available_value <
-            actual_target ||  // Cannot possibly reach target with the amount remaining in the curr_available_value.
+            actual_target ||  //NOLINT Cannot possibly reach target with the amount remaining in the curr_available_value.
         curr_value >
             actual_target +
-                cost_of_change ||  // Selected value is out of range, go back and try other branch
+                cost_of_change ||  //NOLINT Selected value is out of range, go back and try other branch
         (curr_waste > best_waste &&
          (utxos.at(0).fee - utxos.at(0).long_term_fee) >
-             0)) {  // Don't select things which we know will be more wasteful if the waste is increasing
+             0)) {  //NOLINT Don't select things which we know will be more wasteful if the waste is increasing
       backtrack = true;
     } else if (
-        curr_value >= actual_target) {  // Selected value is within range
+        curr_value >= actual_target) {  //NOLINT Selected value is within range
       curr_waste +=
           (curr_value -
-           actual_target);  // This is the excess value which is added to the waste for the below comparison
-      // Adding another UTXO after this check could bring the waste down if the long term fee is higher than the current fee.
-      // However we are not going to explore that because this optimization for the waste is only done when we have hit our target
-      // value. Adding any more UTXOs will be just burning the UTXO; it will go entirely to fees. Thus we aren't going to
-      // explore any more UTXOs to avoid burning money like that.
+           actual_target);  //NOLINT This is the excess value which is added to the waste for the below comparison
+      //NOLINT Adding another UTXO after this check could bring the waste down if the long term fee is higher than the current fee.
+      //NOLINT However we are not going to explore that because this optimization for the waste is only done when we have hit our target
+      //NOLINT value. Adding any more UTXOs will be just burning the UTXO; it will go entirely to fees. Thus we aren't going to
+      //NOLINT explore any more UTXOs to avoid burning money like that.
       if (curr_waste <= best_waste) {
         best_selection = curr_selection;
         best_selection.resize(utxos.size());
@@ -188,13 +192,13 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
       }
       curr_waste -=
           (curr_value -
-           actual_target);  // Remove the excess value as we will be selecting different coins now
+           actual_target);  //NOLINT Remove the excess value as we will be selecting different coins now
       backtrack = true;
     }
 
     // Backtracking, moving backwards
     if (backtrack) {
-      // Walk backwards to find the last included UTXO that still needs to have its omission branch traversed.
+      //NOLINT Walk backwards to find the last included UTXO that still needs to have its omission branch traversed.
       while (!curr_selection.empty() && !curr_selection.back()) {
         curr_selection.pop_back();
         curr_available_value +=
@@ -202,7 +206,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
       }
 
       if (curr_selection
-              .empty()) {  // We have walked back to the first utxo and no branch is untraversed. All solutions searched
+              .empty()) {  //NOLINT We have walked back to the first utxo and no branch is untraversed. All solutions searched
         break;
       }
 
@@ -217,8 +221,8 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
       // Remove this utxo from the curr_available_value utxo amount
       curr_available_value -= utxo.effective_value;
 
-      // Avoid searching a branch if the previous UTXO has the same value and same waste and was excluded. Since the ratio of fee to
-      // long term fee is the same, we only need to check if one of those values match in order to know that the waste is the same.
+      // NOLINT Avoid searching a branch if the previous UTXO has the same value and same waste and was excluded. Since the ratio of fee to
+      // NOLINT long term fee is the same, we only need to check if one of those values match in order to know that the waste is the same.
       if (!curr_selection.empty() && !curr_selection.back() &&
           utxo.effective_value ==
               utxos.at(curr_selection.size() - 1).effective_value &&
