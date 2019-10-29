@@ -64,7 +64,8 @@ void ApproximateBestSubset(
     int iterations = kApproximateBestSubsetIterations) {
   if (vf_best == nullptr || n_best == nullptr) {
     warn(CFD_LOG_SOURCE, "Outparameter(select_value) is nullptr.");
-    throw CfdException(CfdError::kCfdIllegalArgumentError,
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
         "Failed to select coin. Outparameter is nullptr.");
   }
 
@@ -76,7 +77,7 @@ void ApproximateBestSubset(
     vf_includes.assign(utxos.size(), false);
     uint64_t n_total = 0;
     bool is_reached_target = false;
-    uint32_t randomize_cashe = 0;
+    std::vector<bool> randomize_cache;
     for (int n_pass = 0; n_pass < 2 && !is_reached_target; n_pass++) {
       for (unsigned int i = 0; i < utxos.size(); i++) {
         // The solver here uses a randomized algorithm,
@@ -85,7 +86,7 @@ void ApproximateBestSubset(
         // that the rng is fast. We do not use a constant random sequence,
         // because there may be some privacy improvement by making
         // the selection random.
-        bool rand_bool = RandomNumberUtil::GetRandomBool(&randomize_cashe);
+        bool rand_bool = RandomNumberUtil::GetRandomBool(&randomize_cache);
         if (n_pass == 0 ? rand_bool : !vf_includes[i]) {
           n_total += utxos[i]->amount;
           vf_includes[i] = true;
@@ -182,7 +183,8 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
     Amount* select_value) const {
   if (select_value == nullptr) {
     warn(CFD_LOG_SOURCE, "Outparameter(select_value) is nullptr.");
-    throw CfdException(CfdError::kCfdIllegalArgumentError,
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
         "Failed to select coin. Outparameter is nullptr.");
   }
 
@@ -327,7 +329,8 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
 
   if (select_value == nullptr) {
     warn(CFD_LOG_SOURCE, "Outparameter(select_value) is nullptr.");
-    throw CfdException(CfdError::kCfdIllegalArgumentError,
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
         "Failed to select coin. Outparameter is nullptr.");
   }
 
