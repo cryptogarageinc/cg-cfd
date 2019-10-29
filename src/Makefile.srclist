@@ -12,6 +12,7 @@ CFD_SOURCES = \
   cfd_transaction_common.cpp \
   cfd_transaction.cpp \
   cfd_address.cpp \
+  cfd_utxo.cpp \
   cfdapi_transaction.cpp \
   cfdapi_transaction_base.cpp \
   cfdapi_address.cpp \

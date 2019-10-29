@@ -34,21 +34,28 @@ using cfd::core::ConfidentialAssetId;
  * @brief 最小のデータのみを保持するUTXO構造体。
  * @details witness_size_max, uscript_size_max, address_type
  *  は専用APIで算出する。
+ * @see cfd::CoinSelection::ConvertToUtxo()
  */
 struct Utxo {
-  uint64_t block_height;     //!< blick高
-  uint8_t block_hash[32];    //!< block hash
-  uint8_t txid[32];          //!< txid
-  uint32_t vout;             //!< vout
-  // uint32_t script_length;    //!< script length
-  uint16_t witness_size_max; //!< witness stack size maximum
-  uint16_t uscript_size_max; //!< unlocking script size maximum
-  uint64_t amount;           //!< amount
-  uint16_t address_type;     //!< address type (cfd::core::AddressType)
+  uint64_t block_height;       //!< blick高
+  uint8_t block_hash[32];      //!< block hash
+  uint8_t txid[32];            //!< txid
+  uint32_t vout;               //!< vout
+  uint8_t locking_script[40];  //!< locking script
+  uint16_t script_length;      //!< locking script length
+  uint16_t address_type;       //!< address type (cfd::core::AddressType)
+  uint16_t witness_size_max;   //!< witness stack size maximum
+  uint16_t uscript_size_max;   //!< unlocking script size maximum
+  uint64_t amount;             //!< amount
 #ifndef CFD_DISABLE_ELEMENTS
   bool blinded;       //!< has blind
   uint8_t asset[33];  //!< asset
 #endif                // CFD_DISABLE_ELEMENTS
+  /**
+   * @brief 任意のバイナリデータアドレス
+   * @details cfdでは領域だけ設けておき、アクセスはしない
+   */
+  void* binary_data;
 #if 0
   int32_t status;           //!< utxo status (reserved)
   // elements
@@ -65,9 +72,9 @@ struct Utxo {
  */
 struct UtxoFilter {
 #ifndef CFD_DISABLE_ELEMENTS
-  std::string include_asset;  //!< 利用するasset
-#endif                        // CFD_DISABLE_ELEMENTS
-  uint32_t reserved;          //!< 予約領域
+  ConfidentialAssetId target_asset;  //!< 利用するasset
+#endif                               // CFD_DISABLE_ELEMENTS
+  uint32_t reserved;                 //!< 予約領域
 };
 
 /**
@@ -97,10 +104,10 @@ class CFD_EXPORT CoinSelectionOption {
    */
   size_t GetChangeSpendSize() const;
   /**
-   * @brief 効果的なfeeのbase rateを取得します.
-   * @return 効果的なfeeのbase rate
+   * @brief 効果的なfeeのbaserateを取得します.
+   * @return 効果的なfeeのbaserate
    */
-  uint64_t GetEffectiveFeeBaseRate() const;
+  uint64_t GetEffectiveFeeBaserate() const;
   /**
    * @brief 出力変更サイズを取得します.
    * @return 出力変更サイズ
@@ -123,10 +130,10 @@ class CFD_EXPORT CoinSelectionOption {
    */
   void SetChangeSpendSize(size_t size);
   /**
-   * @brief 効果的なfeeのbase rateを設定します.
-   * @param[in] base_rate   fee base rate
+   * @brief 効果的なfeeのbaserateを設定します.
+   * @param[in] baserate    fee baserate
    */
-  void SetEffectiveFeeBaseRate(uint64_t base_rate);
+  void SetEffectiveFeeBaserate(uint64_t baserate);
   /**
    * @brief tx合計サイズのうちTxIn分のサイズを差し引いたサイズを設定する。
    * @param[in] size    ignore txin size.
@@ -219,6 +226,45 @@ class CFD_EXPORT CoinSelection {
   std::vector<Utxo> KnapsackSolver(
       const Amount& target_value, const std::vector<Utxo>& utxos,
       Amount* select_value) const;
+
+  /**
+   * @brief UTXO構造体への変換を行う。
+   * @param[in] block_height        block高
+   * @param[in] block_hash          blockハッシュ
+   * @param[in] txid                txid
+   * @param[in] vout                vout
+   * @param[in] locking_script      block高
+   * @param[in] output_descriptor   output descriptor
+   * @param[in] amount              amount
+   * @param[in] binary_data         任意のデータアドレス
+   * @param[out] utxo               変換後のUTXO
+   */
+  static void ConvertToUtxo(
+      uint64_t block_height, const BlockHash& block_hash, const Txid& txid,
+      uint32_t vout, const Script& locking_script,
+      const std::string& output_descriptor, const Amount& amount,
+      const void* binary_data, Utxo* utxo);
+
+#ifndef CFD_DISABLE_ELEMENTS
+  /**
+   * @brief UTXO構造体への変換を行う。
+   * @param[in] block_height        block高
+   * @param[in] block_hash          blockハッシュ
+   * @param[in] txid                txid
+   * @param[in] vout                vout
+   * @param[in] locking_script      block高
+   * @param[in] output_descriptor   output descriptor
+   * @param[in] amount              amount
+   * @param[in] asset               asset
+   * @param[in] binary_data         任意のデータアドレス
+   * @param[out] utxo               変換後のUTXO
+   */
+  static void ConvertToUtxo(
+      uint64_t block_height, const BlockHash& block_hash, const Txid& txid,
+      uint32_t vout, const Script& locking_script,
+      const std::string& output_descriptor, const Amount& amount,
+      const ConfidentialAssetId& asset, const void* binary_data, Utxo* utxo);
+#endif  // CFD_DISABLE_ELEMENTS
 
  private:
   bool use_bnb_;  //!< BnB 利用フラグ

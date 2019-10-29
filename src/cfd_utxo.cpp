@@ -13,12 +13,20 @@
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_amount.h"
 #include "cfdcore/cfdcore_coin.h"
-#include "cfdcore/cfdcore_elements_transaction.h"
 #include "cfdcore/cfdcore_script.h"
+#ifndef CFD_DISABLE_ELEMENTS
+#include "cfdcore/cfdcore_elements_transaction.h"
+#endif  // CFD_DISABLE_ELEMENTS
 
 namespace cfd {
 
+using cfd::core::Amount;
+using cfd::core::BlockHash;
+using cfd::core::Script;
+using cfd::core::Txid;
+#ifndef CFD_DISABLE_ELEMENTS
 using cfd::core::ConfidentialAssetId;
+#endif  // CFD_DISABLE_ELEMENTS
 
 // -----------------------------------------------------------------------------
 // CoinSelectionOption
@@ -37,7 +45,7 @@ size_t CoinSelectionOption::GetChangeSpendSize() const {
   return change_spend_size_;
 }
 
-uint64_t CoinSelectionOption::GetEffectiveFeeBaseRate() const {
+uint64_t CoinSelectionOption::GetEffectiveFeeBaserate() const {
   return effective_fee_baserate_;
 }
 
@@ -55,8 +63,8 @@ void CoinSelectionOption::SetChangeSpendSize(size_t size) {
   change_spend_size_ = size;
 }
 
-void CoinSelectionOption::SetEffectiveFeeBaseRate(uint64_t base_rate) {
-  effective_fee_baserate_ = base_rate;
+void CoinSelectionOption::SetEffectiveFeeBaserate(uint64_t baserate) {
+  effective_fee_baserate_ = baserate;
 }
 
 void CoinSelectionOption::SetTxNoInputsSize(size_t size) {
@@ -87,7 +95,7 @@ CoinSelection::CoinSelection(bool use_bnb) : use_bnb_(use_bnb) {
 std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
     const Amount& target_value, const std::vector<Utxo>& utxos,
     const UtxoFilter& filter, const CoinSelectionOption& option_params,
-    Amount* select_value = nullptr, Amount* fee_value = nullptr) const {
+    Amount* select_value, Amount* fee_value) const {
   // FIXME
   return std::vector<Utxo>();
 }
@@ -106,5 +114,23 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
   // FIXME
   return std::vector<Utxo>();
 }
+
+void CoinSelection::ConvertToUtxo(
+    uint64_t block_height, const BlockHash& block_hash, const Txid& txid,
+    uint32_t vout, const Script& locking_script,
+    const std::string& output_descriptor, const Amount& amount,
+    const void* binary_data, Utxo* utxo) {
+  // FIXME
+}
+
+#ifndef CFD_DISABLE_ELEMENTS
+void CoinSelection::ConvertToUtxo(
+    uint64_t block_height, const BlockHash& block_hash, const Txid& txid,
+    uint32_t vout, const Script& locking_script,
+    const std::string& output_descriptor, const Amount& amount,
+    const ConfidentialAssetId& asset, const void* binary_data, Utxo* utxo) {
+  // FIXME
+}
+#endif  // CFD_DISABLE_ELEMENTS
 
 }  // namespace cfd

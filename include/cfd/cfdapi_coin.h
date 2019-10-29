@@ -36,9 +36,7 @@ using cfd::core::ConfidentialAssetId;
 struct UtxoData {
   uint64_t block_height;   //!< blick高
   BlockHash block_hash;    //!< block hash
-  Txid txid;               //!< txid
-  uint32_t vout;           //!< vout
-  Script script;           //!< script
+  Script locking_script;   //!< script
   Address address;         //!< address
   std::string descriptor;  //!< output descriptor
   Amount amount;           //!< amount
