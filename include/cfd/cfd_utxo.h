@@ -31,25 +31,28 @@ using cfd::core::ConfidentialAssetId;
 #endif  // CFD_DISABLE_ELEMENTS
 
 /**
- * @brief UTXO構造体
+ * @brief 最小のデータのみを保持するUTXO構造体。
+ * @details witness_size_max, uscript_size_max, address_type
+ *  は専用APIで算出する。
  */
 struct Utxo {
   uint64_t block_height;     //!< blick高
   uint8_t block_hash[32];    //!< block hash
   uint8_t txid[32];          //!< txid
   uint32_t vout;             //!< vout
-  uint32_t script_length;    //!< script length
-  AddressType address_type;  //!< address type
+  // uint32_t script_length;    //!< script length
+  uint16_t witness_size_max; //!< witness stack size maximum
+  uint16_t uscript_size_max; //!< unlocking script size maximum
   uint64_t amount;           //!< amount
+  uint16_t address_type;     //!< address type (cfd::core::AddressType)
 #ifndef CFD_DISABLE_ELEMENTS
+  bool blinded;       //!< has blind
   uint8_t asset[33];  //!< asset
 #endif                // CFD_DISABLE_ELEMENTS
 #if 0
   int32_t status;           //!< utxo status (reserved)
   // elements
   uint8_t confidential_key[33];      //!< Confidential key
-  uint8_t asset_blind_factor[33];    //!< asset blind factor
-  uint8_t amount_blind_factor[33];   //!< blind vactor
 #endif  // if 0
   // calculate
   uint64_t effective_value;  //!< amountからfeeを除外した有効額
