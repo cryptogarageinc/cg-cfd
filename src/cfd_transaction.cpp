@@ -230,8 +230,12 @@ const Transaction& TransactionController::GetTransaction() const {
 }
 
 uint32_t TransactionController::GetSizeIgnoreTxIn() const {
-  // FIXME 後で実装する
-  return 0;
+  uint32_t result = AbstractTransaction::kTransactionMinimumSize;
+  std::vector<TxOutReference> txouts = transaction_.GetTxOutList();
+  for (const auto& txout : txouts) {
+    result += txout.GetSerializeSize();
+  }
+  return result;
 }
 
 const TxInReference TransactionController::GetTxIn(
