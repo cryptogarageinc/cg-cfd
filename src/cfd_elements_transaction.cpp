@@ -342,7 +342,7 @@ ConfidentialTransactionController::GetTransaction() const {
 
 uint32_t ConfidentialTransactionController::GetSizeIgnoreTxIn(
     bool is_blinded, uint32_t* witness_stack_size) const {
-  if (!witness_stack_size) {
+  if (witness_stack_size) {
     *witness_stack_size = 0;
   }
 
