@@ -1,3 +1,4 @@
+#ifndef CFD_DISABLE_ELEMENTS
 #include "gtest/gtest.h"
 #include <vector>
 
@@ -46,6 +47,34 @@ TEST(ElementsAddressFactory, Constructor_type_prefix)
   EXPECT_NO_THROW(ElementsAddressFactory factory(NetType::kRegtest, GetBitcoinAddressFormatList()));
   EXPECT_NO_THROW(ElementsAddressFactory factory(NetType::kLiquidV1, GetElementsAddressFormatList()));
   EXPECT_NO_THROW(ElementsAddressFactory factory(NetType::kElementsRegtest, GetElementsAddressFormatList()));
+
+  Pubkey pubkey = Pubkey("027592aab5d43618dda13fba71e3993cd7517a712d3da49664c06ee1bd3d1f70af");
+  {
+    ElementsAddressFactory factory(NetType::kLiquidV1, GetElementsAddressFormatList());
+    Address address = factory.CreateP2wpkhAddress(pubkey);
+    EXPECT_EQ(address.GetNetType(), NetType::kLiquidV1);
+    EXPECT_EQ(address.GetWitnessVersion(), WitnessVersion::kVersion0);
+  }
+  {
+    ElementsAddressFactory factory(NetType::kElementsRegtest, GetElementsAddressFormatList());
+    Address address = factory.CreateP2pkhAddress(pubkey);
+    EXPECT_EQ(address.GetNetType(), NetType::kElementsRegtest);
+    EXPECT_EQ(address.GetWitnessVersion(), WitnessVersion::kVersionNone);
+  }
+
+  // error
+  {
+    ElementsAddressFactory factory(NetType::kMainnet, GetElementsAddressFormatList());
+    EXPECT_THROW((factory.CreateP2pkhAddress(pubkey)), CfdException);
+  }
+  {
+    ElementsAddressFactory factory(NetType::kTestnet, GetElementsAddressFormatList());
+    EXPECT_THROW((factory.CreateP2pkhAddress(pubkey)), CfdException);
+  }
+  {
+    ElementsAddressFactory factory(NetType::kRegtest, GetElementsAddressFormatList());
+    EXPECT_THROW((factory.CreateP2pkhAddress(pubkey)), CfdException);
+  }
 }
 
 TEST(ElementsAddressFactory, Constructor_type_witver)
@@ -62,6 +91,143 @@ TEST(ElementsAddressFactory, Constructor_type_witver_prefix)
   EXPECT_NO_THROW(ElementsAddressFactory factory(NetType::kRegtest, WitnessVersion::kVersionNone, GetBitcoinAddressFormatList()));
   EXPECT_NO_THROW(ElementsAddressFactory factory(NetType::kLiquidV1, WitnessVersion::kVersion0, GetElementsAddressFormatList()));
   EXPECT_NO_THROW(ElementsAddressFactory factory(NetType::kElementsRegtest, WitnessVersion::kVersionNone, GetElementsAddressFormatList()));
+
+  Pubkey pubkey = Pubkey("027592aab5d43618dda13fba71e3993cd7517a712d3da49664c06ee1bd3d1f70af");
+  {
+    ElementsAddressFactory factory(NetType::kLiquidV1, WitnessVersion::kVersion0, GetElementsAddressFormatList());
+    Address address = factory.CreateP2wpkhAddress(pubkey);
+    EXPECT_EQ(address.GetNetType(), NetType::kLiquidV1);
+    EXPECT_EQ(address.GetWitnessVersion(), WitnessVersion::kVersion0);
+  }
+  {
+    ElementsAddressFactory factory(NetType::kElementsRegtest, WitnessVersion::kVersionNone, GetElementsAddressFormatList());
+    Address address = factory.CreateP2pkhAddress(pubkey);
+    EXPECT_EQ(address.GetNetType(), NetType::kElementsRegtest);
+    EXPECT_EQ(address.GetWitnessVersion(), WitnessVersion::kVersionNone);
+  }
+
+  // error
+  {
+    ElementsAddressFactory factory(NetType::kMainnet, WitnessVersion::kVersion0, GetElementsAddressFormatList());
+    EXPECT_THROW((factory.CreateP2wpkhAddress(pubkey)), CfdException);
+  }
+  {
+    ElementsAddressFactory factory(NetType::kTestnet, WitnessVersion::kVersion1, GetElementsAddressFormatList());
+    EXPECT_THROW((factory.CreateP2wpkhAddress(pubkey)), CfdException);
+  }
+  {
+    ElementsAddressFactory factory(NetType::kRegtest, WitnessVersion::kVersionNone, GetElementsAddressFormatList());
+    EXPECT_THROW((factory.CreateP2pkhAddress(pubkey)), CfdException);
+  }
+}
+
+TEST(ElementsAddressFactory, GetAddress)
+{
+  {
+    ElementsAddressFactory factory(NetType::kElementsRegtest, GetElementsAddressFormatList());
+    Address address = factory.GetAddress("XVHzywLC5fPS8N1216n3b2fngqqrPzKYx9");
+    EXPECT_STREQ(address.GetAddress().c_str(), "XVHzywLC5fPS8N1216n3b2fngqqrPzKYx9");
+
+    EXPECT_THROW(Address address = factory.GetAddress(""), CfdException);
+    EXPECT_THROW(Address address = factory.GetAddress("AzpwdpR9siiDBs3nG8SNpvGQcLTHP2od4MQPugUTa3zfKHKkAVwx6M4ea2W1JovrbhuErKosFpfeuxf5"), CfdException);
+    EXPECT_THROW(Address address = factory.GetAddress("bcrt1qshc8er8ycnxn5mamc9m7acaxcasplqunvaw4f6"), CfdException);
+  }
+}
+TEST(ElementsAddressFactory, GetAddressByHash)
+{
+  {
+    ElementsAddressFactory factory(NetType::kElementsRegtest, GetElementsAddressFormatList());
+    Address address = factory.GetAddressByHash(AddressType::kP2pkhAddress, ByteData("c4d571179a455b8976b79cf99183fd2bbafe6bfd"));
+    EXPECT_STREQ(address.GetHash().GetHex().c_str(), "c4d571179a455b8976b79cf99183fd2bbafe6bfd");
+    EXPECT_EQ(address.GetAddressType(), AddressType::kP2pkhAddress);
+
+    EXPECT_THROW(factory.GetAddressByHash(AddressType::kP2wpkhAddress, ByteData()), CfdException);
+  }
+}
+
+TEST(ElementsAddressFactory, GetAddressByHash160)
+{
+  {
+    ElementsAddressFactory factory(NetType::kElementsRegtest, GetElementsAddressFormatList());
+    Address address = factory.GetAddressByHash(AddressType::kP2pkhAddress, ByteData160("c4d571179a455b8976b79cf99183fd2bbafe6bfd"));
+    EXPECT_STREQ(address.GetHash().GetHex().c_str(), "c4d571179a455b8976b79cf99183fd2bbafe6bfd");
+    EXPECT_EQ(address.GetAddressType(), AddressType::kP2pkhAddress);
+
+    EXPECT_THROW(factory.GetAddressByHash(AddressType::kP2wpkhAddress, ByteData160()), CfdException);
+  }
+}
+
+TEST(ElementsAddressFactory, GetSegwitAddressByHash)
+{
+  {
+    ElementsAddressFactory factory(NetType::kElementsRegtest, GetElementsAddressFormatList());
+    Address address = factory.GetSegwitAddressByHash(ByteData("c4d571179a455b8976b79cf99183fd2bbafe6bfd"));
+    EXPECT_STREQ(address.GetHash().GetHex().c_str(), "c4d571179a455b8976b79cf99183fd2bbafe6bfd");
+    EXPECT_EQ(address.GetAddressType(), AddressType::kP2wpkhAddress);
+
+    EXPECT_THROW(factory.GetSegwitAddressByHash(ByteData()), CfdException);
+    EXPECT_THROW(factory.GetSegwitAddressByHash(ByteData("0000")), CfdException);
+  }
+}
+
+TEST(ElementsAddressFactory, CreateP2pkhAddress)
+{
+  Pubkey pubkey = Pubkey("027592aab5d43618dda13fba71e3993cd7517a712d3da49664c06ee1bd3d1f70af");
+  {
+    ElementsAddressFactory factory(NetType::kElementsRegtest, GetElementsAddressFormatList());
+    Address addr = factory.CreateP2pkhAddress(pubkey);
+    EXPECT_STREQ(addr.GetAddress().c_str(), "2dnmekh8NBmNX3Ckwte5CArjcsHLYdthCg3");
+    EXPECT_STREQ(addr.GetPubkey().GetHex().c_str(), "027592aab5d43618dda13fba71e3993cd7517a712d3da49664c06ee1bd3d1f70af");
+  }
+}
+
+TEST(ElementsAddressFactory, CreateP2shAddress)
+{
+  Script script = Script("76a914ef286e6af39de178d88b32e120f716b53753808c88ac");
+  {
+    ElementsAddressFactory factory(NetType::kElementsRegtest, GetElementsAddressFormatList());
+    Address addr = factory.CreateP2shAddress(script);
+    EXPECT_STREQ(addr.GetAddress().c_str(), "XVP8HajT7CDjhT16N5eGvKqYpyrc4vsuv8");
+    EXPECT_STREQ(addr.GetScript().GetHex().c_str(), "76a914ef286e6af39de178d88b32e120f716b53753808c88ac");
+  }
+}
+
+TEST(ElementsAddressFactory, CreateP2wpkhAddress)
+{
+  Pubkey pubkey = Pubkey("027592aab5d43618dda13fba71e3993cd7517a712d3da49664c06ee1bd3d1f70af");
+  {
+    ElementsAddressFactory factory(NetType::kElementsRegtest, GetElementsAddressFormatList());
+    Address addr = factory.CreateP2wpkhAddress(pubkey);
+    EXPECT_STREQ(addr.GetAddress().c_str(), "ert1qjfw5q2ygp0gvn450h3lu0hlwjanfsc5udafvh6");
+    EXPECT_STREQ(addr.GetPubkey().GetHex().c_str(), "027592aab5d43618dda13fba71e3993cd7517a712d3da49664c06ee1bd3d1f70af");
+  }
+}
+
+TEST(ElementsAddressFactory, CreateP2wshAddress)
+{
+  Script script = Script("76a914ef286e6af39de178d88b32e120f716b53753808c88ac");
+  {
+    ElementsAddressFactory factory(NetType::kElementsRegtest, GetElementsAddressFormatList());
+    Address addr = factory.CreateP2wshAddress(script);
+    EXPECT_STREQ(addr.GetAddress().c_str(), "ert1q705w67ldrw5t4l5me7evc4nnf7m6tgq6tc85fr6j6zsuwt68kefqherg6e");
+    EXPECT_STREQ(addr.GetScript().GetHex().c_str(), "76a914ef286e6af39de178d88b32e120f716b53753808c88ac");
+  }
+}
+
+TEST(ElementsAddressFactory, CreateP2wshMultisigAddress)
+{
+   std::vector<Pubkey> pubkeys;
+   pubkeys.push_back(Pubkey("027592aab5d43618dda13fba71e3993cd7517a712d3da49664c06ee1bd3d1f70af"));
+   pubkeys.push_back(Pubkey("038d87a23b18cee3a3615eb03035e74cafa8388b48c9263bf2b3a4081d51ffcee7"));
+   pubkeys.push_back(Pubkey("027bb433e43e5e3526e435bd579289dfd4b9c4acdb2e3e80bd04dcd996edc15c73"));
+
+   ElementsAddressFactory factory(NetType::kLiquidV1);
+   EXPECT_NO_THROW(Address addr = factory.CreateP2wshMultisigAddress(2, pubkeys));
+
+   std::vector<Pubkey> empty_pubkeys;
+   EXPECT_THROW(factory.CreateP2wshMultisigAddress(2, empty_pubkeys), CfdException);
+   EXPECT_THROW(factory.CreateP2wshMultisigAddress(0, pubkeys), CfdException);
+   EXPECT_THROW(factory.CreateP2wshMultisigAddress(5, pubkeys), CfdException);
 }
 
 TEST(ElementsAddressFactory, GetConfidentialAddress)
@@ -143,3 +309,4 @@ TEST(ElementsAddressFactory, CreatePegInAddress3)
     EXPECT_THROW(factory.CreatePegInAddress(AddressType::kP2wpkhAddress, Script()), CfdException);
   }
 }
+#endif

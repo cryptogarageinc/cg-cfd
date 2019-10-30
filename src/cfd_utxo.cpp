@@ -34,6 +34,7 @@ using cfd::core::kMaxAmount;
 using cfd::core::RandomNumberUtil;
 using cfd::core::Script;
 using cfd::core::Txid;
+using cfd::core::TxIn;
 #ifndef CFD_DISABLE_ELEMENTS
 using cfd::core::ConfidentialAssetId;
 using cfd::core::ConfidentialTxIn;
@@ -622,15 +623,17 @@ void CoinSelection::ConvertToUtxo(
   memset(utxo, 0, sizeof(*utxo));
 
   utxo->block_height = block_height;
-  memcpy(
-      utxo->block_hash, block_hash.GetData().GetBytes().data(),
-      sizeof(utxo->block_hash));
+  if (!block_hash.GetData().Empty()) {
+    memcpy(
+        utxo->block_hash, block_hash.GetData().GetBytes().data(),
+        sizeof(utxo->block_hash));
+  }
   memcpy(utxo->txid, txid.GetData().GetBytes().data(), sizeof(utxo->txid));
   utxo->vout = vout;
-  const std::vector<uint8_t>& scrpt = locking_script.GetData().GetBytes();
-  if (scrpt.size() < sizeof(utxo->locking_script)) {
-    memcpy(utxo->locking_script, scrpt.data(), sizeof(utxo->locking_script));
-    utxo->script_length = static_cast<uint16_t>(scrpt.size());
+  const std::vector<uint8_t>& script = locking_script.GetData().GetBytes();
+  if (script.size() < sizeof(utxo->locking_script)) {
+    memcpy(utxo->locking_script, script.data(), script.size());
+    utxo->script_length = static_cast<uint16_t>(script.size());
   }
 
   uint32_t minimum_txin = static_cast<uint32_t>(TxIn::kMinimumTxInSize);
