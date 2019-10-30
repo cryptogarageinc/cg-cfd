@@ -12,6 +12,7 @@
 #include "cfd/cfd_utxo.h"
 
 #include "cfd/cfd_common.h"
+#include "cfd/cfd_fee.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_amount.h"
 #include "cfdcore/cfdcore_coin.h"
@@ -111,7 +112,8 @@ void ApproximateBestSubset(
 // -----------------------------------------------------------------------------
 // CoinSelectionOption
 // -----------------------------------------------------------------------------
-CoinSelectionOption::CoinSelectionOption() {
+CoinSelectionOption::CoinSelectionOption()
+    : effective_fee_baserate_(FeeCalculator::GetMinimumFeeRate()) {
   // do nothing
 }
 
@@ -144,7 +146,7 @@ void CoinSelectionOption::SetChangeSpendSize(size_t size) {
 }
 
 void CoinSelectionOption::SetEffectiveFeeBaserate(uint64_t baserate) {
-  effective_fee_baserate_ = baserate;
+  effective_fee_baserate_ = baserate * 1000;
 }
 
 void CoinSelectionOption::SetTxNoInputsSize(size_t size) {
@@ -189,15 +191,93 @@ CoinSelection::CoinSelection(bool use_bnb) : use_bnb_(use_bnb) {
 }
 
 std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
-    const Amount& target_value, const std::vector<Utxo>& utxos,
+    const Amount& target_value, std::vector<Utxo>* utxos,
     const UtxoFilter& filter, const CoinSelectionOption& option_params,
-    Amount* select_value, Amount* fee_value) const {
-  // FIXME
-  return std::vector<Utxo>();
+    Amount* select_value, Amount* fee_value) {
+  // for btc default(DUST_RELAY_TX_FEE)
+  static constexpr const uint64_t kDustRelayTxFee = 3000;
+  if (select_value) {
+    *select_value = Amount::CreateBySatoshiAmount(0);
+  } else {
+    cfd::core::logger::info(
+        CFD_LOG_SOURCE, "select_value=null. filter.asset={}",
+        filter.target_asset.GetHex());
+  }
+  if (fee_value) {
+    *fee_value = Amount::CreateBySatoshiAmount(0);
+  }
+
+  if (use_bnb_ && option_params.IsUseBnB()) {
+    // Get long term estimate
+    std::vector<Utxo*> utxo_pool;
+    FeeCalculator discard_fee(kDustRelayTxFee);
+    FeeCalculator effective_fee(option_params.GetEffectiveFeeBaserate());
+    FeeCalculator long_term_fee(FeeCalculator::GetMinimumFeeRate());
+    // FeeCalculation feeCalc;
+    // CCoinControl temp;
+    // temp.m_confirm_target = 1008;
+    // CFeeRate long_term_feerate = GetMinimumFeeRate(*this, temp, &feeCalc);
+
+    // Calculate cost of change
+    // CAmount cost_of_change = GetDiscardRate(*this).GetFee(
+    //   coin_selection_params.change_spend_size) +
+    //   coin_selection_params.effective_fee.GetFee(
+    //     coin_selection_params.change_output_size);
+    Amount cost_of_change =
+        discard_fee.GetFee(option_params.GetChangeSpendSize()) +
+        effective_fee.GetFee(option_params.GetChangeOutputSize());
+
+    // NOLINT Filter by the min conf specs and add to utxo_pool and calculate effective value
+    for (auto& utxo : *utxos) {
+      // if (!group.EligibleForSpending(eligibility_filter)) continue;
+
+      utxo.fee = 0;
+      utxo.long_term_fee = 0;
+      utxo.effective_value = 0;
+
+      uint64_t fee = effective_fee.GetFee(utxo).GetSatoshiValue();
+      // Only include outputs that are positive effective value (i.e. not dust)
+      if (utxo.amount > fee) {
+        uint64_t effective_value = utxo.amount - fee;
+        utxo.fee = fee;
+        utxo.long_term_fee = long_term_fee.GetFee(utxo).GetSatoshiValue();
+        utxo.effective_value = effective_value;
+        utxo_pool.push_back(&utxo);
+      }
+    }
+    // Calculate the fees for things that aren't inputs
+    Amount not_input_fees =
+        effective_fee.GetFee(option_params.GetTxNoInputsSize());
+    std::vector<Utxo> result = SelectCoinsBnB(
+        target_value, utxo_pool, cost_of_change, not_input_fees, select_value);
+    if (!result.empty()) {
+      if (select_value && fee_value &&
+          (select_value->GetSatoshiValue() != 0)) {
+        *fee_value = *select_value - target_value;
+      }
+      use_bnb_ = false;
+      return result;
+    }
+    // SelectCoinsBnB fail, go to KnapsackSolver.
+  }
+
+  // Filter by the min conf specs and add to utxo_pool
+  // TODO(k-matsuzawa): 現状はフィルタリングしていないためUtxo一覧の再作成不要
+  // for (const OutputGroup& group : groups) {
+  //   if (!group.EligibleForSpending(eligibility_filter)) continue;
+  //   utxo_pool.push_back(group);
+  // }
+  std::vector<Utxo> result =
+      KnapsackSolver(target_value, *utxos, select_value);
+  if (select_value && fee_value && (select_value->GetSatoshiValue() != 0)) {
+    *fee_value = *select_value - target_value;
+  }
+  use_bnb_ = false;
+  return result;
 }
 
 std::vector<Utxo> CoinSelection::SelectCoinsBnB(
-    const Amount& target_value, const std::vector<Utxo>& utxos,
+    const Amount& target_value, const std::vector<Utxo*>& utxos,
     const Amount& cost_of_change, const Amount& not_input_fees,
     Amount* select_value) const {
   if (select_value == nullptr) {
@@ -216,11 +296,24 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
 
   // Calculate curr_available_value
   Amount curr_available_value = Amount::CreateBySatoshiAmount(0);
-  for (const Utxo utxo : utxos) {
+  std::vector<const Utxo*> p_utxos(utxos.size());
+  for (const Utxo* utxo : utxos) {
     // Assert that this utxo is not negative. It should never be negative,
     //  effective value calculation should have removed it
-    assert(utxo.effective_value > 0);
-    curr_available_value += utxo.effective_value;
+    // assert(utxo->effective_value > 0);
+    if (utxo->effective_value == 0) {
+      warn(
+          CFD_LOG_SOURCE,
+          "Failed to SelectCoinsBnB. effective_value is 0."
+          ": effective_value={}",
+          utxo->effective_value);
+      throw CfdException(
+          CfdError::kCfdIllegalStateError,
+          "Failed to select coin. effective amount is 0.");
+    }
+    curr_available_value += utxo->effective_value;
+    // copy utxo pointer
+    p_utxos.push_back(utxo);
   }
   if (curr_available_value < actual_target) {
     // not enough amount
@@ -236,11 +329,6 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
         "Failed to select coin. Not enough utxos.");
   }
 
-  // copy utxo pointer
-  std::vector<const Utxo*> p_utxos(utxos.size());
-  for (const Utxo& utxo : utxos) {
-    p_utxos.push_back(&utxo);
-  }
   // Sort the utxos
   std::sort(p_utxos.begin(), p_utxos.end(), [](const Utxo* a, const Utxo* b) {
     return a->effective_value > b->effective_value;
@@ -277,9 +365,8 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
         best_selection.resize(p_utxos.size());
         best_waste = curr_waste;
       }
-      curr_waste -=
-          (curr_value -
-           actual_target);  //NOLINT Remove the excess value as we will be selecting different coins now
+      curr_waste -= (curr_value - actual_target);
+      //NOLINT Remove the excess value as we will be selecting different coins now
       backtrack = true;
     }
 
@@ -439,10 +526,93 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
 }
 
 void CoinSelection::ConvertToUtxo(
+    const Txid& txid, uint32_t vout, const std::string& output_descriptor,
+    const Amount& amount, const std::string& asset, const void* binary_data,
+    Utxo* utxo) {
+  static constexpr const uint16_t kScriptSize = 50;
+  if (utxo == nullptr) {
+    warn(CFD_LOG_SOURCE, "utxo is nullptr.");
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
+        "Failed to convert utxo. utxo is nullptr.");
+  }
+  memset(utxo, 0, sizeof(*utxo));
+  memcpy(utxo->txid, txid.GetData().GetBytes().data(), sizeof(utxo->txid));
+  utxo->vout = vout;
+
+  // TODO(k-matsuzawa): descriptor解析は暫定対処。本対応が必要。
+
+  uint32_t minimum_txin = static_cast<uint32_t>(TxIn::kMinimumTxInSize);
+  uint32_t witness_size = 0;
+  if (output_descriptor.find("wpkh(") == 0) {
+    utxo->address_type = AddressType::kP2wpkhAddress;
+    TxIn::EstimateTxInSize(
+        AddressType::kP2wpkhAddress, Script(), &witness_size);
+    utxo->witness_size_max = static_cast<uint16_t>(witness_size);
+  } else if (output_descriptor.find("wsh(") == 0) {
+    utxo->address_type = AddressType::kP2wshAddress;
+    TxIn::EstimateTxInSize(
+        AddressType::kP2wshAddress, Script(), &witness_size);
+    utxo->witness_size_max = static_cast<uint16_t>(witness_size);
+    utxo->witness_size_max += kScriptSize;
+  } else if (output_descriptor.find("sh(") == 0) {
+    if (output_descriptor.find("sh(wpkh(") == 0) {
+      utxo->address_type = AddressType::kP2shP2wpkhAddress;
+      utxo->uscript_size_max = 22;
+      TxIn::EstimateTxInSize(
+          AddressType::kP2wpkhAddress, Script(), &witness_size);
+      utxo->witness_size_max = static_cast<uint16_t>(witness_size);
+    } else if (output_descriptor.find("sh(wsh(") == 0) {
+      utxo->address_type = AddressType::kP2shP2wshAddress;
+      utxo->uscript_size_max = 34;
+      TxIn::EstimateTxInSize(
+          AddressType::kP2wshAddress, Script(), &witness_size);
+      utxo->witness_size_max = static_cast<uint16_t>(witness_size);
+      utxo->witness_size_max += kScriptSize;
+    } else {
+      utxo->address_type = AddressType::kP2shAddress;
+      utxo->uscript_size_max = kScriptSize;
+      utxo->uscript_size_max +=
+          TxIn::EstimateTxInSize(AddressType::kP2shAddress, Script()) -
+          minimum_txin;
+    }
+  } else if (output_descriptor.find("pkh(") == 0) {
+    utxo->address_type = AddressType::kP2pkhAddress;
+    utxo->uscript_size_max =
+        TxIn::EstimateTxInSize(AddressType::kP2pkhAddress, Script()) -
+        minimum_txin;
+  } else {
+    // unknown type?
+  }
+#if 0
+  const std::vector<uint8_t>& scrpt = locking_script.GetData().GetBytes();
+  if (scrpt.size() < sizeof(utxo->locking_script)) {
+    memcpy(utxo->locking_script, scrpt.data(), sizeof(utxo->locking_script));
+    utxo->script_length = static_cast<uint16_t>(scrpt.size());
+  }
+#endif
+
+  utxo->amount = amount.GetSatoshiValue();
+  memcpy(&utxo->binary_data, &binary_data, sizeof(void*));
+  utxo->effective_value = utxo->amount;
+
+#ifndef CFD_DISABLE_ELEMENTS
+  if (!asset.empty()) {
+    ConfidentialAssetId asset_data(asset);
+    utxo->blinded = asset_data.HasBlinding();
+    memcpy(
+        utxo->asset, asset_data.GetData().GetBytes().data(),
+        sizeof(utxo->asset));
+  }
+#endif  // CFD_DISABLE_ELEMENTS
+}
+
+void CoinSelection::ConvertToUtxo(
     uint64_t block_height, const BlockHash& block_hash, const Txid& txid,
     uint32_t vout, const Script& locking_script,
     const std::string& output_descriptor, const Amount& amount,
     const void* binary_data, Utxo* utxo) {
+  static constexpr const uint16_t kScriptSize = 50;
   if (utxo == nullptr) {
     warn(CFD_LOG_SOURCE, "utxo is nullptr.");
     throw CfdException(
@@ -463,25 +633,44 @@ void CoinSelection::ConvertToUtxo(
     utxo->script_length = static_cast<uint16_t>(scrpt.size());
   }
 
+  uint32_t minimum_txin = static_cast<uint32_t>(TxIn::kMinimumTxInSize);
+  uint32_t witness_size = 0;
   if (locking_script.IsP2pkhScript()) {
     utxo->address_type = AddressType::kP2pkhAddress;
-    utxo->uscript_size_max = 0;  // TODO(k-matsuzawa): 後で追加対応する
+    utxo->uscript_size_max =
+        TxIn::EstimateTxInSize(AddressType::kP2pkhAddress, Script()) -
+        minimum_txin;
   } else if (locking_script.IsP2shScript()) {
     utxo->address_type = AddressType::kP2shAddress;
-    utxo->uscript_size_max = 0;  // TODO(k-matsuzawa): 後で追加対応する
+    utxo->uscript_size_max = kScriptSize;
+    utxo->uscript_size_max +=
+        TxIn::EstimateTxInSize(AddressType::kP2shAddress, Script()) -
+        minimum_txin;
     if (output_descriptor.find("sh(wpkh(") == 0) {
       utxo->address_type = AddressType::kP2shP2wpkhAddress;
-      utxo->witness_size_max = 0;  // TODO(k-matsuzawa): 後で追加対応する
+      utxo->uscript_size_max = 22;
+      TxIn::EstimateTxInSize(
+          AddressType::kP2wpkhAddress, Script(), &witness_size);
+      utxo->witness_size_max = static_cast<uint16_t>(witness_size);
     } else if (output_descriptor.find("sh(wsh(") == 0) {
       utxo->address_type = AddressType::kP2shP2wshAddress;
-      utxo->witness_size_max = 0;  // TODO(k-matsuzawa): 後で追加対応する
+      utxo->uscript_size_max = 34;
+      TxIn::EstimateTxInSize(
+          AddressType::kP2wshAddress, Script(), &witness_size);
+      utxo->witness_size_max = static_cast<uint16_t>(witness_size);
+      utxo->witness_size_max += kScriptSize;
     }
   } else if (locking_script.IsP2wpkhScript()) {
     utxo->address_type = AddressType::kP2wpkhAddress;
-    utxo->witness_size_max = 0;  // TODO(k-matsuzawa): 後で追加対応する
+    TxIn::EstimateTxInSize(
+        AddressType::kP2wpkhAddress, Script(), &witness_size);
+    utxo->witness_size_max = static_cast<uint16_t>(witness_size);
   } else if (locking_script.IsP2wshScript()) {
     utxo->address_type = AddressType::kP2wshAddress;
-    utxo->witness_size_max = 0;  // TODO(k-matsuzawa): 後で追加対応する
+    TxIn::EstimateTxInSize(
+        AddressType::kP2wshAddress, Script(), &witness_size);
+    utxo->witness_size_max = static_cast<uint16_t>(witness_size);
+    utxo->witness_size_max += kScriptSize;
   }
   // TODO(k-matsuzawa): 後でOutputDescriptor対応する
   utxo->amount = amount.GetSatoshiValue();
