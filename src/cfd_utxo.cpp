@@ -40,6 +40,7 @@ using cfd::core::ConfidentialAssetId;
 using cfd::core::ConfidentialTxIn;
 using cfd::core::ConfidentialTxOutReference;
 #endif  // CFD_DISABLE_ELEMENTS
+using cfd::core::logger::info;
 using cfd::core::logger::warn;
 
 // -----------------------------------------------------------------------------
@@ -75,6 +76,7 @@ void ApproximateBestSubset(
   }
 
   std::vector<char> vf_includes;
+  vf_best->assign(utxos.size(), true);
   *n_best = n_total_value;
 
   for (int n_rep = 0; n_rep < iterations && *n_best != n_target_value;
@@ -245,6 +247,9 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
         uint64_t effective_value = utxo.amount - fee;
         utxo.fee = fee;
         utxo.long_term_fee = long_term_fee.GetFee(utxo).GetSatoshiValue();
+        if (utxo.long_term_fee > utxo.fee) {
+          utxo.long_term_fee = utxo.fee;  // TODO(k-matsuzawa): 後で見直し
+        }
         utxo.effective_value = effective_value;
         utxo_pool.push_back(&utxo);
       }
@@ -299,6 +304,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
         CfdError::kCfdIllegalArgumentError,
         "Failed to select coin. Outparameter is nullptr.");
   }
+  info(CFD_LOG_SOURCE, "SelectCoinsBnB start.");
 
   std::vector<Utxo> results;
   Amount curr_value = Amount::CreateBySatoshiAmount(0);
@@ -309,7 +315,6 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
 
   // Calculate curr_available_value
   Amount curr_available_value = Amount::CreateBySatoshiAmount(0);
-  std::vector<const Utxo*> p_utxos(utxos.size());
   for (const Utxo* utxo : utxos) {
     // Assert that this utxo is not negative. It should never be negative,
     //  effective value calculation should have removed it
@@ -325,8 +330,6 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
           "Failed to select coin. effective amount is 0.");
     }
     curr_available_value += utxo->effective_value;
-    // copy utxo pointer
-    p_utxos.push_back(utxo);
   }
   if (curr_available_value < actual_target) {
     // not enough amount
@@ -343,6 +346,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
   }
 
   // Sort the utxos
+  std::vector<Utxo*> p_utxos = utxos;
   std::sort(p_utxos.begin(), p_utxos.end(), [](const Utxo* a, const Utxo* b) {
     return a->effective_value > b->effective_value;
   });
@@ -438,6 +442,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
     }
   }
 
+  info(CFD_LOG_SOURCE, "SelectCoinsBnB end. results={}", results.size());
   return results;
 }
 
@@ -452,6 +457,7 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
         CfdError::kCfdIllegalArgumentError,
         "Failed to select coin. Outparameter is nullptr.");
   }
+  info(CFD_LOG_SOURCE, "KnapsackSolver start.");
 
   // List of values less than target
   const Utxo* lowest_larger = nullptr;
@@ -466,6 +472,7 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
     if (utxos[index]->amount == n_target) {
       ret_utxos.push_back(*utxos[index]);
       *select_value = Amount::CreateBySatoshiAmount(utxos[index]->amount);
+      info(CFD_LOG_SOURCE, "KnapsackSolver end. results={}", ret_utxos.size());
       return ret_utxos;
 
     } else if (utxos[index]->amount < n_target + kMinChange) {
@@ -486,6 +493,7 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
       ret_value += utxo->amount;
     }
     *select_value = Amount::CreateBySatoshiAmount(ret_value);
+    info(CFD_LOG_SOURCE, "KnapsackSolver end. results={}", ret_utxos.size());
     return ret_utxos;
   }
 
@@ -500,6 +508,7 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
 
     ret_utxos.push_back(*lowest_larger);
     *select_value = Amount::CreateBySatoshiAmount(lowest_larger->amount);
+    info(CFD_LOG_SOURCE, "KnapsackSolver end. results={}", ret_utxos.size());
     return ret_utxos;
   }
 
@@ -537,6 +546,7 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
     }
     *select_value = Amount::CreateBySatoshiAmount(ret_value);
   }
+  info(CFD_LOG_SOURCE, "KnapsackSolver end. results={}", ret_utxos.size());
   return ret_utxos;
 }
 
