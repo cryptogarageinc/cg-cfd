@@ -192,7 +192,7 @@ CoinSelection::CoinSelection(bool use_bnb) : use_bnb_(use_bnb) {
 }
 
 std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
-    const Amount& target_value, std::vector<Utxo>* utxos,
+    const Amount& target_value, const std::vector<Utxo>& utxos,
     const UtxoFilter& filter, const CoinSelectionOption& option_params,
     Amount* select_value, Amount* fee_value) {
   // for btc default(DUST_RELAY_TX_FEE)
@@ -207,6 +207,8 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
   if (fee_value) {
     *fee_value = Amount::CreateBySatoshiAmount(0);
   }
+  // Copy the list to change the calculation area.
+  std::vector<Utxo> work_utxos = utxos;
 
   if (use_bnb_ && option_params.IsUseBnB()) {
     // Get long term estimate
@@ -229,7 +231,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
         effective_fee.GetFee(option_params.GetChangeOutputSize());
 
     // NOLINT Filter by the min conf specs and add to utxo_pool and calculate effective value
-    for (auto& utxo : *utxos) {
+    for (auto& utxo : work_utxos) {
       // if (!group.EligibleForSpending(eligibility_filter)) continue;
 
       utxo.fee = 0;
@@ -269,7 +271,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
   //   utxo_pool.push_back(group);
   // }
   std::vector<Utxo> result =
-      KnapsackSolver(target_value, *utxos, select_value);
+      KnapsackSolver(target_value, work_utxos, select_value);
   if (select_value && fee_value && (select_value->GetSatoshiValue() != 0)) {
     *fee_value = *select_value - target_value;
   }

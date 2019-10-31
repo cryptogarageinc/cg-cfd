@@ -214,7 +214,7 @@ class CFD_EXPORT CoinSelection {
    * @return UTXO一覧。空の場合はエラー終了。
    */
   std::vector<Utxo> SelectCoinsMinConf(
-      const Amount& target_value, std::vector<Utxo>* utxos,
+      const Amount& target_value, const std::vector<Utxo>& utxos,
       const UtxoFilter& filter, const CoinSelectionOption& option_params,
       Amount* select_value = nullptr, Amount* fee_value = nullptr);
 
