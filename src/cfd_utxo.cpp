@@ -260,7 +260,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
         uint64_t effective_value = utxo.amount - fee;
         utxo.fee = fee;
         utxo.long_term_fee = long_term_fee.GetFee(utxo).GetSatoshiValue();
-#if 1
+#if 0
         std::vector<uint8_t> txid_byte(sizeof(utxo.txid));
         memcpy(txid_byte.data(), utxo.txid, txid_byte.size());
         info(
