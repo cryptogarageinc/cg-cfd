@@ -10,9 +10,11 @@
 
 #include "cfd/cfd_fee.h"
 #include "cfdcore/cfdcore_amount.h"
+#include "cfdcore/cfdcore_transaction_common.h"
 
 namespace cfd {
 
+using cfd::core::AbstractTransaction;
 using cfd::core::Amount;
 
 // -----------------------------------------------------------------------------
@@ -311,7 +313,8 @@ Amount FeeCalculator::GetFee(size_t size) const {
 Amount FeeCalculator::GetFee(const Utxo& utxo) const {
   uint32_t minimum_txin = static_cast<uint32_t>(TxIn::kMinimumTxInSize);
   uint32_t nowit_size = minimum_txin + utxo.uscript_size_max;
-  uint32_t vsize = (nowit_size * 4) + utxo.witness_size_max;
+  uint32_t vsize =
+      AbstractTransaction::GetVsizeFromSize(nowit_size, utxo.witness_size_max);
   return GetFee(vsize);
 }
 

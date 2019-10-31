@@ -19,12 +19,14 @@
 #include "cfdcore/cfdcore_exception.h"
 #include "cfdcore/cfdcore_logger.h"
 #include "cfdcore/cfdcore_script.h"
+#include "cfdcore/cfdcore_transaction_common.h"
 #ifndef CFD_DISABLE_ELEMENTS
 #include "cfdcore/cfdcore_elements_transaction.h"
 #endif  // CFD_DISABLE_ELEMENTS
 
 namespace cfd {
 
+using cfd::core::AbstractTransaction;
 using cfd::core::AddressType;
 using cfd::core::Amount;
 using cfd::core::BlockHash;
@@ -162,7 +164,8 @@ void CoinSelectionOption::InitializeTxSize(const TransactionController& tx) {
   uint32_t witness_size = 0;
   uint32_t total_size = TxIn::EstimateTxInSize(
       AddressType::kP2wpkhAddress, Script(), &witness_size);
-  change_spend_size_ = ((total_size - witness_size) * 4) + witness_size;
+  change_spend_size_ = AbstractTransaction::GetVsizeFromSize(
+      (total_size - witness_size), witness_size);
 }
 
 #ifndef CFD_DISABLE_ELEMENTS
@@ -180,18 +183,21 @@ void CoinSelectionOption::InitializeConfidentialTxSize(
   uint32_t witness_size = 0;
 
   size = tx.GetSizeIgnoreTxIn(true, &witness_size);
-  tx_noinputs_size_ = ((size - witness_size) * 4) + witness_size;
+  tx_noinputs_size_ = AbstractTransaction::GetVsizeFromSize(
+      (size - witness_size), witness_size);
 
   ConfidentialTxOutReference txout;
   witness_size = 0;
   size = txout.GetSerializeSize(true, &witness_size);
-  change_output_size_ = ((size - witness_size) * 4) + witness_size;
+  change_output_size_ = AbstractTransaction::GetVsizeFromSize(
+      (size - witness_size), witness_size);
 
   witness_size = 0;
   size = ConfidentialTxIn::EstimateTxInSize(
       AddressType::kP2wpkhAddress, Script(), 0, Script(), false, false,
       &witness_size);
-  change_spend_size_ = ((size - witness_size) * 4) + witness_size;
+  change_spend_size_ = AbstractTransaction::GetVsizeFromSize(
+      (size - witness_size), witness_size);
 }
 #endif  // CFD_DISABLE_ELEMENTS
 
