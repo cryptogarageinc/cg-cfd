@@ -135,7 +135,7 @@ class CFD_EXPORT CoinSelectionOption {
   void SetChangeSpendSize(size_t size);
   /**
    * @brief 効果的なfeeのbaserateを設定します.
-   * @param[in] baserate    fee baserate
+   * @param[in] baserate    fee baserate (for BTC/byte)
    */
   void SetEffectiveFeeBaserate(uint64_t baserate);
   /**
@@ -219,32 +219,6 @@ class CFD_EXPORT CoinSelection {
       Amount* select_value = nullptr, Amount* fee_value = nullptr);
 
   /**
-   * @brief CoinSelection(BnB)を実施する。
-   * @param[in] target_value    収集額
-   * @param[in] utxos           検索対象UTXO一覧
-   * @param[in] cost_of_change  コストの変更範囲。
-   *              target_value+本値が収集上限値となる。
-   * @param[in] not_input_fees  TxIn部を除いたfee額
-   * @param[out] select_value   UTXO収集成功時、合計収集額
-   * @return UTXO一覧。空の場合はエラー終了。
-   */
-  std::vector<Utxo> SelectCoinsBnB(
-      const Amount& target_value, const std::vector<Utxo*>& utxos,
-      const Amount& cost_of_change, const Amount& not_input_fees,
-      Amount* select_value) const;
-
-  /**
-   * @brief CoinSelection(KnapsackSolver)を実施する。
-   * @param[in] target_value    収集額
-   * @param[in] utxos           検索対象UTXO一覧
-   * @param[out] select_value   UTXO収集成功時、合計収集額
-   * @return UTXO一覧。空の場合はエラー終了。
-   */
-  std::vector<Utxo> KnapsackSolver(
-      const Amount& target_value, const std::vector<Utxo>& utxos,
-      Amount* select_value) const;
-
-  /**
    * @brief UTXO構造体への変換を行う。
    * @param[in] txid                txid
    * @param[in] vout                vout
@@ -297,6 +271,33 @@ class CFD_EXPORT CoinSelection {
       const std::string& output_descriptor, const Amount& amount,
       const ConfidentialAssetId& asset, const void* binary_data, Utxo* utxo);
 #endif  // CFD_DISABLE_ELEMENTS
+
+ protected:
+  /**
+   * @brief CoinSelection(BnB)を実施する。
+   * @param[in] target_value    収集額
+   * @param[in] utxos           検索対象UTXO一覧
+   * @param[in] cost_of_change  コストの変更範囲。
+   *              target_value+本値が収集上限値となる。
+   * @param[in] not_input_fees  TxIn部を除いたfee額
+   * @param[out] select_value   UTXO収集成功時、合計収集額
+   * @return UTXO一覧。空の場合はエラー終了。
+   */
+  std::vector<Utxo> SelectCoinsBnB(
+      const Amount& target_value, const std::vector<Utxo*>& utxos,
+      const Amount& cost_of_change, const Amount& not_input_fees,
+      Amount* select_value) const;
+
+  /**
+   * @brief CoinSelection(KnapsackSolver)を実施する。
+   * @param[in] target_value    収集額
+   * @param[in] utxos           検索対象UTXO一覧
+   * @param[out] select_value   UTXO収集成功時、合計収集額
+   * @return UTXO一覧。空の場合はエラー終了。
+   */
+  std::vector<Utxo> KnapsackSolver(
+      const Amount& target_value, const std::vector<Utxo*>& utxos,
+      Amount* select_value) const;
 
  private:
   bool use_bnb_;  //!< BnB 利用フラグ

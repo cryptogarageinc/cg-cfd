@@ -237,7 +237,7 @@ static int64_t EstimateSmartFee(uint32_t confirm_target) {
  * @return fee rate
  */
 static int64_t EstimateSmartFee(uint32_t confirm_target) {
-  // TODO(k-matsuzawa): 暫定。移植はwallet or nodeの動的パラメータが多すぎる
+  // TODO(k-matsuzawa): T.B.D.
   return static_cast<int64_t>(confirm_target);
 }
 

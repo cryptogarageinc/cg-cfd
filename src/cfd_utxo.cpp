@@ -210,9 +210,10 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
   // Copy the list to change the calculation area.
   std::vector<Utxo> work_utxos = utxos;
 
+  bool bnb_used = false;
+  std::vector<Utxo*> utxo_pool;
   if (use_bnb_ && option_params.IsUseBnB()) {
     // Get long term estimate
-    std::vector<Utxo*> utxo_pool;
     FeeCalculator discard_fee(kDustRelayTxFee);
     FeeCalculator effective_fee(option_params.GetEffectiveFeeBaserate());
     FeeCalculator long_term_fee(FeeCalculator::GetMinimumFeeRate());
@@ -261,6 +262,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
       use_bnb_ = false;
       return result;
     }
+    bnb_used = true;
     // SelectCoinsBnB fail, go to KnapsackSolver.
   }
 
@@ -270,8 +272,16 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
   //   if (!group.EligibleForSpending(eligibility_filter)) continue;
   //   utxo_pool.push_back(group);
   // }
+  if (!bnb_used) {
+    for (auto& utxo : work_utxos) {
+      if (utxo.effective_value == 0) {
+        utxo.effective_value = utxo.amount;
+      }
+      utxo_pool.push_back(&utxo);
+    }
+  }
   std::vector<Utxo> result =
-      KnapsackSolver(target_value, work_utxos, select_value);
+      KnapsackSolver(target_value, utxo_pool, select_value);
   if (select_value && fee_value && (select_value->GetSatoshiValue() != 0)) {
     *fee_value = *select_value - target_value;
   }
@@ -432,7 +442,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
 }
 
 std::vector<Utxo> CoinSelection::KnapsackSolver(
-    const Amount& target_value, const std::vector<Utxo>& utxos,
+    const Amount& target_value, const std::vector<Utxo*>& utxos,
     Amount* select_value) const {
   std::vector<Utxo> ret_utxos;
 
@@ -453,19 +463,19 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
       RandomNumberUtil::GetRandomIndexes(static_cast<uint32_t>(utxos.size()));
 
   for (size_t index = 0; index < indexes.size(); ++index) {
-    if (utxos[index].amount == n_target) {
-      ret_utxos.push_back(utxos[index]);
-      *select_value = Amount::CreateBySatoshiAmount(utxos[index].amount);
+    if (utxos[index]->amount == n_target) {
+      ret_utxos.push_back(*utxos[index]);
+      *select_value = Amount::CreateBySatoshiAmount(utxos[index]->amount);
       return ret_utxos;
 
-    } else if (utxos[index].amount < n_target + kMinChange) {
-      applicable_groups.push_back(&utxos[index]);
-      n_total += utxos[index].amount;
+    } else if (utxos[index]->amount < n_target + kMinChange) {
+      applicable_groups.push_back(utxos[index]);
+      n_total += utxos[index]->amount;
 
     } else if (
         lowest_larger == nullptr ||
-        utxos[index].amount < lowest_larger->amount) {
-      lowest_larger = &utxos[index];
+        utxos[index]->amount < lowest_larger->amount) {
+      lowest_larger = utxos[index];
     }
   }
 
@@ -495,7 +505,9 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
 
   std::sort(
       applicable_groups.begin(), applicable_groups.end(),
-      [](const Utxo* a, const Utxo* b) { return a->amount > b->amount; });
+      [](const Utxo* a, const Utxo* b) {
+        return a->effective_value > b->effective_value;
+      });
   std::vector<char> vf_best;
   uint64_t n_best;
 
