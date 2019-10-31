@@ -216,8 +216,8 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
     const Amount& target_value, const std::vector<Utxo>& utxos,
     const UtxoFilter& filter, const CoinSelectionOption& option_params,
     Amount* select_value, Amount* fee_value) {
-  // for btc default(DUST_RELAY_TX_FEE)
-  static constexpr const uint64_t kDustRelayTxFee = 3000;
+  // for btc default(DUST_RELAY_TX_FEE(3000)) -> DEFAULT_DISCARD_FEE(10000)
+  static constexpr const uint64_t kDustRelayTxFee = 10000;
   if (select_value) {
     *select_value = Amount::CreateBySatoshiAmount(0);
   } else {
