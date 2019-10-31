@@ -174,7 +174,11 @@ void CoinSelectionOption::SetFeeAsset(const ConfidentialAssetId& asset) {
   fee_asset_ = asset;
 }
 
-void CoinSelectionOption::InitializeConfidentialTxSize(c
+void CoinSelectionOption::InitializeConfidentialTxSize(
+    const ConfidentialTransactionController& tx) {
+  uint32_t size;
+  uint32_t witness_size = 0;
+
   size = tx.GetSizeIgnoreTxIn(true, &witness_size);
   tx_noinputs_size_ = ((size - witness_size) * 4) + witness_size;
 
