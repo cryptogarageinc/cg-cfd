@@ -310,8 +310,9 @@ Amount FeeCalculator::GetFee(size_t size) const {
 
 Amount FeeCalculator::GetFee(const Utxo& utxo) const {
   uint32_t minimum_txin = static_cast<uint32_t>(TxIn::kMinimumTxInSize);
-  uint32_t size = minimum_txin + utxo.uscript_size_max + utxo.witness_size_max;
-  return GetFee(size);
+  uint32_t nowit_size = minimum_txin + utxo.uscript_size_max;
+  uint32_t vsize = (nowit_size * 4) + utxo.witness_size_max;
+  return GetFee(vsize);
 }
 
 }  // namespace cfd

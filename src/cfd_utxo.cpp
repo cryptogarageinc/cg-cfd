@@ -159,7 +159,10 @@ void CoinSelectionOption::SetTxNoInputsSize(size_t size) {
 void CoinSelectionOption::InitializeTxSize(const TransactionController& tx) {
   tx_noinputs_size_ = tx.GetSizeIgnoreTxIn();
   change_output_size_ = 22 + 1 + 8;  // p2wpkh
-  change_spend_size_ = TxIn::EstimateTxInSize(AddressType::kP2wpkhAddress);
+  uint32_t witness_size = 0;
+  uint32_t total_size = TxIn::EstimateTxInSize(
+      AddressType::kP2wpkhAddress, Script(), &witness_size);
+  change_spend_size_ = ((total_size - witness_size) * 4) + witness_size;
 }
 
 #ifndef CFD_DISABLE_ELEMENTS
@@ -171,14 +174,20 @@ void CoinSelectionOption::SetFeeAsset(const ConfidentialAssetId& asset) {
   fee_asset_ = asset;
 }
 
-void CoinSelectionOption::InitializeConfidentialTxSize(
-    const ConfidentialTransactionController& tx) {
-  tx_noinputs_size_ = tx.GetSizeIgnoreTxIn();
+void CoinSelectionOption::InitializeConfidentialTxSize(c
+  size = tx.GetSizeIgnoreTxIn(true, &witness_size);
+  tx_noinputs_size_ = ((size - witness_size) * 4) + witness_size;
+
   ConfidentialTxOutReference txout;
-  // TODO(k-matsuzawa): 後で調整する
-  change_output_size_ = txout.GetSerializeSize(true);  // blind
-  change_spend_size_ =
-      ConfidentialTxIn::EstimateTxInSize(AddressType::kP2wpkhAddress);
+  witness_size = 0;
+  size = txout.GetSerializeSize(true, &witness_size);
+  change_output_size_ = ((size - witness_size) * 4) + witness_size;
+
+  witness_size = 0;
+  size = ConfidentialTxIn::EstimateTxInSize(
+      AddressType::kP2wpkhAddress, Script(), 0, Script(), false, false,
+      &witness_size);
+  change_spend_size_ = ((size - witness_size) * 4) + witness_size;
 }
 #endif  // CFD_DISABLE_ELEMENTS
 
@@ -247,6 +256,14 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
         uint64_t effective_value = utxo.amount - fee;
         utxo.fee = fee;
         utxo.long_term_fee = long_term_fee.GetFee(utxo).GetSatoshiValue();
+#if 1
+        std::vector<uint8_t> txid_byte(sizeof(utxo.txid));
+        memcpy(txid_byte.data(), utxo.txid, txid_byte.size());
+        info(
+            CFD_LOG_SOURCE, "utxo({},{}) size={}/{} amount={}/{}/{}",
+            Txid(txid_byte).GetHex(), utxo.vout, utxo.uscript_size_max,
+            utxo.witness_size_max, utxo.amount, utxo.fee, utxo.long_term_fee);
+#endif
         if (utxo.long_term_fee > utxo.fee) {
           utxo.long_term_fee = utxo.fee;  // TODO(k-matsuzawa): 後で見直し
         }
@@ -264,7 +281,6 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
           (select_value->GetSatoshiValue() != 0)) {
         *fee_value = *select_value - target_value;
       }
-      use_bnb_ = false;
       return result;
     }
     bnb_used = true;
@@ -290,7 +306,6 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
   if (select_value && fee_value && (select_value->GetSatoshiValue() != 0)) {
     *fee_value = *select_value - target_value;
   }
-  use_bnb_ = false;
   return result;
 }
 
@@ -304,7 +319,10 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
         CfdError::kCfdIllegalArgumentError,
         "Failed to select coin. Outparameter is nullptr.");
   }
-  info(CFD_LOG_SOURCE, "SelectCoinsBnB start.");
+  info(
+      CFD_LOG_SOURCE,
+      "SelectCoinsBnB start. cost_of_change={}, not_input_fees={}",
+      cost_of_change.GetSatoshiValue(), not_input_fees.GetSatoshiValue());
 
   std::vector<Utxo> results;
   Amount curr_value = Amount::CreateBySatoshiAmount(0);
@@ -429,16 +447,14 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
   }
 
   // Check for solution
-  if (best_selection.empty()) {
-    return results;
-  }
-
-  // Set output set
-  *select_value = Amount::CreateBySatoshiAmount(0);
-  for (size_t i = 0; i < best_selection.size(); ++i) {
-    if (best_selection.at(i)) {
-      results.push_back(*(p_utxos.at(i)));
-      *select_value += static_cast<int64_t>(p_utxos.at(i)->amount);
+  if (!best_selection.empty()) {
+    // Set output set
+    *select_value = Amount::CreateBySatoshiAmount(0);
+    for (size_t i = 0; i < best_selection.size(); ++i) {
+      if (best_selection.at(i)) {
+        results.push_back(*(p_utxos.at(i)));
+        *select_value += static_cast<int64_t>(p_utxos.at(i)->amount);
+      }
     }
   }
 
