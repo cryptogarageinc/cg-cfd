@@ -137,7 +137,7 @@ class CFD_EXPORT CoinSelectionOption {
    * @brief 効果的なfeeのbaserateを設定します.
    * @param[in] baserate    fee baserate (for BTC/byte)
    */
-  void SetEffectiveFeeBaserate(uint64_t baserate);
+  void SetEffectiveFeeBaserate(double baserate);
   /**
    * @brief tx合計サイズのうちTxIn分のサイズを差し引いたサイズを設定する。
    * @param[in] size    ignore txin size.
