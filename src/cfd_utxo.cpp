@@ -41,7 +41,9 @@ using cfd::core::TxIn;
 #ifndef CFD_DISABLE_ELEMENTS
 using cfd::core::ConfidentialAssetId;
 using cfd::core::ConfidentialTxIn;
+using cfd::core::ConfidentialTxOut;
 using cfd::core::ConfidentialTxOutReference;
+using cfd::core::ConfidentialValue;
 #endif  // CFD_DISABLE_ELEMENTS
 using cfd::core::logger::info;
 using cfd::core::logger::warn;
@@ -130,7 +132,10 @@ void CoinSelectionOption::InitializeConfidentialTxSize(
   tx_noinputs_size_ = AbstractTransaction::GetVsizeFromSize(
       (size - witness_size), witness_size);
 
-  ConfidentialTxOutReference txout;
+  // wpkh想定
+  Script wpkh_script("0014ffffffffffffffffffffffffffffffffffffffff");
+  ConfidentialTxOut ctxout(wpkh_script, ConfidentialAssetId(), ConfidentialValue());
+  ConfidentialTxOutReference txout(ctxout);
   witness_size = 0;
   size = txout.GetSerializeSize(true, &witness_size);
   change_output_size_ = AbstractTransaction::GetVsizeFromSize(
@@ -550,8 +555,11 @@ void CoinSelection::ApproximateBestSubset(
         // that the rng is fast. We do not use a constant random sequence,
         // because there may be some privacy improvement by making
         // the selection random.
-        bool rand_bool = RandomNumberUtil::GetRandomBool(&randomize_cache_);
-        if (n_pass == 0 ? rand_bool : !vf_includes[i]) {
+        bool rand_bool = !vf_includes[i];
+        if (n_pass == 0) {
+          rand_bool = RandomNumberUtil::GetRandomBool(&randomize_cache_);
+        }
+        if (rand_bool) {
           n_total += utxos[i]->amount;
           vf_includes[i] = true;
           if (n_total >= n_target_value) {
