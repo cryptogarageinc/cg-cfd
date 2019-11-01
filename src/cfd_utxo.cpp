@@ -6,6 +6,7 @@
  */
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -150,8 +151,8 @@ void CoinSelectionOption::SetChangeSpendSize(size_t size) {
   change_spend_size_ = size;
 }
 
-void CoinSelectionOption::SetEffectiveFeeBaserate(uint64_t baserate) {
-  effective_fee_baserate_ = baserate * 1000;
+void CoinSelectionOption::SetEffectiveFeeBaserate(double baserate) {
+  effective_fee_baserate_ = static_cast<uint64_t>(floor(baserate * 1000));
 }
 
 void CoinSelectionOption::SetTxNoInputsSize(size_t size) {
