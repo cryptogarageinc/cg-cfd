@@ -229,6 +229,15 @@ const Transaction& TransactionController::GetTransaction() const {
   return transaction_;
 }
 
+uint32_t TransactionController::GetSizeIgnoreTxIn() const {
+  uint32_t result = AbstractTransaction::kTransactionMinimumSize;
+  std::vector<TxOutReference> txouts = transaction_.GetTxOutList();
+  for (const auto& txout : txouts) {
+    result += txout.GetSerializeSize();
+  }
+  return result;
+}
+
 const TxInReference TransactionController::GetTxIn(
     const Txid& txid, uint32_t vout) const {
   uint32_t index = transaction_.GetTxInIndex(txid, vout);

@@ -340,6 +340,24 @@ ConfidentialTransactionController::GetTransaction() const {
   return transaction_;
 }
 
+uint32_t ConfidentialTransactionController::GetSizeIgnoreTxIn(
+    bool is_blinded, uint32_t* witness_stack_size) const {
+  if (witness_stack_size) {
+    *witness_stack_size = 0;
+  }
+
+  uint32_t result = ConfidentialTransaction::kElementsTransactionMinimumSize;
+  std::vector<ConfidentialTxOutReference> txouts = transaction_.GetTxOutList();
+  uint32_t witness_size = 0;
+  for (const auto& txout : txouts) {
+    result += txout.GetSerializeSize(is_blinded, &witness_size);
+    if (!witness_stack_size) {
+      *witness_stack_size += witness_size;
+    }
+  }
+  return result;
+}
+
 IssuanceParameter ConfidentialTransactionController::SetAssetIssuance(
     const Txid& txid, uint32_t vout, const Amount& asset_amount,
     const Script& asset_locking_script, const ByteData& asset_nonce,

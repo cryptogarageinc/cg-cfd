@@ -264,6 +264,12 @@ class CFD_EXPORT TransactionController
   const Transaction& GetTransaction() const;
 
   /**
+   * @brief TxInを除外したサイズを取得する。
+   * @return TxInを除外したTxサイズ(Serialize)
+   */
+  uint32_t GetSizeIgnoreTxIn() const;
+
+  /**
    * @brief 指定されたP2PKH形式のTxInのSignatureHashを計算する.
    * @param[in] txid SignatureHash算出対象のTxInのtxid
    * @param[in] vout SignatureHash算出対象のTxInのvout

@@ -22,6 +22,7 @@
 namespace cfd {
 
 using cfd::core::Address;
+using cfd::core::AddressFormatData;
 using cfd::core::AddressType;
 using cfd::core::ConfidentialKey;
 using cfd::core::ElementsConfidentialAddress;
