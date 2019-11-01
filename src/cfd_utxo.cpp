@@ -57,63 +57,6 @@ static constexpr const int kApproximateBestSubsetIterations = 100000;
 //!  Change最小値
 static constexpr const uint64_t kMinChange = 1000000;  // MIN_CHANGE
 
-/**
- * 収集額に最も近い合計額となるUTXO一覧を決定する
- * @param[in]  utxos          収集額より小さいUTXO一覧
- * @param[in]  n_total_value  utxo一覧の合計額
- * @param[in]  n_target_value 収集額
- * @param[out] vf_best        収集対象フラグ一覧
- * @param[out] n_best         収集額に最も近い合計額
- * @param[in]  iterations     繰り返し数
- */
-void ApproximateBestSubset(
-    const std::vector<const Utxo*>& utxos, uint64_t n_total_value,
-    uint64_t n_target_value, std::vector<char>* vf_best, uint64_t* n_best,
-    int iterations = kApproximateBestSubsetIterations) {
-  if (vf_best == nullptr || n_best == nullptr) {
-    warn(CFD_LOG_SOURCE, "Outparameter(select_value) is nullptr.");
-    throw CfdException(
-        CfdError::kCfdIllegalArgumentError,
-        "Failed to select coin. Outparameter is nullptr.");
-  }
-
-  std::vector<char> vf_includes;
-  vf_best->assign(utxos.size(), true);
-  *n_best = n_total_value;
-
-  for (int n_rep = 0; n_rep < iterations && *n_best != n_target_value;
-       n_rep++) {
-    vf_includes.assign(utxos.size(), false);
-    uint64_t n_total = 0;
-    bool is_reached_target = false;
-    std::vector<bool> randomize_cache;
-    for (int n_pass = 0; n_pass < 2 && !is_reached_target; n_pass++) {
-      for (unsigned int i = 0; i < utxos.size(); i++) {
-        // The solver here uses a randomized algorithm,
-        // the randomness serves no real security purpose but is just
-        // needed to prevent degenerate behavior and it is important
-        // that the rng is fast. We do not use a constant random sequence,
-        // because there may be some privacy improvement by making
-        // the selection random.
-        bool rand_bool = RandomNumberUtil::GetRandomBool(&randomize_cache);
-        if (n_pass == 0 ? rand_bool : !vf_includes[i]) {
-          n_total += utxos[i]->amount;
-          vf_includes[i] = true;
-          if (n_total >= n_target_value) {
-            is_reached_target = true;
-            if (n_total < *n_best) {
-              *n_best = n_total;
-              *vf_best = vf_includes;
-            }
-            n_total -= utxos[i]->amount;
-            vf_includes[i] = false;
-          }
-        }
-      }
-    }
-  }
-}
-
 // -----------------------------------------------------------------------------
 // CoinSelectionOption
 // -----------------------------------------------------------------------------
@@ -322,7 +265,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
 std::vector<Utxo> CoinSelection::SelectCoinsBnB(
     const Amount& target_value, const std::vector<Utxo*>& utxos,
     const Amount& cost_of_change, const Amount& not_input_fees,
-    Amount* select_value) const {
+    Amount* select_value) {
   if (select_value == nullptr) {
     warn(CFD_LOG_SOURCE, "Outparameter(select_value) is nullptr.");
     throw CfdException(
@@ -474,7 +417,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
 
 std::vector<Utxo> CoinSelection::KnapsackSolver(
     const Amount& target_value, const std::vector<Utxo*>& utxos,
-    Amount* select_value) const {
+    Amount* select_value) {
   std::vector<Utxo> ret_utxos;
 
   if (select_value == nullptr) {
@@ -546,12 +489,14 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
   std::vector<char> vf_best;
   uint64_t n_best;
 
+  randomize_cache_.clear();
   ApproximateBestSubset(
-      applicable_groups, n_total, n_target, &vf_best, &n_best);
+      applicable_groups, n_total, n_target, &vf_best, &n_best,
+      kApproximateBestSubsetIterations);
   if (n_best != n_target && n_total >= n_target + kMinChange) {
     ApproximateBestSubset(
-        applicable_groups, n_total, (n_target + kMinChange), &vf_best,
-        &n_best);
+        applicable_groups, n_total, (n_target + kMinChange), &vf_best, &n_best,
+        kApproximateBestSubsetIterations);
   }
 
   // NOLINT If we have a bigger coin and (either the stochastic approximation didn't find a good solution,
@@ -576,6 +521,53 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
   return ret_utxos;
 }
 
+void CoinSelection::ApproximateBestSubset(
+    const std::vector<const Utxo*>& utxos, uint64_t n_total_value,
+    uint64_t n_target_value, std::vector<char>* vf_best, uint64_t* n_best,
+    int iterations) {
+  if (vf_best == nullptr || n_best == nullptr) {
+    warn(CFD_LOG_SOURCE, "Outparameter(select_value) is nullptr.");
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
+        "Failed to select coin. Outparameter is nullptr.");
+  }
+
+  std::vector<char> vf_includes;
+  vf_best->assign(utxos.size(), true);
+  *n_best = n_total_value;
+
+  for (int n_rep = 0; n_rep < iterations && *n_best != n_target_value;
+       n_rep++) {
+    vf_includes.assign(utxos.size(), false);
+    uint64_t n_total = 0;
+    bool is_reached_target = false;
+    for (int n_pass = 0; n_pass < 2 && !is_reached_target; n_pass++) {
+      for (unsigned int i = 0; i < utxos.size(); i++) {
+        // The solver here uses a randomized algorithm,
+        // the randomness serves no real security purpose but is just
+        // needed to prevent degenerate behavior and it is important
+        // that the rng is fast. We do not use a constant random sequence,
+        // because there may be some privacy improvement by making
+        // the selection random.
+        bool rand_bool = RandomNumberUtil::GetRandomBool(&randomize_cache_);
+        if (n_pass == 0 ? rand_bool : !vf_includes[i]) {
+          n_total += utxos[i]->amount;
+          vf_includes[i] = true;
+          if (n_total >= n_target_value) {
+            is_reached_target = true;
+            if (n_total < *n_best) {
+              *n_best = n_total;
+              *vf_best = vf_includes;
+            }
+            n_total -= utxos[i]->amount;
+            vf_includes[i] = false;
+          }
+        }
+      }
+    }
+  }
+}
+
 void CoinSelection::ConvertToUtxo(
     const Txid& txid, uint32_t vout, const std::string& output_descriptor,
     const Amount& amount, const std::string& asset, const void* binary_data,
@@ -588,7 +580,10 @@ void CoinSelection::ConvertToUtxo(
         "Failed to convert utxo. utxo is nullptr.");
   }
   memset(utxo, 0, sizeof(*utxo));
-  memcpy(utxo->txid, txid.GetData().GetBytes().data(), sizeof(utxo->txid));
+  ByteData txid_data = txid.GetData();
+  if (!txid_data.Empty()) {
+    memcpy(utxo->txid, txid_data.GetBytes().data(), sizeof(utxo->txid));
+  }
   utxo->vout = vout;
 
   // TODO(k-matsuzawa): descriptor解析は暫定対処。本対応が必要。
@@ -678,7 +673,10 @@ void CoinSelection::ConvertToUtxo(
         utxo->block_hash, block_hash.GetData().GetBytes().data(),
         sizeof(utxo->block_hash));
   }
-  memcpy(utxo->txid, txid.GetData().GetBytes().data(), sizeof(utxo->txid));
+  ByteData txid_data = txid.GetData();
+  if (!txid_data.Empty()) {
+    memcpy(utxo->txid, txid_data.GetBytes().data(), sizeof(utxo->txid));
+  }
   utxo->vout = vout;
   const std::vector<uint8_t>& script = locking_script.GetData().GetBytes();
   if (script.size() < sizeof(utxo->locking_script)) {

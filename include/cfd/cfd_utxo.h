@@ -286,7 +286,7 @@ class CFD_EXPORT CoinSelection {
   std::vector<Utxo> SelectCoinsBnB(
       const Amount& target_value, const std::vector<Utxo*>& utxos,
       const Amount& cost_of_change, const Amount& not_input_fees,
-      Amount* select_value) const;
+      Amount* select_value);
 
   /**
    * @brief CoinSelection(KnapsackSolver)を実施する。
@@ -297,10 +297,25 @@ class CFD_EXPORT CoinSelection {
    */
   std::vector<Utxo> KnapsackSolver(
       const Amount& target_value, const std::vector<Utxo*>& utxos,
-      Amount* select_value) const;
+      Amount* select_value);
 
  private:
-  bool use_bnb_;  //!< BnB 利用フラグ
+  bool use_bnb_;                       //!< BnB 利用フラグ
+  std::vector<bool> randomize_cache_;  //!< randomize cache
+
+  /**
+   * 収集額に最も近い合計額となるUTXO一覧を決定する
+   * @param[in]  utxos          収集額より小さいUTXO一覧
+   * @param[in]  n_total_value  utxo一覧の合計額
+   * @param[in]  n_target_value 収集額
+   * @param[out] vf_best        収集対象フラグ一覧
+   * @param[out] n_best         収集額に最も近い合計額
+   * @param[in]  iterations     繰り返し数
+   */
+  void ApproximateBestSubset(
+      const std::vector<const Utxo*>& utxos, uint64_t n_total_value,
+      uint64_t n_target_value, std::vector<char>* vf_best, uint64_t* n_best,
+      int iterations);
 };
 
 }  // namespace cfd
