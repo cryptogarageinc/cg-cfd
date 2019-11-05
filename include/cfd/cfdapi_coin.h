@@ -36,10 +36,14 @@ using cfd::core::ConfidentialAssetId;
 struct UtxoData {
   uint64_t block_height;   //!< blick高
   BlockHash block_hash;    //!< block hash
-  Script locking_script;   //!< script
+  Txid txid;               //!< txid
+  uint32_t vout;           //!< vout
+  Script locking_script;   //!< locking script
+  Script redeem_script;    //!< script
   Address address;         //!< address
   std::string descriptor;  //!< output descriptor
   Amount amount;           //!< amount
+  void* binary_data;       //!< binary data option
 #ifndef CFD_DISABLE_ELEMENTS
   ConfidentialAssetId asset;  //!< asset
 #endif                        // CFD_DISABLE_ELEMENTS

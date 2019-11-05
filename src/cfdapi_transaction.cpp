@@ -11,7 +11,9 @@
 #include <vector>
 
 #include "cfd/cfd_address.h"
+#include "cfd/cfd_fee.h"
 #include "cfd/cfd_transaction.h"
+#include "cfd/cfdapi_coin.h"
 #include "cfdcore/cfdcore_address.h"
 #include "cfdcore/cfdcore_coin.h"
 #include "cfdcore/cfdcore_exception.h"
@@ -30,11 +32,13 @@
 namespace cfd {
 namespace api {
 
+using cfd::FeeCalculator;
 using cfd::TransactionController;
 using cfd::api::TransactionApiBase;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
 using cfd::core::Txid;
+using cfd::core::logger::info;
 using cfd::core::logger::warn;
 
 // -----------------------------------------------------------------------------
@@ -196,6 +200,68 @@ TransactionController TransactionApi::AddMultisigSign(
           CreateController, tx_hex, txid, vout, sign_list, address_type,
           witness_script, redeem_script, clear_stack);
   return TransactionController(result);
+}
+
+Amount TransactionApi::EstimateFee(
+    const std::string& tx_hex, const std::vector<UtxoData>& utxos,
+    Amount* tx_fee, Amount* utxo_fee, double effective_fee_rate) const {
+  TransactionController txc(tx_hex);
+
+  uint32_t size;
+  size = txc.GetSizeIgnoreTxIn();
+  uint32_t tx_vsize = AbstractTransaction::GetVsizeFromSize(size, 0);
+
+  size = 0;
+  uint32_t witness_size = 0;
+  uint32_t wit_size = 0;
+  for (const auto& utxo : utxos) {
+    // check descriptor
+    AddressType addr_type = utxo.address.GetAddressType();
+    // TODO(k-matsuzawa): output descriptorの正式対応後に差し替え
+    if (utxo.address.GetAddress().empty()) {
+      if (utxo.descriptor.find("wpkh(") == 0) {
+        addr_type = AddressType::kP2wpkhAddress;
+      } else if (utxo.descriptor.find("wsh(") == 0) {
+        addr_type = AddressType::kP2wshAddress;
+      } else if (utxo.descriptor.find("pkh(") == 0) {
+        addr_type = AddressType::kP2pkhAddress;
+      } else if (utxo.descriptor.find("sh(") == 0) {
+        addr_type = AddressType::kP2shAddress;
+      }
+    }
+    if (utxo.descriptor.find("sh(wpkh(") == 0) {
+      addr_type = AddressType::kP2shP2wpkhAddress;
+    } else if (utxo.descriptor.find("sh(wsh(") == 0) {
+      addr_type = AddressType::kP2shP2wshAddress;
+    }
+
+    uint32_t txin_size =
+        TxIn::EstimateTxInSize(addr_type, utxo.redeem_script, &wit_size);
+    txin_size -= wit_size;
+    size += txin_size;
+    witness_size += wit_size;
+  }
+  uint32_t utxo_vsize =
+      AbstractTransaction::GetVsizeFromSize(size, witness_size);
+
+  uint64_t fee_rate = static_cast<uint64_t>(floor(effective_fee_rate * 1000));
+  FeeCalculator fee_calc(fee_rate);
+  Amount tx_fee_amount = fee_calc.GetFee(tx_vsize);
+  Amount utxo_fee_amount = fee_calc.GetFee(utxo_vsize);
+  Amount fee = tx_fee_amount + utxo_fee_amount;
+
+  if (tx_fee) *tx_fee = tx_fee_amount;
+  if (utxo_fee) *utxo_fee = utxo_fee_amount;
+  // minimum fee check
+  if (fee.GetSatoshiValue() < FeeCalculator::kRelayMinimumFee) {
+    fee = Amount::CreateBySatoshiAmount(FeeCalculator::kRelayMinimumFee);
+  }
+
+  info(
+      CFD_LOG_SOURCE, "EstimateFee rate={} fee={} tx={} utxo={}",
+      effective_fee_rate, fee.GetSatoshiValue(),
+      tx_fee_amount.GetSatoshiValue(), utxo_fee_amount.GetSatoshiValue());
+  return fee;
 }
 
 }  // namespace api

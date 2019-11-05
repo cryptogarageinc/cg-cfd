@@ -113,6 +113,11 @@ class CFD_EXPORT CoinSelectionOption {
    */
   uint64_t GetEffectiveFeeBaserate() const;
   /**
+   * @brief 長期的なfeeのbaserateを取得します.
+   * @return 長期的なfeeのbaserate
+   */
+  uint64_t GetLongTermFeeBaserate() const;
+  /**
    * @brief 出力変更サイズを取得します.
    * @return 出力変更サイズ
    */
@@ -138,6 +143,11 @@ class CFD_EXPORT CoinSelectionOption {
    * @param[in] baserate    fee baserate (for BTC/byte)
    */
   void SetEffectiveFeeBaserate(double baserate);
+  /**
+   * @brief 効果的なfeeのbaserateを設定します.
+   * @param[in] baserate    fee baserate (for BTC/byte)
+   */
+  void SetLongTermFeeBaserate(double baserate);
   /**
    * @brief tx合計サイズのうちTxIn分のサイズを差し引いたサイズを設定する。
    * @param[in] size    ignore txin size.
@@ -176,7 +186,8 @@ class CFD_EXPORT CoinSelectionOption {
   bool use_bnb_ = true;              //!< BnB 使用フラグ
   size_t change_output_size_ = 0;    //!< 出力変更サイズ
   size_t change_spend_size_ = 0;     //!< 受入変更サイズ
-  uint64_t effective_fee_baserate_;  //!< feeのbaserate
+  uint64_t effective_fee_baserate_;  //!< fee baserate
+  uint64_t long_term_fee_baserate_;  //!< longterm fee baserate
   /**
    * @brief txのTxIn除外時のサイズ.
    * @details elementsなどの考慮を算出時点で行うこと。

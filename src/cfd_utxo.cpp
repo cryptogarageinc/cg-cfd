@@ -57,14 +57,18 @@ static constexpr const size_t kBnBMaxTotalTries = 100000;
 //! KnapsackSolver ApproximateBestSubsetの繰り返し回数
 static constexpr const int kApproximateBestSubsetIterations = 100000;
 
-//!  Change最小値
+//! Change最小値
 static constexpr const uint64_t kMinChange = 1000000;  // MIN_CHANGE
+
+//! LongTerm fee rate default (20.0)
+static constexpr const uint64_t kDefaultLongTermFeeRate = 20000;
 
 // -----------------------------------------------------------------------------
 // CoinSelectionOption
 // -----------------------------------------------------------------------------
 CoinSelectionOption::CoinSelectionOption()
-    : effective_fee_baserate_(FeeCalculator::GetMinimumFeeRate()) {
+    : effective_fee_baserate_(FeeCalculator::kRelayMinimumFee),
+      long_term_fee_baserate_(kDefaultLongTermFeeRate) {
   // do nothing
 }
 
@@ -80,6 +84,10 @@ size_t CoinSelectionOption::GetChangeSpendSize() const {
 
 uint64_t CoinSelectionOption::GetEffectiveFeeBaserate() const {
   return effective_fee_baserate_;
+}
+
+uint64_t CoinSelectionOption::GetLongTermFeeBaserate() const {
+  return long_term_fee_baserate_;
 }
 
 size_t CoinSelectionOption::GetTxNoInputsSize() const {
@@ -98,6 +106,10 @@ void CoinSelectionOption::SetChangeSpendSize(size_t size) {
 
 void CoinSelectionOption::SetEffectiveFeeBaserate(double baserate) {
   effective_fee_baserate_ = static_cast<uint64_t>(floor(baserate * 1000));
+}
+
+void CoinSelectionOption::SetLongTermFeeBaserate(double baserate) {
+  long_term_fee_baserate_ = static_cast<uint64_t>(floor(baserate * 1000));
 }
 
 void CoinSelectionOption::SetTxNoInputsSize(size_t size) {
@@ -134,7 +146,8 @@ void CoinSelectionOption::InitializeConfidentialTxSize(
 
   // wpkh想定
   Script wpkh_script("0014ffffffffffffffffffffffffffffffffffffffff");
-  ConfidentialTxOut ctxout(wpkh_script, ConfidentialAssetId(), ConfidentialValue());
+  ConfidentialTxOut ctxout(
+      wpkh_script, ConfidentialAssetId(), ConfidentialValue());
   ConfidentialTxOutReference txout(ctxout);
   witness_size = 0;
   size = txout.GetSerializeSize(true, &witness_size);
@@ -186,7 +199,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
     // Get long term estimate
     FeeCalculator discard_fee(kDustRelayTxFee);
     FeeCalculator effective_fee(option_params.GetEffectiveFeeBaserate());
-    FeeCalculator long_term_fee(FeeCalculator::GetMinimumFeeRate());
+    FeeCalculator long_term_fee(option_params.GetLongTermFeeBaserate());
     // FeeCalculation feeCalc;
     // CCoinControl temp;
     // temp.m_confirm_target = 1008;

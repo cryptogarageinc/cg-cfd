@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "cfd/cfd_elements_transaction.h"
+#include "cfd/cfd_fee.h"
 #include "cfd_manager.h"  // NOLINT
 #include "cfdcore/cfdcore_amount.h"
 #include "cfdcore/cfdcore_bytedata.h"
@@ -37,10 +38,12 @@ namespace cfd {
 namespace api {
 
 using cfd::ConfidentialTransactionController;
+using cfd::FeeCalculator;
 using cfd::SignParameter;
 using cfd::api::TransactionApiBase;
 using cfd::core::Address;
 using cfd::core::AddressType;
+using cfd::core::Amount;
 using cfd::core::BlindParameter;
 using cfd::core::ByteData;
 using cfd::core::ByteData160;
@@ -528,6 +531,103 @@ Privkey ElementsTransactionApi::GetIssuanceBlindingKey(
       master_blinding_key, txid, vout);
 
   return blinding_key;
+}
+
+Amount ElementsTransactionApi::EstimateFee(
+    const std::string& tx_hex, const std::vector<ElementsUtxoAndOption>& utxos,
+    const ConfidentialAssetId& fee_asset, Amount* tx_fee, Amount* utxo_fee,
+    bool is_blind, double effective_fee_rate) const {
+  ConfidentialTransactionController txc(tx_hex);
+
+  if (fee_asset.IsEmpty()) {
+    warn(CFD_LOG_SOURCE, "Failed to EstimateFee. Empty fee asset.");
+    throw CfdException(CfdError::kCfdIllegalArgumentError, "Empty fee asset.");
+  }
+
+  // check fee in txout
+  bool exist_fee = false;
+  const ConfidentialTransaction& ctx = txc.GetTransaction();
+  for (const auto& txout : ctx.GetTxOutList()) {
+    if (txout.GetLockingScript().IsEmpty()) {
+      if (txout.GetAsset().GetHex() != fee_asset.GetHex()) {
+        warn(CFD_LOG_SOURCE, "Failed to EstimateFee. Unmatch fee asset.");
+        throw CfdException(
+            CfdError::kCfdIllegalArgumentError, "Unmatch fee asset.");
+      }
+      exist_fee = true;
+      break;
+    }
+  }
+  if (!exist_fee) {
+    txc.AddTxOutFee(Amount::CreateBySatoshiAmount(1), fee_asset);  // dummy fee
+  }
+
+  uint32_t size;
+  uint32_t witness_size = 0;
+  size = txc.GetSizeIgnoreTxIn(is_blind, &witness_size);
+  size -= witness_size;
+  uint32_t tx_vsize =
+      AbstractTransaction::GetVsizeFromSize(size, witness_size);
+
+  size = 0;
+  witness_size = 0;
+  uint32_t wit_size = 0;
+  for (const auto& utxo : utxos) {
+    uint32_t pegin_btc_tx_size = 0;
+    Script fedpeg_script;
+    if (utxo.is_pegin) {
+      pegin_btc_tx_size = utxo.pegin_btc_tx_size;
+      fedpeg_script = utxo.fedpeg_script;
+    }
+    // check descriptor
+    AddressType addr_type = utxo.utxo.address.GetAddressType();
+    // TODO(k-matsuzawa): output descriptorの正式対応後に差し替え
+    if (utxo.utxo.address.GetAddress().empty()) {
+      if (utxo.utxo.descriptor.find("wpkh(") == 0) {
+        addr_type = AddressType::kP2wpkhAddress;
+      } else if (utxo.utxo.descriptor.find("wsh(") == 0) {
+        addr_type = AddressType::kP2wshAddress;
+      } else if (utxo.utxo.descriptor.find("pkh(") == 0) {
+        addr_type = AddressType::kP2pkhAddress;
+      } else if (utxo.utxo.descriptor.find("sh(") == 0) {
+        addr_type = AddressType::kP2shAddress;
+      }
+    }
+    if (utxo.utxo.descriptor.find("sh(wpkh(") == 0) {
+      addr_type = AddressType::kP2shP2wpkhAddress;
+    } else if (utxo.utxo.descriptor.find("sh(wsh(") == 0) {
+      addr_type = AddressType::kP2shP2wshAddress;
+    }
+
+    uint32_t txin_size = ConfidentialTxIn::EstimateTxInSize(
+        addr_type, utxo.utxo.redeem_script, pegin_btc_tx_size, fedpeg_script,
+        utxo.is_issuance, utxo.is_blind_issuance, &wit_size);
+    txin_size -= wit_size;
+    size += txin_size;
+    witness_size += wit_size;
+  }
+  uint32_t utxo_vsize =
+      AbstractTransaction::GetVsizeFromSize(size, witness_size);
+
+  uint64_t fee_rate = static_cast<uint64_t>(floor(effective_fee_rate * 1000));
+  FeeCalculator fee_calc(fee_rate);
+  Amount tx_fee_amount = fee_calc.GetFee(tx_vsize);
+  Amount utxo_fee_amount = fee_calc.GetFee(utxo_vsize);
+  Amount fee = tx_fee_amount + utxo_fee_amount;
+
+  if (tx_fee) *tx_fee = tx_fee_amount;
+  if (utxo_fee) *utxo_fee = utxo_fee_amount;
+  // minimum fee check
+  if (fee.GetSatoshiValue() < FeeCalculator::kElementsRelayMinimumFee) {
+    fee =
+        Amount::CreateBySatoshiAmount(FeeCalculator::kElementsRelayMinimumFee);
+  }
+
+  info(
+      CFD_LOG_SOURCE, "EstimateFee rate={} fee={} tx={} utxo={}",
+      effective_fee_rate, fee.GetSatoshiValue(),
+      tx_fee_amount.GetSatoshiValue(), utxo_fee_amount.GetSatoshiValue());
+  return fee;
 }
 
 }  // namespace api
