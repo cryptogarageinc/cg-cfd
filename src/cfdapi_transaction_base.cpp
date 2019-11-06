@@ -36,113 +36,11 @@ using cfd::core::Script;
 using cfd::core::ScriptBuilder;
 using cfd::core::ScriptElement;
 using cfd::core::ScriptOperator;
+using cfd::core::ScriptUtil;
 using cfd::core::SigHashAlgorithm;
 using cfd::core::SigHashType;
 using cfd::core::Txid;
 using cfd::core::logger::warn;
-
-/**
- * @brief Get the set of public keys contained in a multisig script.
- * @details if the redeem script contains multiple OP_CHECKMULTISIG(VERIFY),
- * returns only the public keys required for the last one.
- * @param[in] multisig_script the multisig redeem script.
- * @return an array of public keys.
- */
-const std::vector<Pubkey> ExtractPubkeysFromMultisigScript(
-    const Script& multisig_script) {
-  std::vector<Pubkey> pubkeys;
-
-  const std::vector<ScriptElement> elements = multisig_script.GetElementList();
-
-  // find OP_CHECKMULTISIG or OP_CHECKMULTISIGVERIFY
-  IteratorWrapper<ScriptElement> itr = IteratorWrapper<ScriptElement>(
-      elements, "Invalid script element access", true);
-  // search OP_CHECKMULTISIG(or VERIFY)
-  while (itr.hasNext()) {
-    ScriptElement element = itr.next();
-    if (!element.IsOpCode()) {
-      continue;
-    }
-    if (element.GetOpCode() == ScriptOperator::OP_CHECKMULTISIG ||
-        element.GetOpCode() == ScriptOperator::OP_CHECKMULTISIGVERIFY) {
-      break;
-    }
-  }
-  // target opcode not found
-  if (!itr.hasNext()) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Multisig opcode (OP_CHECKMULTISIG|VERIFY) not found"
-        " in redeem script: script={}",
-        multisig_script.ToString());
-    throw CfdException(
-        CfdError::kCfdIllegalArgumentError,
-        "OP_CHCKMULTISIG(OP_CHECKMULTISIGVERIFY) not found"
-        " in redeem script.");
-  }
-
-  // get contain pubkey num
-  const ScriptElement& op_m = itr.next();
-  if (!op_m.IsNumber()) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Invalid OP_CHECKMULTISIG(VERIFY) input in redeem script."
-        " Missing contain pubkey number.: script={}",
-        multisig_script.ToString());
-    throw CfdException(
-        CfdError::kCfdIllegalArgumentError,
-        "Invalid OP_CHCKMULTISIG(OP_CHECKMULTISIGVERIFY) input"
-        " in redeem script. Missing contain pubkey number.");
-  }
-
-  // set pubkey to vector(reverse data)
-  int64_t contain_pubkey_num = op_m.GetNumber();
-  for (int64_t i = 0; i < contain_pubkey_num; ++i) {
-    if (!itr.hasNext()) {
-      warn(
-          CFD_LOG_SOURCE,
-          "Not found enough pubkeys in redeem script.: "
-          "require_pubkey_num={}, script={}",
-          contain_pubkey_num, multisig_script.ToString());
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Not found enough pubkeys in redeem script.");
-    }
-
-    const ScriptElement& pubkey_element = itr.next();
-    // check script element type
-    if (!pubkey_element.IsBinary()) {
-      warn(
-          CFD_LOG_SOURCE,
-          "Invalid script element. Not binary element.: "
-          "ScriptElementType={}, data={}",
-          pubkey_element.GetType(), pubkey_element.ToString());
-      throw CfdException(
-          CfdError::kCfdIllegalArgumentError,
-          "Invalid ScriptElementType.(not binary)");
-    }
-
-    // push pubkey data
-    pubkeys.push_back(Pubkey(pubkey_element.GetBinaryData()));
-  }
-
-  // check opcode(require signature num)
-  if (!itr.hasNext() || !itr.next().IsNumber()) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Invalid OP_CHECKMULTISIG(VERIFY) input in redeem script."
-        " Missing require signature number.: script={}",
-        multisig_script.ToString());
-    throw CfdException(
-        CfdError::kCfdIllegalArgumentError,
-        "Invalid OP_CHCKMULTISIG(OP_CHECKMULTISIGVERIFY) input"
-        " in redeem script. Missing require signature number.");
-  }
-
-  // return reverse pubkey vector
-  std::reverse(std::begin(pubkeys), std::end(pubkeys));
-  return pubkeys;
-}
 
 /**
  * @brief Sets a P2sh unlocking script for a transaction input.
@@ -380,7 +278,7 @@ std::string TransactionApiBase::AddMultisigSign(
   Script script = (address_type == AddressType::kP2shAddress) ? redeem_script
                                                               : witness_script;
 
-  std::vector<Pubkey> pubkeys = ExtractPubkeysFromMultisigScript(script);
+  std::vector<Pubkey> pubkeys = ScriptUtil::ExtractPubkeysFromMultisigScript(script);
   // get signParams from json request
   std::vector<SignParameter> sign_params = sign_list;
 

@@ -73,6 +73,20 @@ class CFD_EXPORT ElementsAddressApi {
       std::vector<AddressFormatData>* prefix_list = nullptr);
 
   /**
+   * @brief Multisig ScriptからPubkey Address一覧を作成する
+   * @param[in] net_type        network type
+   * @param[in] address_type    address type
+   * @param[in] redeem_script   multisig script
+   * @param[out] pubkey_list    pubkey list
+   * @param[in] prefix_list     address prefix list
+   * @return pubkey address list
+   */
+  std::vector<Address> GetAddressesFromMultisig(
+      NetType net_type, AddressType address_type, const Script& redeem_script,
+      std::vector<Pubkey>* pubkey_list = nullptr,
+      std::vector<AddressFormatData>* prefix_list = nullptr);
+
+  /**
    * @brief AddressからConfidentialAddressを取得する.
    * @param[in] address Address
    * @param[in] confidential_key confidential key

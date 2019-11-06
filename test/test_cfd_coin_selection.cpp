@@ -329,8 +329,6 @@ static const std::vector<TestUtxoCoinVector> kExtCoinSelectTestVector = {
 
 TEST(CoinSelection, SelectCoinsMinConf_SelectCoinsBnB)
 {
-  cfd::core::CfdCoreHandle handle = nullptr;
-  cfd::core::Initialize(&handle);
   CoinSelection coin_select(true);
 
   Amount target_value = Amount::CreateBySatoshiAmount(99998500);
@@ -374,8 +372,6 @@ TEST(CoinSelection, SelectCoinsMinConf_SelectCoinsBnB)
 
 TEST(CoinSelection, SelectCoinsMinConf_SelectCoinsBnB_single)
 {
-  cfd::core::CfdCoreHandle handle = nullptr;
-  cfd::core::Initialize(&handle);
   CoinSelection coin_select(true);
 
   Amount target_value = Amount::CreateBySatoshiAmount(155060800);

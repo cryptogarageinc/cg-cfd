@@ -62,6 +62,23 @@ Address ElementsAddressApi::CreateMultisig(
       witness_script, &addr_prefixes);
 }
 
+std::vector<Address> ElementsAddressApi::GetAddressesFromMultisig(
+    NetType net_type, AddressType address_type, const Script& redeem_script,
+    std::vector<Pubkey>* pubkey_list,
+    std::vector<AddressFormatData>* prefix_list) {
+  std::vector<AddressFormatData> addr_prefixes;
+  if (prefix_list == nullptr) {
+    addr_prefixes = cfd::core::GetElementsAddressFormatList();
+  } else {
+    addr_prefixes = *prefix_list;
+  }
+
+  AddressApi address_api;
+  return address_api.GetAddressesFromMultisig(
+      net_type, address_type, redeem_script, pubkey_list,
+      &addr_prefixes);
+}
+
 ElementsConfidentialAddress ElementsAddressApi::GetConfidentialAddress(
     const Address& address, const ConfidentialKey confidential_key) {
   ConfidentialKey conf_key(confidential_key);

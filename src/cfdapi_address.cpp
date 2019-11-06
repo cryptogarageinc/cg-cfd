@@ -20,6 +20,7 @@
 namespace cfd {
 namespace api {
 
+using cfd::AddressFactory;
 using cfd::core::Address;
 using cfd::core::AddressFormatData;
 using cfd::core::AddressType;
@@ -181,6 +182,58 @@ Address AddressApi::CreateMultisig(
         "\"p2wsh\" or \"p2sh-p2wsh\".");  // NOLINT
   }
   return addr;
+}
+
+std::vector<Address> AddressApi::GetAddressesFromMultisig(
+    NetType net_type, AddressType address_type, const Script& redeem_script,
+    std::vector<Pubkey>* pubkey_list,
+    std::vector<AddressFormatData>* prefix_list) {
+  std::vector<AddressFormatData> addr_prefixes;
+  if (prefix_list == nullptr) {
+    addr_prefixes = cfd::core::GetBitcoinAddressFormatList();
+  } else {
+    addr_prefixes = *prefix_list;
+  }
+
+  if ((address_type != AddressType::kP2pkhAddress) &&
+      (address_type != AddressType::kP2wpkhAddress) &&
+      (address_type != AddressType::kP2shP2wpkhAddress)) {
+    warn(
+        CFD_LOG_SOURCE,
+        "Failed to GetAddressesFromMultisig. Invalid address_type passed:  "
+        "addressType={}",  // NOLINT
+        address_type);
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError,
+        "Invalid address_type. address_type must be \"p2pkh\" "
+        "\"p2wpkh\" or \"p2sh-p2wpkh\".");  // NOLINT
+  }
+  AddressFactory addr_factory(net_type, addr_prefixes);
+
+  std::vector<Pubkey> pubkeys =
+      ScriptUtil::ExtractPubkeysFromMultisigScript(redeem_script);
+
+  std::vector<Address> addr_list;
+  Address addr;
+  Script script;
+  for (const auto& pubkey : pubkeys) {
+    if (address_type == AddressType::kP2pkhAddress) {
+      addr = addr_factory.CreateP2pkhAddress(pubkey);
+    } else if (address_type == AddressType::kP2shP2wpkhAddress) {
+      script = ScriptUtil::CreateP2wpkhLockingScript(pubkey);
+      addr = addr_factory.CreateP2shAddress(script);
+    } else if (address_type == AddressType::kP2wpkhAddress) {
+      // Currently we support only witness version 0.
+      addr = addr_factory.CreateP2wpkhAddress(pubkey);
+    }
+    addr_list.push_back(addr);
+  }
+
+  if (pubkey_list) {
+    *pubkey_list = pubkeys;
+  }
+
+  return addr_list;
 }
 
 }  // namespace api
