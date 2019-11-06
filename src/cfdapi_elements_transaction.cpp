@@ -617,11 +617,6 @@ Amount ElementsTransactionApi::EstimateFee(
 
   if (tx_fee) *tx_fee = tx_fee_amount;
   if (utxo_fee) *utxo_fee = utxo_fee_amount;
-  // minimum fee check
-  if (fee.GetSatoshiValue() < FeeCalculator::kElementsRelayMinimumFee) {
-    fee =
-        Amount::CreateBySatoshiAmount(FeeCalculator::kElementsRelayMinimumFee);
-  }
 
   info(
       CFD_LOG_SOURCE, "EstimateFee rate={} fee={} tx={} utxo={}",
