@@ -117,11 +117,6 @@ class CFD_EXPORT CoinSelectionOption {
    * @return 長期的なfeeのbaserate
    */
   uint64_t GetLongTermFeeBaserate() const;
-  /**
-   * @brief 出力変更サイズを取得します.
-   * @return 出力変更サイズ
-   */
-  size_t GetTxNoInputsSize() const;
 
   /**
    * @brief BnB 使用フラグを設定します.
@@ -148,19 +143,11 @@ class CFD_EXPORT CoinSelectionOption {
    * @param[in] baserate    fee baserate (for BTC/byte)
    */
   void SetLongTermFeeBaserate(double baserate);
-  /**
-   * @brief tx合計サイズのうちTxIn分のサイズを差し引いたサイズを設定する。
-   * @param[in] size    ignore txin size.
-   * @see cfd::TransactionController::GetSizeIgnoreTxIn()
-   * @see cfd::ConfidentialTransactionController::GetSizeIgnoreTxIn()
-   */
-  void SetTxNoInputsSize(size_t size);
 
   /**
-   * @brief tx情報を用いてサイズ関連情報を初期化します。
-   * @param[in] tx    transaction controller
+   * @brief bitcoin相当でサイズ関連情報を初期化します。
    */
-  void InitializeTxSize(const TransactionController& tx);
+  void InitializeTxSizeInfo();
 
 #ifndef CFD_DISABLE_ELEMENTS
   /**
@@ -175,11 +162,9 @@ class CFD_EXPORT CoinSelectionOption {
   void SetFeeAsset(const ConfidentialAssetId& asset);
 
   /**
-   * @brief tx情報を用いてサイズ関連情報を初期化します。
-   * @param[in] tx    transaction controller
+   * @brief ConfidentialTxベースでサイズ関連情報を初期化します。
    */
-  void InitializeConfidentialTxSize(
-      const ConfidentialTransactionController& tx);
+  void InitializeConfidentialTxSizeInfo();
 #endif  // CFD_DISABLE_ELEMENTS
 
  private:
@@ -188,11 +173,6 @@ class CFD_EXPORT CoinSelectionOption {
   size_t change_spend_size_ = 0;     //!< 受入変更サイズ
   uint64_t effective_fee_baserate_;  //!< fee baserate
   uint64_t long_term_fee_baserate_;  //!< longterm fee baserate
-  /**
-   * @brief txのTxIn除外時のサイズ.
-   * @details elementsなどの考慮を算出時点で行うこと。
-   */
-  size_t tx_noinputs_size_ = 0;
 #ifndef CFD_DISABLE_ELEMENTS
   ConfidentialAssetId fee_asset_;  //!< feeとして利用するasset
 #endif                             // CFD_DISABLE_ELEMENTS
@@ -216,18 +196,21 @@ class CFD_EXPORT CoinSelection {
 
   /**
    * @brief 最小のCoinを選択する。
-   * @param[in] target_value    収集額
-   * @param[in,out] utxos       検索対象UTXO一覧
-   * @param[in] filter          UTXO収集フィルタ情報
-   * @param[in] option_params   オプション情報
-   * @param[out] select_value   UTXO収集成功時、合計収集額
-   * @param[out] fee_value      UTXO収集成功時、fee金額
+   * @param[in] target_value     収集額
+   * @param[in,out] utxos        検索対象UTXO一覧
+   * @param[in] filter           UTXO収集フィルタ情報
+   * @param[in] option_params    オプション情報
+   * @param[in] tx_fee_value     transaction fee information
+   * @param[out] select_value    UTXO収集成功時、合計収集額
+   * @param[out] utxo_fee_value  UTXO収集成功時、utxo分のfee金額
+   * @param[out] searched_bnb    BnBで検索できたかどうか
    * @return UTXO一覧。空の場合はエラー終了。
    */
   std::vector<Utxo> SelectCoinsMinConf(
       const Amount& target_value, const std::vector<Utxo>& utxos,
       const UtxoFilter& filter, const CoinSelectionOption& option_params,
-      Amount* select_value = nullptr, Amount* fee_value = nullptr);
+      const Amount& tx_fee_value, Amount* select_value = nullptr,
+      Amount* utxo_fee_value = nullptr, bool* searched_bnb = nullptr);
 
   /**
    * @brief UTXO構造体への変換を行う。
@@ -286,29 +269,31 @@ class CFD_EXPORT CoinSelection {
  protected:
   /**
    * @brief CoinSelection(BnB)を実施する。
-   * @param[in] target_value    収集額
-   * @param[in] utxos           検索対象UTXO一覧
-   * @param[in] cost_of_change  コストの変更範囲。
+   * @param[in] target_value     収集額
+   * @param[in] utxos            検索対象UTXO一覧
+   * @param[in] cost_of_change   コストの変更範囲。
    *              target_value+本値が収集上限値となる。
-   * @param[in] not_input_fees  TxIn部を除いたfee額
-   * @param[out] select_value   UTXO収集成功時、合計収集額
+   * @param[in] not_input_fees   TxIn部を除いたfee額
+   * @param[out] select_value    UTXO収集成功時、合計収集額
+   * @param[out] utxo_fee_value  UTXO収集成功時、utxo分のfee金額
    * @return UTXO一覧。空の場合はエラー終了。
    */
   std::vector<Utxo> SelectCoinsBnB(
       const Amount& target_value, const std::vector<Utxo*>& utxos,
       const Amount& cost_of_change, const Amount& not_input_fees,
-      Amount* select_value);
+      Amount* select_value, Amount* utxo_fee_value);
 
   /**
    * @brief CoinSelection(KnapsackSolver)を実施する。
-   * @param[in] target_value    収集額
-   * @param[in] utxos           検索対象UTXO一覧
-   * @param[out] select_value   UTXO収集成功時、合計収集額
+   * @param[in] target_value     収集額
+   * @param[in] utxos            検索対象UTXO一覧
+   * @param[out] select_value    UTXO収集成功時、合計収集額
+   * @param[out] utxo_fee_value  UTXO収集成功時、utxo分のfee金額
    * @return UTXO一覧。空の場合はエラー終了。
    */
   std::vector<Utxo> KnapsackSolver(
       const Amount& target_value, const std::vector<Utxo*>& utxos,
-      Amount* select_value);
+      Amount* select_value, Amount* utxo_fee_value);
 
  private:
   bool use_bnb_;                       //!< BnB 利用フラグ

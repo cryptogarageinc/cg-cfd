@@ -67,7 +67,7 @@ static constexpr const uint64_t kDefaultLongTermFeeRate = 20000;
 // CoinSelectionOption
 // -----------------------------------------------------------------------------
 CoinSelectionOption::CoinSelectionOption()
-    : effective_fee_baserate_(FeeCalculator::kRelayMinimumFee),
+    : effective_fee_baserate_(kDefaultLongTermFeeRate),
       long_term_fee_baserate_(kDefaultLongTermFeeRate) {
   // do nothing
 }
@@ -90,10 +90,6 @@ uint64_t CoinSelectionOption::GetLongTermFeeBaserate() const {
   return long_term_fee_baserate_;
 }
 
-size_t CoinSelectionOption::GetTxNoInputsSize() const {
-  return tx_noinputs_size_;
-}
-
 void CoinSelectionOption::SetUseBnB(bool use_bnb) { use_bnb_ = use_bnb; }
 
 void CoinSelectionOption::SetChangeOutputSize(size_t size) {
@@ -112,12 +108,7 @@ void CoinSelectionOption::SetLongTermFeeBaserate(double baserate) {
   long_term_fee_baserate_ = static_cast<uint64_t>(floor(baserate * 1000));
 }
 
-void CoinSelectionOption::SetTxNoInputsSize(size_t size) {
-  tx_noinputs_size_ = size;
-}
-
-void CoinSelectionOption::InitializeTxSize(const TransactionController& tx) {
-  tx_noinputs_size_ = tx.GetSizeIgnoreTxIn();
+void CoinSelectionOption::InitializeTxSizeInfo() {
   change_output_size_ = 22 + 1 + 8;  // p2wpkh
   uint32_t witness_size = 0;
   uint32_t total_size = TxIn::EstimateTxInSize(
@@ -135,14 +126,9 @@ void CoinSelectionOption::SetFeeAsset(const ConfidentialAssetId& asset) {
   fee_asset_ = asset;
 }
 
-void CoinSelectionOption::InitializeConfidentialTxSize(
-    const ConfidentialTransactionController& tx) {
+void CoinSelectionOption::InitializeConfidentialTxSizeInfo() {
   uint32_t size;
   uint32_t witness_size = 0;
-
-  size = tx.GetSizeIgnoreTxIn(true, &witness_size);
-  tx_noinputs_size_ = AbstractTransaction::GetVsizeFromSize(
-      (size - witness_size), witness_size);
 
   // wpkh想定
   Script wpkh_script("0014ffffffffffffffffffffffffffffffffffffffff");
@@ -177,7 +163,8 @@ CoinSelection::CoinSelection(bool use_bnb) : use_bnb_(use_bnb) {
 std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
     const Amount& target_value, const std::vector<Utxo>& utxos,
     const UtxoFilter& filter, const CoinSelectionOption& option_params,
-    Amount* select_value, Amount* fee_value) {
+    const Amount& tx_fee_value, Amount* select_value, Amount* utxo_fee_value,
+    bool* searched_bnb) {
   // for btc default(DUST_RELAY_TX_FEE(3000)) -> DEFAULT_DISCARD_FEE(10000)
   static constexpr const uint64_t kDustRelayTxFee = 10000;
   if (select_value) {
@@ -187,18 +174,17 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
         CFD_LOG_SOURCE, "select_value=null. filter.asset={}",
         filter.target_asset.GetHex());
   }
-  if (fee_value) {
-    *fee_value = Amount::CreateBySatoshiAmount(0);
-  }
+  if (searched_bnb) *searched_bnb = false;
+
   // Copy the list to change the calculation area.
   std::vector<Utxo> work_utxos = utxos;
+  FeeCalculator effective_fee(option_params.GetEffectiveFeeBaserate());
 
   bool bnb_used = false;
   std::vector<Utxo*> utxo_pool;
   if (use_bnb_ && option_params.IsUseBnB()) {
     // Get long term estimate
     FeeCalculator discard_fee(kDustRelayTxFee);
-    FeeCalculator effective_fee(option_params.GetEffectiveFeeBaserate());
     FeeCalculator long_term_fee(option_params.GetLongTermFeeBaserate());
     // FeeCalculation feeCalc;
     // CCoinControl temp;
@@ -244,15 +230,11 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
       }
     }
     // Calculate the fees for things that aren't inputs
-    Amount not_input_fees =
-        effective_fee.GetFee(option_params.GetTxNoInputsSize());
     std::vector<Utxo> result = SelectCoinsBnB(
-        target_value, utxo_pool, cost_of_change, not_input_fees, select_value);
+        target_value, utxo_pool, cost_of_change, tx_fee_value, select_value,
+        utxo_fee_value);
     if (!result.empty()) {
-      if (select_value && fee_value &&
-          (select_value->GetSatoshiValue() != 0)) {
-        *fee_value = *select_value - target_value;
-      }
+      if (searched_bnb) *searched_bnb = true;
       return result;
     }
     bnb_used = true;
@@ -267,24 +249,20 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
   // }
   if (!bnb_used) {
     for (auto& utxo : work_utxos) {
-      if (utxo.effective_value == 0) {
-        utxo.effective_value = utxo.amount;
-      }
+      utxo.effective_value = utxo.amount;
+      utxo.fee = effective_fee.GetFee(utxo).GetSatoshiValue();
       utxo_pool.push_back(&utxo);
     }
   }
   std::vector<Utxo> result =
-      KnapsackSolver(target_value, utxo_pool, select_value);
-  if (select_value && fee_value && (select_value->GetSatoshiValue() != 0)) {
-    *fee_value = *select_value - target_value;
-  }
+      KnapsackSolver(target_value, utxo_pool, select_value, utxo_fee_value);
   return result;
 }
 
 std::vector<Utxo> CoinSelection::SelectCoinsBnB(
     const Amount& target_value, const std::vector<Utxo*>& utxos,
     const Amount& cost_of_change, const Amount& not_input_fees,
-    Amount* select_value) {
+    Amount* select_value, Amount* utxo_fee_value) {
   if (select_value == nullptr) {
     warn(CFD_LOG_SOURCE, "Outparameter(select_value) is nullptr.");
     throw CfdException(
@@ -424,8 +402,12 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
     *select_value = Amount::CreateBySatoshiAmount(0);
     for (size_t i = 0; i < best_selection.size(); ++i) {
       if (best_selection.at(i)) {
-        results.push_back(*(p_utxos.at(i)));
-        *select_value += static_cast<int64_t>(p_utxos.at(i)->amount);
+        Utxo* p_utxo = p_utxos.at(i);
+        results.push_back(*p_utxo);
+        *select_value += static_cast<int64_t>(p_utxo->amount);
+        if (utxo_fee_value) {
+          *utxo_fee_value += static_cast<int64_t>(p_utxo->fee);
+        }
       }
     }
   }
@@ -436,7 +418,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsBnB(
 
 std::vector<Utxo> CoinSelection::KnapsackSolver(
     const Amount& target_value, const std::vector<Utxo*>& utxos,
-    Amount* select_value) {
+    Amount* select_value, Amount* utxo_fee_value) {
   std::vector<Utxo> ret_utxos;
 
   if (select_value == nullptr) {
@@ -452,6 +434,7 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
   std::vector<const Utxo*> applicable_groups;
   uint64_t n_total = 0;
   uint64_t n_target = target_value.GetSatoshiValue();
+  uint64_t utxo_fee = 0;
 
   std::vector<uint32_t> indexes =
       RandomNumberUtil::GetRandomIndexes(static_cast<uint32_t>(utxos.size()));
@@ -460,6 +443,9 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
     if (utxos[index]->amount == n_target) {
       ret_utxos.push_back(*utxos[index]);
       *select_value = Amount::CreateBySatoshiAmount(utxos[index]->amount);
+      if (utxo_fee_value) {
+        *utxo_fee_value = Amount::CreateBySatoshiAmount(utxos[index]->fee);
+      }
       info(CFD_LOG_SOURCE, "KnapsackSolver end. results={}", ret_utxos.size());
       return ret_utxos;
 
@@ -479,8 +465,12 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
     for (const auto& utxo : applicable_groups) {
       ret_utxos.push_back(*utxo);
       ret_value += utxo->amount;
+      utxo_fee += utxo->fee;
     }
     *select_value = Amount::CreateBySatoshiAmount(ret_value);
+    if (utxo_fee_value) {
+      *utxo_fee_value = Amount::CreateBySatoshiAmount(utxo_fee);
+    }
     info(CFD_LOG_SOURCE, "KnapsackSolver end. results={}", ret_utxos.size());
     return ret_utxos;
   }
@@ -496,6 +486,9 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
 
     ret_utxos.push_back(*lowest_larger);
     *select_value = Amount::CreateBySatoshiAmount(lowest_larger->amount);
+    if (utxo_fee_value) {
+      *utxo_fee_value = Amount::CreateBySatoshiAmount(lowest_larger->fee);
+    }
     info(CFD_LOG_SOURCE, "KnapsackSolver end. results={}", ret_utxos.size());
     return ret_utxos;
   }
@@ -525,6 +518,9 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
        lowest_larger->amount <= n_best)) {
     ret_utxos.push_back(*lowest_larger);
     *select_value = Amount::CreateBySatoshiAmount(lowest_larger->amount);
+    if (utxo_fee_value) {
+      *utxo_fee_value = Amount::CreateBySatoshiAmount(lowest_larger->fee);
+    }
 
   } else {
     uint64_t ret_value = 0;
@@ -532,9 +528,13 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
       if (vf_best[i]) {
         ret_utxos.push_back(*applicable_groups[i]);
         ret_value += applicable_groups[i]->amount;
+        utxo_fee += applicable_groups[i]->fee;
       }
     }
     *select_value = Amount::CreateBySatoshiAmount(ret_value);
+    if (utxo_fee_value) {
+      *utxo_fee_value = Amount::CreateBySatoshiAmount(utxo_fee);
+    }
   }
   info(CFD_LOG_SOURCE, "KnapsackSolver end. results={}", ret_utxos.size());
   return ret_utxos;
