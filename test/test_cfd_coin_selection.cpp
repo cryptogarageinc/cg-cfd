@@ -382,7 +382,7 @@ TEST(CoinSelection, SelectCoinsMinConf_SelectCoinsBnB_empty)
   // BnB fail. (use knapsack)
   CoinSelection coin_select(true);
 
-  Amount target_value = Amount::CreateBySatoshiAmount(100000000);
+  Amount target_value = Amount::CreateBySatoshiAmount(114060000);
   std::vector<Utxo> utxos;
   UtxoFilter filter;
   CoinSelectionOption option_params;
@@ -412,7 +412,7 @@ TEST(CoinSelection, SelectCoinsMinConf_SelectCoinsBnB_empty)
       filter, option_params, &select_value, &fee_value)));
   EXPECT_EQ(select_utxos.size(), 3);
   EXPECT_EQ(select_value.GetSatoshiValue(), static_cast<int64_t>(115063590));
-  EXPECT_EQ(fee_value.GetSatoshiValue(), static_cast<int64_t>(15063590));
+  EXPECT_EQ(fee_value.GetSatoshiValue(), static_cast<int64_t>(1003590));
   if (select_utxos.size() == 3) {
     EXPECT_EQ(select_utxos[0].amount, static_cast<int64_t>(61062500));
     EXPECT_EQ(select_utxos[1].amount, static_cast<int64_t>(39062500));
@@ -506,7 +506,7 @@ TEST(CoinSelection, ConvertToUtxo)
   std::string output_descriptor("wpkh([ef735203/0'/0'/7']022c2409fbf657ba25d97bb3dab5426d20677b774d4fc7bd3bfac27ff96ada3dd1)#4z2vy08x");
   Amount amount = Amount::CreateBySatoshiAmount(20000);
   void* binary_data = &vout;
-  Utxo utxo;
+  Utxo utxo = {};
   // std::vector<uint8_t> script_bytes;
 
   EXPECT_NO_THROW((CoinSelection::ConvertToUtxo(
