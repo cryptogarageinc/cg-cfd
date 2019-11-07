@@ -75,8 +75,7 @@ std::vector<Address> ElementsAddressApi::GetAddressesFromMultisig(
 
   AddressApi address_api;
   return address_api.GetAddressesFromMultisig(
-      net_type, address_type, redeem_script, pubkey_list,
-      &addr_prefixes);
+      net_type, address_type, redeem_script, pubkey_list, &addr_prefixes);
 }
 
 ElementsConfidentialAddress ElementsAddressApi::GetConfidentialAddress(

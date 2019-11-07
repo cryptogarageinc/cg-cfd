@@ -278,7 +278,8 @@ std::string TransactionApiBase::AddMultisigSign(
   Script script = (address_type == AddressType::kP2shAddress) ? redeem_script
                                                               : witness_script;
 
-  std::vector<Pubkey> pubkeys = ScriptUtil::ExtractPubkeysFromMultisigScript(script);
+  std::vector<Pubkey> pubkeys =
+      ScriptUtil::ExtractPubkeysFromMultisigScript(script);
   // get signParams from json request
   std::vector<SignParameter> sign_params = sign_list;
 
