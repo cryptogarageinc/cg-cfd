@@ -68,7 +68,8 @@ static constexpr const uint64_t kDefaultLongTermFeeRate = 20000;
 // -----------------------------------------------------------------------------
 CoinSelectionOption::CoinSelectionOption()
     : effective_fee_baserate_(kDefaultLongTermFeeRate),
-      long_term_fee_baserate_(kDefaultLongTermFeeRate) {
+      long_term_fee_baserate_(kDefaultLongTermFeeRate),
+      knapsack_minimum_change_(-1) {
   // do nothing
 }
 
@@ -90,6 +91,10 @@ uint64_t CoinSelectionOption::GetLongTermFeeBaserate() const {
   return long_term_fee_baserate_;
 }
 
+int64_t CoinSelectionOption::GetKnapsackMinimumChange() const {
+  return knapsack_minimum_change_;
+}
+
 void CoinSelectionOption::SetUseBnB(bool use_bnb) { use_bnb_ = use_bnb; }
 
 void CoinSelectionOption::SetChangeOutputSize(size_t size) {
@@ -106,6 +111,10 @@ void CoinSelectionOption::SetEffectiveFeeBaserate(double baserate) {
 
 void CoinSelectionOption::SetLongTermFeeBaserate(double baserate) {
   long_term_fee_baserate_ = static_cast<uint64_t>(floor(baserate * 1000));
+}
+
+void CoinSelectionOption::SetKnapsackMinimumChange(int64_t min_change) {
+  knapsack_minimum_change_ = min_change;
 }
 
 void CoinSelectionOption::InitializeTxSizeInfo() {
@@ -247,10 +256,8 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
       utxo.fee = (use_fee) ? effective_fee.GetFee(utxo).GetSatoshiValue() : 0;
       if (utxo.amount > utxo.fee) {
         utxo.effective_value = utxo.amount - utxo.fee;
-      } else {
-        utxo.effective_value = 0;
+        utxo_pool.push_back(&utxo);
       }
-      utxo_pool.push_back(&utxo);
     }
   }
   Amount search_value = target_value;
@@ -258,8 +265,18 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
   if (tx_fee_value.GetSatoshiValue() > 0) {
     search_value += tx_fee_value;
   }
+  // using minimum fee
+  uint64_t min_change = kMinChange;
+  int64_t opt_min_change = option_params.GetKnapsackMinimumChange();
+  if (opt_min_change >= 0) {
+    if ((!use_fee) || (opt_min_change > cost_of_change.GetSatoshiValue())) {
+      min_change = static_cast<uint64_t>(opt_min_change);
+    } else if (use_fee) {
+      min_change = static_cast<uint64_t>(cost_of_change.GetSatoshiValue());
+    }
+  }
   std::vector<Utxo> result = KnapsackSolver(
-      search_value, utxo_pool, kMinChange, select_value, &utxo_fee);
+      search_value, utxo_pool, min_change, select_value, &utxo_fee);
   if (use_fee) {
     // Check if the required amount was detected
     // (May be a non-passing route)
@@ -474,7 +491,8 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
       info(CFD_LOG_SOURCE, "KnapsackSolver end. results={}", ret_utxos.size());
       return ret_utxos;
 
-    } else if (utxos[index]->amount < n_target + min_change) {
+    } else if (utxos[index]->effective_value < n_target + min_change) {
+      // } else if ((utxos[index]->amount < n_target + min_change) {
       applicable_groups.push_back(utxos[index]);
       n_total += utxos[index]->amount;
       n_effective_total += utxos[index]->effective_value;
@@ -528,19 +546,26 @@ std::vector<Utxo> CoinSelection::KnapsackSolver(
 
   randomize_cache_.clear();
   ApproximateBestSubset(
-      applicable_groups, n_total, n_target, &vf_best, &n_best,
+      applicable_groups, n_effective_total, n_target, &vf_best, &n_best,
       kApproximateBestSubsetIterations);
-  if (n_best != n_target && n_total >= n_target + min_change) {
+  if (n_best != n_target && n_effective_total >= n_target + min_change) {
+    uint64_t n_best2 = n_best;
+    std::vector<char> vf_best2;
     ApproximateBestSubset(
-        applicable_groups, n_total, (n_target + min_change), &vf_best, &n_best,
-        kApproximateBestSubsetIterations);
+        applicable_groups, n_effective_total, (n_target + min_change),
+        &vf_best2, &n_best2, kApproximateBestSubsetIterations);
+    if ((n_best2 == n_target) || (n_best > n_best2)) {
+      n_best = n_best2;
+      vf_best = vf_best2;
+    }
   }
 
   // NOLINT If we have a bigger coin and (either the stochastic approximation didn't find a good solution,
   // NOLINT                                or the next bigger coin is closer), return the bigger coin
   if (lowest_larger != nullptr &&
       ((n_best != n_target && n_best < n_target + min_change) ||
-       lowest_larger->amount <= n_best)) {
+       lowest_larger->effective_value <= n_best)) {
+    // lowest_larger->amount <= n_best)) {
     ret_utxos.push_back(*lowest_larger);
     *select_value = Amount::CreateBySatoshiAmount(lowest_larger->amount);
     *utxo_fee_value = Amount::CreateBySatoshiAmount(lowest_larger->fee);
@@ -594,7 +619,8 @@ void CoinSelection::ApproximateBestSubset(
           rand_bool = RandomNumberUtil::GetRandomBool(&randomize_cache_);
         }
         if (rand_bool) {
-          n_total += utxos[i]->amount;
+          // n_total += utxos[i]->amount;
+          n_total += utxos[i]->effective_value;
           vf_includes[i] = true;
           if (n_total >= n_target_value) {
             is_reached_target = true;
@@ -602,7 +628,8 @@ void CoinSelection::ApproximateBestSubset(
               *n_best = n_total;
               *vf_best = vf_includes;
             }
-            n_total -= utxos[i]->amount;
+            // n_total -= utxos[i]->amount;
+            n_total -= utxos[i]->effective_value;
             vf_includes[i] = false;
           }
         }

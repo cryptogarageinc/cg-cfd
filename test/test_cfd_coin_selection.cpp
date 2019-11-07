@@ -259,9 +259,51 @@ TEST(CoinSelection, KnapsackSolver_ApproximateBestSubset2)
 
   EXPECT_EQ(ret.size(), 2);
   EXPECT_EQ(select_value.GetSatoshiValue(), 468750000);
-  if ((fee.GetSatoshiValue() != 2623040) && (fee.GetSatoshiValue() != 1640)) {
-    EXPECT_EQ(fee.GetSatoshiValue(), 2623040);
+  EXPECT_EQ(fee.GetSatoshiValue(), 1640);
+  if (ret.size() == 2) {
+    EXPECT_EQ(ret[0].amount, static_cast<int64_t>(312500000));
+    EXPECT_EQ(ret[1].amount, static_cast<int64_t>(156250000));
   }
+  EXPECT_FALSE(use_bnb);
+}
+
+TEST(CoinSelection, KnapsackSolver_ApproximateBestSubset2_lower)
+{
+  // Amount target_amount = Amount::CreateBySatoshiAmount(460000000);
+  Amount target_amount = Amount::CreateBySatoshiAmount(468700000);
+  Amount select_value;
+  Amount fee;
+  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
+  bool use_bnb = false;
+  std::vector<Utxo> ret = exp_selection.SelectCoinsMinConf(
+      target_amount, GetBitcoinUtxoList(), exp_filter, GetBitcoinOption(),
+      tx_fee, &select_value, &fee, &use_bnb);
+
+  EXPECT_EQ(ret.size(), 1);
+  EXPECT_EQ(select_value.GetSatoshiValue(), 1250000000);
+  EXPECT_EQ(fee.GetSatoshiValue(), 820);
+  if (ret.size() == 1) {
+    EXPECT_EQ(ret[0].amount, static_cast<int64_t>(1250000000));
+  }
+  EXPECT_FALSE(use_bnb);
+}
+
+TEST(CoinSelection, KnapsackSolver_MinimumFee)
+{
+  Amount target_amount = Amount::CreateBySatoshiAmount(468700000);
+  Amount select_value;
+  Amount fee;
+  Amount tx_fee = Amount::CreateBySatoshiAmount(1000);
+  bool use_bnb = false;
+  CoinSelectionOption option = GetBitcoinOption();
+  option.SetKnapsackMinimumChange(0);  // minimum change is BnB level
+  std::vector<Utxo> ret = exp_selection.SelectCoinsMinConf(
+      target_amount, GetBitcoinUtxoList(), exp_filter, option,
+      tx_fee, &select_value, &fee, &use_bnb);
+
+  EXPECT_EQ(ret.size(), 2);
+  EXPECT_EQ(select_value.GetSatoshiValue(), 468750000);
+  EXPECT_EQ(fee.GetSatoshiValue(), 1640);
   if (ret.size() == 2) {
     EXPECT_EQ(ret[0].amount, static_cast<int64_t>(312500000));
     EXPECT_EQ(ret[1].amount, static_cast<int64_t>(156250000));

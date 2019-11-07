@@ -117,6 +117,11 @@ class CFD_EXPORT CoinSelectionOption {
    * @return 長期的なfeeのbaserate
    */
   uint64_t GetLongTermFeeBaserate() const;
+  /**
+   * @brief knapsack探索時の最小の加算値を取得します.
+   * @return knapsack minimum change
+   */
+  int64_t GetKnapsackMinimumChange() const;
 
   /**
    * @brief BnB 使用フラグを設定します.
@@ -143,6 +148,11 @@ class CFD_EXPORT CoinSelectionOption {
    * @param[in] baserate    fee baserate (for BTC/byte)
    */
   void SetLongTermFeeBaserate(double baserate);
+  /**
+   * @brief knapsack探索時の最小の加算値を設定します.
+   * @param[in] min_change    knapsack minimum change
+   */
+  void SetKnapsackMinimumChange(int64_t min_change);
 
   /**
    * @brief bitcoin相当でサイズ関連情報を初期化します。
@@ -173,6 +183,7 @@ class CFD_EXPORT CoinSelectionOption {
   size_t change_spend_size_ = 0;     //!< 受入変更サイズ
   uint64_t effective_fee_baserate_;  //!< fee baserate
   uint64_t long_term_fee_baserate_;  //!< longterm fee baserate
+  int64_t knapsack_minimum_change_;  //!< knapsack min change
 #ifndef CFD_DISABLE_ELEMENTS
   ConfidentialAssetId fee_asset_;  //!< feeとして利用するasset
 #endif                             // CFD_DISABLE_ELEMENTS
