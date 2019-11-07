@@ -160,10 +160,7 @@ TEST(CoinSelection, KnapsackSolver_match_utxo)
 
   EXPECT_EQ(ret.size(), 1);
   EXPECT_EQ(select_value.GetSatoshiValue(), 39062500);
-  if ((fee.GetSatoshiValue() != 1311520) && (fee.GetSatoshiValue() != 820)) {
-    EXPECT_EQ(fee.GetSatoshiValue(), 1311520);
-  }
-  // EXPECT_EQ(fee.GetSatoshiValue(), 1311520);
+  EXPECT_EQ(fee.GetSatoshiValue(), 820);
   if (ret.size() == 1) {
     EXPECT_EQ(ret[0].amount, static_cast<int64_t>(39062500));
   }
@@ -183,10 +180,7 @@ TEST(CoinSelection, KnapsackSolver_match_utxo2)
 
   EXPECT_EQ(ret.size(), 2);
   EXPECT_EQ(select_value.GetSatoshiValue(), 117187500);
-  if ((fee.GetSatoshiValue() != 2623040) && (fee.GetSatoshiValue() != 1640)) {
-    EXPECT_EQ(fee.GetSatoshiValue(), 2623040);
-  }
-  // EXPECT_EQ(fee.GetSatoshiValue(), 2623040);
+  EXPECT_EQ(fee.GetSatoshiValue(), 1640);
   if (ret.size() == 2) {
     EXPECT_EQ(ret[0].amount, static_cast<int64_t>(78125000));
     EXPECT_EQ(ret[1].amount, static_cast<int64_t>(39062500));
@@ -220,10 +214,7 @@ TEST(CoinSelection, KnapsackSolver_lowest_larger)
 
   EXPECT_EQ(ret.size(), 1);
   EXPECT_EQ(select_value.GetSatoshiValue(), 156250000);
-  if ((fee.GetSatoshiValue() != 1311520) && (fee.GetSatoshiValue() != 820)) {
-    EXPECT_EQ(fee.GetSatoshiValue(), 1311520);
-  }
-  // EXPECT_EQ(fee.GetSatoshiValue(), 1311520);
+  EXPECT_EQ(fee.GetSatoshiValue(), 820);
   if (ret.size() == 1) {
     EXPECT_EQ(ret[0].amount, static_cast<int64_t>(156250000));
   }
@@ -243,10 +234,7 @@ TEST(CoinSelection, KnapsackSolver_ApproximateBestSubset)
 
   EXPECT_EQ(ret.size(), 2);
   EXPECT_EQ(select_value.GetSatoshiValue(), 234375000);
-  if ((fee.GetSatoshiValue() != 2623040) && (fee.GetSatoshiValue() != 1640)) {
-    EXPECT_EQ(fee.GetSatoshiValue(), 2623040);
-  }
-  // EXPECT_EQ(fee.GetSatoshiValue(), 2623040);
+  EXPECT_EQ(fee.GetSatoshiValue(), 1640);
   if (ret.size() == 2) {
     EXPECT_EQ(ret[0].amount, static_cast<int64_t>(156250000));
     EXPECT_EQ(ret[1].amount, static_cast<int64_t>(78125000));
