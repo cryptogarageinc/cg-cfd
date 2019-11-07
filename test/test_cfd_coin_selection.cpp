@@ -111,10 +111,12 @@ TEST(CoinSelection, KnapsackSolver_targetvalue_0)
   Amount target_amount = Amount::CreateBySatoshiAmount(0);
   Amount select_value;
   Amount fee;
-  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
+  Amount tx_fee = Amount::CreateBySatoshiAmount(0);
   bool use_bnb = false;
+  CoinSelectionOption option = GetBitcoinOption();
+  option.SetEffectiveFeeBaserate(0.0);
   std::vector<Utxo> ret = exp_selection.SelectCoinsMinConf(
-      target_amount, GetBitcoinUtxoList(), exp_filter, GetBitcoinOption(),
+      target_amount, GetBitcoinUtxoList(), exp_filter, option,
       tx_fee, &select_value, &fee, &use_bnb);
 
   EXPECT_EQ(ret.size(), 0);
@@ -149,7 +151,8 @@ TEST(CoinSelection, KnapsackSolver_outparameter_nullptr)
 
 TEST(CoinSelection, KnapsackSolver_match_utxo)
 {
-  Amount target_amount = Amount::CreateBySatoshiAmount(39062500);
+  // 39062500 - 820 - 1500
+  Amount target_amount = Amount::CreateBySatoshiAmount(39060180);
   Amount select_value;
   Amount fee;
   Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
@@ -169,7 +172,8 @@ TEST(CoinSelection, KnapsackSolver_match_utxo)
 
 TEST(CoinSelection, KnapsackSolver_match_utxo2)
 {
-  Amount target_amount = Amount::CreateBySatoshiAmount(117187500);
+  // 117187500 - 1640 - 1500
+  Amount target_amount = Amount::CreateBySatoshiAmount(117184360);
   Amount select_value;
   Amount fee;
   Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
@@ -444,7 +448,7 @@ TEST(CoinSelection, SelectCoinsMinConf_SelectCoinsBnB_empty)
   // BnB fail. (use knapsack)
   CoinSelection coin_select(true);
 
-  Amount target_value = Amount::CreateBySatoshiAmount(114060000);
+  Amount target_value = Amount::CreateBySatoshiAmount(114040000);
   std::vector<Utxo> utxos;
   UtxoFilter filter;
   CoinSelectionOption option_params;

@@ -287,13 +287,14 @@ class CFD_EXPORT CoinSelection {
    * @brief CoinSelection(KnapsackSolver)を実施する。
    * @param[in] target_value     収集額
    * @param[in] utxos            検索対象UTXO一覧
+   * @param[in] min_change       最小の差額
    * @param[out] select_value    UTXO収集成功時、合計収集額
    * @param[out] utxo_fee_value  UTXO収集成功時、utxo分のfee金額
    * @return UTXO一覧。空の場合はエラー終了。
    */
   std::vector<Utxo> KnapsackSolver(
       const Amount& target_value, const std::vector<Utxo*>& utxos,
-      Amount* select_value, Amount* utxo_fee_value);
+      uint64_t min_change, Amount* select_value, Amount* utxo_fee_value);
 
  private:
   bool use_bnb_;                       //!< BnB 利用フラグ
