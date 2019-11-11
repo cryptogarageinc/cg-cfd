@@ -351,7 +351,7 @@ uint32_t ConfidentialTransactionController::GetSizeIgnoreTxIn(
   uint32_t witness_size = 0;
   for (const auto& txout : txouts) {
     result += txout.GetSerializeSize(is_blinded, &witness_size);
-    if (!witness_stack_size) {
+    if (witness_stack_size) {
       *witness_stack_size += witness_size;
     }
   }
@@ -488,7 +488,7 @@ Amount ConfidentialTransactionController::CalculateSimpleFee(
   // 簡易計算
   uint32_t size = transaction_.GetTotalSize();
   uint32_t vsize = transaction_.GetVsize();
-  uint32_t rate = FeeCalculator::kBaseRate;
+  uint32_t rate = FeeCalculator::kRelayMinimumFee;
   if (append_feature_signed_size) {
     uint32_t weight = transaction_.GetWeight();
     uint32_t count = transaction_.GetTxInCount();
