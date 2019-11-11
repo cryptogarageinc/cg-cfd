@@ -144,7 +144,7 @@ class CFD_EXPORT CoinSelectionOption {
    */
   void SetEffectiveFeeBaserate(double baserate);
   /**
-   * @brief 効果的なfeeのbaserateを設定します.
+   * @brief 長期的なfeeのbaserateを設定します.
    * @param[in] baserate    fee baserate (for BTC/byte)
    */
   void SetLongTermFeeBaserate(double baserate);
