@@ -16,6 +16,7 @@
 #include "cfd/cfd_common.h"
 #include "cfd/cfd_elements_transaction.h"
 #include "cfd/cfd_transaction_common.h"
+#include "cfd/cfdapi_coin.h"
 #include "cfdcore/cfdcore_coin.h"
 #include "cfdcore/cfdcore_elements_transaction.h"
 #include "cfdcore/cfdcore_key.h"
@@ -141,7 +142,7 @@ struct UnblindIssuanceOutputs {
 };
 
 /**
- *  @brief Issuance input
+ * @brief Issuance input
  */
 struct TxInIssuanceParameters {
   Txid txid;                      //!< txid
@@ -155,7 +156,7 @@ struct TxInIssuanceParameters {
 };
 
 /**
- *  @brief Reissuance input
+ * @brief Reissuance input
  */
 struct TxInReissuanceParameters {
   Txid txid;                      //!< txid
@@ -167,12 +168,24 @@ struct TxInReissuanceParameters {
 };
 
 /**
- *  @brief Issueance / Reissuance output
+ * @brief Issueance / Reissuance output
  */
 struct IssuanceOutput {
   Txid txid;                 //!< txid
   uint32_t vout;             //!< vout
   IssuanceParameter output;  //!< issuance output
+};
+
+/**
+ * @brief Using utxo and option data in elements
+ */
+struct ElementsUtxoAndOption {
+  UtxoData utxo;               //!< utxo
+  bool is_issuance;            //!< use issuance/reissuance
+  bool is_blind_issuance;      //!< use blind issuance/reissuance
+  bool is_pegin;               //!< use pegin
+  uint32_t pegin_btc_tx_size;  //!< btc pegin tx size
+  Script fedpeg_script;        //!< fedpeg script for pegin
 };
 
 /**
@@ -433,18 +446,6 @@ class CFD_EXPORT ElementsTransactionApi {
       Address* pegout_address = nullptr) const;
 
   /**
-   *
-   * @return
-   */
-  uint32_t GetWitnessStackNum();
-
-  /**
-   *
-   * @return
-   */
-  ConfidentialTransactionController UpdateWitnessStack();
-
-  /**
    * @brief Issue用BlindingKeyを作成する.
    * @param[in] master_blinding_key master blindingKey
    * @param[in] txid                issuance utxo txid
@@ -453,6 +454,24 @@ class CFD_EXPORT ElementsTransactionApi {
    */
   Privkey GetIssuanceBlindingKey(
       const Privkey& master_blinding_key, const Txid& txid, int32_t vout);
+
+  /**
+   * @brief estimate a fee amount from transaction.
+   * @param[in] tx_hex              tx hex string
+   * @param[in] utxos               using utxo data
+   * @param[in] fee_asset           using fee asset
+   * @param[in] tx_fee              tx fee amount (ignore utxo)
+   * @param[in] utxo_fee            utxo fee amount
+   * @param[in] is_blind            using tx blinding
+   * @param[in] effective_fee_rate  effective fee rate (minimum)
+   * @return tx fee (contains utxo)
+   */
+  Amount EstimateFee(
+      const std::string& tx_hex,
+      const std::vector<ElementsUtxoAndOption>& utxos,
+      const ConfidentialAssetId& fee_asset, Amount* tx_fee = nullptr,
+      Amount* utxo_fee = nullptr, bool is_blind = true,
+      double effective_fee_rate = 1) const;
 
   // CreateDestroyAmountTransaction
   // see CreateRawTransaction and ConfidentialTxOut::CreateDestroyAmountTxOut

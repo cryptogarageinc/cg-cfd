@@ -23,29 +23,27 @@ using cfd::core::Amount;
  */
 class CFD_EXPORT FeeCalculator {
  public:
-  /** @brief ベースレート(大き目) */
-  static constexpr uint32_t kBaseRate = 11000;
   /**
    * @brief 最小のfee
+   * @details bitcoin relay minimum fee rate.
    * @see bitcoin: DEFAULT_INCREMENTAL_RELAY_FEE
    */
   static constexpr const int64_t kRelayMinimumFee = 1000;
+  /**
+   * @brief 最小のfee
+   * @details elements relay minimum fee rate.
+   */
+  static constexpr const int64_t kElementsRelayMinimumFee = 100;
 
   /**
    * @brief Feeを計算する.
    * @param[in] size    Transaction size
    * @param[in] vsize   Transaction virtual size
-   * @param[in] rate    rate (base = 1000)
+   * @param[in] rate    rate (default = relay minimum)
    * @return Fee Amount
    */
   static Amount CalculateFee(  // Fee計算
-      uint32_t size, uint32_t vsize, uint32_t rate = kBaseRate);
-
-  /**
-   * @brief 最小のfee rateを取得する。
-   * @return fee rate
-   */
-  static uint64_t GetMinimumFeeRate();
+      uint32_t size, uint32_t vsize, uint64_t rate = kRelayMinimumFee);
 
   /**
    * @brief constructor.

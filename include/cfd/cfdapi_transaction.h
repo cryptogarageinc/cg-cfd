@@ -14,6 +14,7 @@
 
 #include "cfd/cfd_common.h"
 #include "cfd/cfd_transaction.h"
+#include "cfd/cfdapi_coin.h"
 #include "cfdcore/cfdcore_bytedata.h"
 #include "cfdcore/cfdcore_script.h"
 #include "cfdcore/cfdcore_util.h"
@@ -199,6 +200,20 @@ class CFD_EXPORT TransactionApi {
       const std::vector<SignParameter>& sign_list, AddressType address_type,
       const Script& witness_script, const Script redeem_script = Script(),
       bool clear_stack = true);
+
+  /**
+   * @brief estimate a fee amount from transaction.
+   * @param[in] tx_hex              tx hex string
+   * @param[in] utxos               using utxo data
+   * @param[in] tx_fee              tx fee amount (ignore utxo)
+   * @param[in] utxo_fee            utxo fee amount
+   * @param[in] effective_fee_rate  effective fee rate (minimum)
+   * @return tx fee (contains utxo)
+   */
+  Amount EstimateFee(
+      const std::string& tx_hex, const std::vector<UtxoData>& utxos,
+      Amount* tx_fee = nullptr, Amount* utxo_fee = nullptr,
+      double effective_fee_rate = 1) const;
 };
 
 }  // namespace api
