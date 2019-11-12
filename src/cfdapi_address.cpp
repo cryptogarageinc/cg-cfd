@@ -261,7 +261,6 @@ DescriptorScriptData AddressApi::ParseOutputDescriptor(
 
   static auto get_keystr_function =
       [](const DescriptorKeyReference& key_ref) -> std::string {
-    // 実際のBIP32解析では強化鍵確認も必要だが、pegoutでは使わないので除外
     if (key_ref.HasExtPrivkey()) {
       return key_ref.GetExtPrivkey().ToString();
     } else if (key_ref.HasExtPubkey()) {
