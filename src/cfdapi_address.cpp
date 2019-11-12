@@ -10,6 +10,7 @@
 #include "cfd/cfd_address.h"
 #include "cfd_manager.h"  // NOLINT
 #include "cfdcore/cfdcore_address.h"
+#include "cfdcore/cfdcore_descriptor.h"
 #include "cfdcore/cfdcore_exception.h"
 #include "cfdcore/cfdcore_key.h"
 #include "cfdcore/cfdcore_logger.h"
@@ -26,6 +27,12 @@ using cfd::core::AddressFormatData;
 using cfd::core::AddressType;
 using cfd::core::CfdError;
 using cfd::core::CfdException;
+using cfd::core::Descriptor;
+using cfd::core::DescriptorKeyReference;
+using cfd::core::DescriptorKeyType;
+using cfd::core::DescriptorNode;
+using cfd::core::DescriptorScriptReference;
+using cfd::core::DescriptorScriptType;
 using cfd::core::NetType;
 using cfd::core::Pubkey;
 using cfd::core::Script;
@@ -36,7 +43,7 @@ using cfd::core::logger::warn;
 Address AddressApi::CreateAddress(
     NetType net_type, AddressType address_type, const Pubkey* pubkey,
     const Script* script, Script* locking_script, Script* redeem_script,
-    std::vector<AddressFormatData>* prefix_list) {
+    const std::vector<AddressFormatData>* prefix_list) const {
   if ((pubkey == nullptr) || (!pubkey->IsValid())) {
     if (address_type == AddressType::kP2pkhAddress ||
         address_type == AddressType::kP2wpkhAddress ||
@@ -134,7 +141,8 @@ Address AddressApi::CreateAddress(
 Address AddressApi::CreateMultisig(
     NetType net_type, AddressType address_type, uint32_t req_sig_num,
     const std::vector<Pubkey>& pubkeys, Script* redeem_script,
-    Script* witness_script, std::vector<AddressFormatData>* prefix_list) {
+    Script* witness_script,
+    const std::vector<AddressFormatData>* prefix_list) const {
   // Multisig redeem scriptの作成
   Script multisig_script =
       ScriptUtil::CreateMultisigRedeemScript(req_sig_num, pubkeys);
@@ -187,7 +195,7 @@ Address AddressApi::CreateMultisig(
 std::vector<Address> AddressApi::GetAddressesFromMultisig(
     NetType net_type, AddressType address_type, const Script& redeem_script,
     std::vector<Pubkey>* pubkey_list,
-    std::vector<AddressFormatData>* prefix_list) {
+    const std::vector<AddressFormatData>* prefix_list) const {
   std::vector<AddressFormatData> addr_prefixes;
   if (prefix_list == nullptr) {
     addr_prefixes = cfd::core::GetBitcoinAddressFormatList();
@@ -234,6 +242,164 @@ std::vector<Address> AddressApi::GetAddressesFromMultisig(
   }
 
   return addr_list;
+}
+
+DescriptorScriptData AddressApi::ParseOutputDescriptor(
+    const std::string& descriptor, NetType net_type,
+    const std::string& bip32_derivation_path,
+    std::vector<DescriptorScriptData>* script_list,
+    std::vector<DescriptorKeyData>* multisig_key_list,
+    const std::vector<AddressFormatData>* prefix_list) const {
+  std::vector<AddressFormatData> addr_prefixes;
+  if (prefix_list == nullptr) {
+    addr_prefixes = cfd::core::GetBitcoinAddressFormatList();
+  } else {
+    addr_prefixes = *prefix_list;
+  }
+  if (script_list) script_list->clear();
+  if (multisig_key_list) multisig_key_list->clear();
+
+  static auto get_keystr_function =
+      [](const DescriptorKeyReference& key_ref) -> std::string {
+    // 実際のBIP32解析では強化鍵確認も必要だが、pegoutでは使わないので除外
+    if (key_ref.HasExtPrivkey()) {
+      return key_ref.GetExtPrivkey().ToString();
+    } else if (key_ref.HasExtPubkey()) {
+      return key_ref.GetExtPubkey().ToString();
+    } else {
+      return key_ref.GetPubkey().GetHex();
+    }
+  };
+
+  DescriptorScriptData result;
+  Descriptor desc = Descriptor::Parse(descriptor, &addr_prefixes);
+  std::vector<std::string> args;
+  for (uint32_t index = 0; index < desc.GetNeedArgumentNum(); ++index) {
+    args.push_back(bip32_derivation_path);
+  }
+  std::vector<DescriptorScriptReference> script_refs =
+      desc.GetReferenceAll(&args);
+  DescriptorNode node = desc.GetNode();
+
+  result.type = node.GetScriptType();
+  result.key_type = DescriptorKeyType::kDescriptorKeyNull;
+  result.depth = 0;
+  result.locking_script = script_refs[0].GetLockingScript();
+  if (script_refs[0].HasAddress()) {
+    result.address = script_refs[0].GenerateAddress(net_type);
+    result.address_type = script_refs[0].GetAddressType();
+  }
+  if (script_refs[0].HasRedeemScript()) {
+    result.redeem_script = script_refs[0].GetRedeemScript();
+  }
+
+  std::vector<DescriptorKeyReference> multisig_keys;
+  bool use_script_list = false;
+  DescriptorKeyReference key_ref;
+  switch (result.type) {
+    case DescriptorScriptType::kDescriptorScriptCombo:
+      if (script_list) {
+        for (const auto& ref : script_refs) {
+          DescriptorScriptData ref_data;
+          ref_data.type = ref.GetScriptType();
+          ref_data.depth = 0;
+          ref_data.locking_script = ref.GetLockingScript();
+          if (ref.HasAddress()) {
+            ref_data.address = ref.GenerateAddress(net_type);
+            ref_data.address_type = ref.GetAddressType();
+          }
+          if (ref.HasRedeemScript()) {
+            ref_data.redeem_script = ref.GetRedeemScript();
+          } else {
+            key_ref = ref.GetKeyList()[0];
+            ref_data.key_type = key_ref.GetKeyType();
+            ref_data.key = get_keystr_function(key_ref);
+          }
+          script_list->push_back(ref_data);
+        }
+      }
+      break;
+    case DescriptorScriptType::kDescriptorScriptSh:
+    case DescriptorScriptType::kDescriptorScriptWsh:
+      use_script_list = true;
+      break;
+    case DescriptorScriptType::kDescriptorScriptPk:
+    case DescriptorScriptType::kDescriptorScriptPkh:
+    case DescriptorScriptType::kDescriptorScriptWpkh:
+      key_ref = script_refs[0].GetKeyList()[0];
+      result.key_type = key_ref.GetKeyType();
+      result.key = get_keystr_function(key_ref);
+      break;
+    case DescriptorScriptType::kDescriptorScriptMulti:
+    case DescriptorScriptType::kDescriptorScriptSortedMulti:
+      multisig_keys = script_refs[0].GetKeyList();
+      break;
+    case DescriptorScriptType::kDescriptorScriptRaw:
+    case DescriptorScriptType::kDescriptorScriptAddr:
+    default:
+      break;
+  }
+
+  if (use_script_list && script_list) {
+    DescriptorScriptReference script_ref = script_refs[0];
+    bool is_loop = true;
+    uint32_t depth = 0;
+    while (is_loop) {
+      DescriptorScriptReference child = script_ref.GetChild();
+      DescriptorScriptData data;
+      switch (script_ref.GetScriptType()) {
+        case DescriptorScriptType::kDescriptorScriptSh:
+        case DescriptorScriptType::kDescriptorScriptWsh:
+          child = script_ref.GetChild();
+          if ((child.GetScriptType() ==
+               DescriptorScriptType::kDescriptorScriptMulti) ||
+              (child.GetScriptType() ==
+               DescriptorScriptType::kDescriptorScriptSortedMulti)) {
+            multisig_keys = child.GetKeyList();
+            is_loop = false;
+          }
+          break;
+        // case DescriptorScriptType::kDescriptorScriptPk:
+        // case DescriptorScriptType::kDescriptorScriptPkh:
+        // case DescriptorScriptType::kDescriptorScriptWpkh:
+        default:
+          is_loop = false;
+          break;
+      }
+      data.type = script_ref.GetScriptType();
+      data.depth = depth;
+      data.locking_script = script_ref.GetLockingScript();
+      data.address = script_ref.GenerateAddress(net_type);
+      data.address_type = script_ref.GetAddressType();
+      if (script_ref.HasRedeemScript()) {
+        data.redeem_script = script_ref.GetRedeemScript();
+      }
+      if (script_ref.HasKey()) {
+        key_ref = script_ref.GetKeyList()[0];
+        data.key_type = key_ref.GetKeyType();
+        data.key = get_keystr_function(key_ref);
+      } else {
+        data.key_type = DescriptorKeyType::kDescriptorKeyNull;
+      }
+
+      script_list->push_back(data);
+      if (is_loop && script_ref.HasChild()) {
+        child = script_ref.GetChild();
+        script_ref = child;
+        ++depth;
+      } else {
+        is_loop = false;
+      }
+    }
+  }
+
+  if ((!multisig_keys.empty()) && multisig_key_list) {
+    for (const auto& ref : multisig_keys) {
+      DescriptorKeyData key_data{ref.GetKeyType(), get_keystr_function(ref)};
+      multisig_key_list->push_back(key_data);
+    }
+  }
+  return result;
 }
 
 }  // namespace api
