@@ -341,10 +341,13 @@ DescriptorScriptData AddressApi::ParseOutputDescriptor(
 
   if (use_script_list && script_list) {
     DescriptorScriptReference script_ref = script_refs[0];
-    bool is_loop = true;
+    bool is_loop = script_ref.HasChild();
     uint32_t depth = 0;
     while (is_loop) {
-      DescriptorScriptReference child = script_ref.GetChild();
+      DescriptorScriptReference child;
+      if (script_ref.HasChild()) {
+        child = script_ref.GetChild();
+      }
       DescriptorScriptData data;
       switch (script_ref.GetScriptType()) {
         case DescriptorScriptType::kDescriptorScriptSh:
