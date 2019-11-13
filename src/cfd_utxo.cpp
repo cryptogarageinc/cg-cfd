@@ -63,6 +63,9 @@ static constexpr const uint64_t kMinChange = 1000000;  // MIN_CHANGE
 //! LongTerm fee rate default (20.0)
 static constexpr const uint64_t kDefaultLongTermFeeRate = 20000;
 
+//! dust relay tx fee
+static constexpr const uint64_t kDustRelayTxFee = 10000;
+
 // -----------------------------------------------------------------------------
 // CoinSelectionOption
 // -----------------------------------------------------------------------------
@@ -95,6 +98,21 @@ int64_t CoinSelectionOption::GetKnapsackMinimumChange() const {
   return knapsack_minimum_change_;
 }
 
+int64_t CoinSelectionOption::GetExcessFeeRange() const {
+  if (excess_fee_range_ < 0) {
+    if (effective_fee_baserate_ != 0) {
+      FeeCalculator effective_fee(effective_fee_baserate_);
+      FeeCalculator discard_fee(kDustRelayTxFee);
+      Amount cost_of_change = Amount::CreateBySatoshiAmount(0);
+      cost_of_change = discard_fee.GetFee(change_spend_size_) +
+                       effective_fee.GetFee(change_output_size_);
+      return cost_of_change.GetSatoshiValue();
+    }
+    return 0;
+  }
+  return excess_fee_range_;
+}
+
 void CoinSelectionOption::SetUseBnB(bool use_bnb) { use_bnb_ = use_bnb; }
 
 void CoinSelectionOption::SetChangeOutputSize(size_t size) {
@@ -115,6 +133,10 @@ void CoinSelectionOption::SetLongTermFeeBaserate(double baserate) {
 
 void CoinSelectionOption::SetKnapsackMinimumChange(int64_t min_change) {
   knapsack_minimum_change_ = min_change;
+}
+
+void CoinSelectionOption::SetExcessFeeRange(int64_t satoshi) {
+  excess_fee_range_ = satoshi;
 }
 
 void CoinSelectionOption::InitializeTxSizeInfo() {
@@ -175,7 +197,6 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
     const Amount& tx_fee_value, Amount* select_value, Amount* utxo_fee_value,
     bool* searched_bnb) {
   // for btc default(DUST_RELAY_TX_FEE(3000)) -> DEFAULT_DISCARD_FEE(10000)
-  static constexpr const uint64_t kDustRelayTxFee = 10000;
   if (select_value) {
     *select_value = Amount::CreateBySatoshiAmount(0);
   } else {

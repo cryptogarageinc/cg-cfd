@@ -122,6 +122,11 @@ class CFD_EXPORT CoinSelectionOption {
    * @return knapsack minimum change
    */
   int64_t GetKnapsackMinimumChange() const;
+  /**
+   * @brief Feeの超過設定範囲を取得します.
+   * @return excess fee satoshi
+   */
+  int64_t GetExcessFeeRange() const;
 
   /**
    * @brief BnB 使用フラグを設定します.
@@ -153,6 +158,11 @@ class CFD_EXPORT CoinSelectionOption {
    * @param[in] min_change    knapsack minimum change
    */
   void SetKnapsackMinimumChange(int64_t min_change);
+  /**
+   * @brief Feeの超過設定範囲を設定します.
+   * @param[in] satoshi    excess fee satoshi
+   */
+  void SetExcessFeeRange(int64_t satoshi);
 
   /**
    * @brief bitcoin相当でサイズ関連情報を初期化します。
@@ -184,6 +194,7 @@ class CFD_EXPORT CoinSelectionOption {
   uint64_t effective_fee_baserate_;  //!< fee baserate
   uint64_t long_term_fee_baserate_;  //!< longterm fee baserate
   int64_t knapsack_minimum_change_;  //!< knapsack min change
+  int64_t excess_fee_range_ = 0;     //!< excess fee range
 #ifndef CFD_DISABLE_ELEMENTS
   ConfidentialAssetId fee_asset_;  //!< feeとして利用するasset
 #endif                             // CFD_DISABLE_ELEMENTS

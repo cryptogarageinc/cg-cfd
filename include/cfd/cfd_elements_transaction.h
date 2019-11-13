@@ -146,6 +146,13 @@ class CFD_EXPORT ConfidentialTransactionController
    */
   const ConfidentialTxInReference GetTxIn(
       const Txid& txid, uint32_t vout) const;
+  /**
+   * @brief TxInを削除する.
+   * @param[in] txid 取得するTxInのTxId
+   * @param[in] vout 取得するTxInのvout
+   * @return 削除したTxInのTxInReferenceインスタンス
+   */
+  const ConfidentialTxInReference RemoveTxIn(const Txid& txid, uint32_t vout);
 
   /**
    * @brief TxOutを追加する.
@@ -222,6 +229,21 @@ class CFD_EXPORT ConfidentialTransactionController
    */
   const ConfidentialTxOutReference AddTxOutFee(
       const Amount& value, const ConfidentialAssetId& asset);
+  /**
+   * @brief TxOutのFee情報を更新する.
+   * @param[in] index 設定対象のindex
+   * @param[in] value Fee額
+   * @param[in] asset AssetID
+   * @return 更新したTxOutのTxOutReferenceインスタンス
+   */
+  const ConfidentialTxOutReference UpdateTxOutFeeAmount(
+      uint32_t index, const Amount& value, const ConfidentialAssetId& asset);
+  /**
+   * @brief TxOutを削除する.
+   * @param[in] index 削除対象のindex
+   * @return 削除したTxOutのTxOutReferenceインスタンス
+   */
+  const ConfidentialTxOutReference RemoveTxOut(uint32_t index);
 
   /**
    * @brief TxInにUnlocking Scriptを設定する.

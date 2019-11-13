@@ -92,6 +92,14 @@ class CFD_EXPORT ElementsAddressFactory : public AddressFactory {
       const ConfidentialKey& confidential_key);
 
   /**
+   * @brief ConfidentialAddressを取得する.
+   * @param[in] address Address文字列
+   * @return BlindされたElementsConfidentialAddressインスタンス
+   */
+  ElementsConfidentialAddress GetConfidentialAddress(
+      const std::string& address) const;
+
+  /**
    * @brief fedpegscriptとpubkeyから、net_typeに応じたmainchain用のpeg-in
    *     addressを作成する
    * @param[in] address_type          for future use

@@ -67,6 +67,11 @@ ElementsConfidentialAddress ElementsAddressFactory::GetConfidentialAddress(
   return ElementsConfidentialAddress(unblinded_address, confidential_key);
 }
 
+ElementsConfidentialAddress ElementsAddressFactory::GetConfidentialAddress(
+    const std::string& address) const {
+  return ElementsConfidentialAddress(address, prefix_list_);
+}
+
 Address ElementsAddressFactory::CreatePegInAddress(
     AddressType address_type, const Pubkey& pubkey,
     const Script& fedpegscript) const {
