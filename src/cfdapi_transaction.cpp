@@ -354,13 +354,17 @@ TransactionController TransactionApi::FundRawTransaction(
   Amount diff_amount = utxo_amount;
   diff_amount -= dest_amount;
   int64_t diff_satoshi = diff_amount.GetSatoshiValue();
+  Address address = addr_factory.GetAddress(reserve_txout_address);
+  Amount dust_amount = option.GetDustFeeAmount(address);
+  info(CFD_LOG_SOURCE, "dust_amount={}", dust_amount.GetSatoshiValue());
 
   if (option.GetEffectiveFeeBaserate() > 0) {
-    // dummyのtx作成
-    TransactionController txc_dummy(tx_hex);
     Amount need_amount = dest_amount + fee;
-    if (utxo_amount > need_amount) {
+    Amount check_amount = utxo_amount - dust_amount;
+    if (check_amount > need_amount) {
       // 必要額以上ある場合、TxOutが増えるのでfee再計算
+      // dummyのtx作成
+      TransactionController txc_dummy(tx_hex);
       std::vector<UtxoData> new_selected_utxos = selected_txin_utxos;
       Txid txid;
       for (const Utxo& coin : selected_coins) {
@@ -390,7 +394,7 @@ TransactionController TransactionApi::FundRawTransaction(
     diff_satoshi = diff_amount.GetSatoshiValue();
 
     // optionで、超過額の設定がある場合、余剰分をfeeに設定。
-    if (option.GetExcessFeeRange() > diff_satoshi) {
+    if (dust_amount > diff_amount) {
       // feeに残高をすべて設定
       diff_satoshi = 0;
       fee = utxo_amount - dest_amount;
@@ -398,7 +402,9 @@ TransactionController TransactionApi::FundRawTransaction(
     info(CFD_LOG_SOURCE, "diff_amount={}", diff_satoshi);
   }
 
-  if (diff_satoshi != 0) {
+  // dustより小さい場合はTxOutには追加しない
+  // (fee計算ありの場合はチェック済だが、fee計算なしの場合は未チェックのため)
+  if ((diff_satoshi != 0) && (dust_amount < diff_amount)) {
     txc.AddTxOut(addr_factory.GetAddress(reserve_txout_address), diff_amount);
     info(CFD_LOG_SOURCE, "addTxOut. value={}", diff_amount.GetSatoshiValue());
     if (append_txout_addresses) {

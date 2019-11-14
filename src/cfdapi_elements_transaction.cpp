@@ -56,6 +56,7 @@ using cfd::core::ConfidentialTxInReference;
 using cfd::core::ConfidentialTxOut;
 using cfd::core::ConfidentialTxOutReference;
 using cfd::core::ConfidentialValue;
+using cfd::core::ElementsConfidentialAddress;
 using cfd::core::ExtPubkey;
 using cfd::core::HashType;
 using cfd::core::HashUtil;
@@ -806,13 +807,36 @@ ConfidentialTransactionController ElementsTransactionApi::FundRawTransaction(
         }
         const std::string& addr = reserve_txout_address.at(itr->first);
         if (ElementsConfidentialAddress::IsConfidentialAddress(addr)) {
-          ctxc.AddTxOut(
-              addr_factory.GetConfidentialAddress(addr), itr->second,
-              ConfidentialAssetId(itr->first));
+          ElementsConfidentialAddress ct_addr =
+              addr_factory.GetConfidentialAddress(addr);
+          Amount dust_amount = option.GetConfidentialDustFeeAmount(
+              ct_addr.GetUnblindedAddress());
+          if (itr->second > dust_amount) {
+            ctxc.AddTxOut(
+                addr_factory.GetConfidentialAddress(addr), itr->second,
+                ConfidentialAssetId(itr->first));
+          } else {
+            warn(
+                CFD_LOG_SOURCE,
+                "Failed to FundRawTransaction. amount less than dust amount.");
+            throw CfdException(
+                CfdError::kCfdIllegalArgumentError,
+                "amount less than dust amount.");
+          }
         } else {
-          ctxc.AddTxOut(
-              addr_factory.GetAddress(addr), itr->second,
-              ConfidentialAssetId(itr->first));
+          Address address = addr_factory.GetAddress(addr);
+          Amount dust_amount = option.GetConfidentialDustFeeAmount(address);
+          if (itr->second > dust_amount) {
+            ctxc.AddTxOut(
+                address, itr->second, ConfidentialAssetId(itr->first));
+          } else {
+            warn(
+                CFD_LOG_SOURCE,
+                "Failed to FundRawTransaction. amount less than dust amount.");
+            throw CfdException(
+                CfdError::kCfdIllegalArgumentError,
+                "amount less than dust amount.");
+          }
         }
         info(
             CFD_LOG_SOURCE, "addTxOut. asset={} value={}", itr->first,
@@ -893,16 +917,24 @@ ConfidentialTransactionController ElementsTransactionApi::FundRawTransaction(
         }
       }
     }
+    const std::string& addr = reserve_txout_address.at(fee_asset_str);
+    Address address;
+    if (ElementsConfidentialAddress::IsConfidentialAddress(addr)) {
+      address =
+          addr_factory.GetConfidentialAddress(addr).GetUnblindedAddress();
+    } else {
+      address = addr_factory.GetAddress(addr);
+    }
+    Amount dust_amount = option.GetConfidentialDustFeeAmount(address);
 
     // optionで、fee対象assetかつ指定額以内の設定がある場合、余剰分をfeeに設定。
     int64_t diff_satoshi = diff_amount.GetSatoshiValue();
     int64_t fee_satoshi = fee.GetSatoshiValue();
-    if (option.GetExcessFeeRange() > diff_satoshi) {
+    if (dust_amount > diff_amount) {
       // feeに残高をすべて設定
       fee_satoshi = diff_satoshi;
     } else if (diff_satoshi > 0) {
       // TxOut追加
-      const std::string& addr = reserve_txout_address.at(fee_asset_str);
       if (ElementsConfidentialAddress::IsConfidentialAddress(addr)) {
         ctxc.AddTxOut(
             addr_factory.GetConfidentialAddress(addr),
@@ -910,8 +942,7 @@ ConfidentialTransactionController ElementsTransactionApi::FundRawTransaction(
             ConfidentialAssetId(fee_asset_str));
       } else {
         ctxc.AddTxOut(
-            addr_factory.GetAddress(addr),
-            Amount::CreateBySatoshiAmount(diff_satoshi),
+            address, Amount::CreateBySatoshiAmount(diff_satoshi),
             ConfidentialAssetId(fee_asset_str));
       }
       info(

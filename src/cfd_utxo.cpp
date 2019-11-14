@@ -63,8 +63,14 @@ static constexpr const uint64_t kMinChange = 1000000;  // MIN_CHANGE
 //! LongTerm fee rate default (20.0)
 static constexpr const uint64_t kDefaultLongTermFeeRate = 20000;
 
-//! dust relay tx fee
-static constexpr const uint64_t kDustRelayTxFee = 10000;
+//! dust relay tx fee rate
+static constexpr const uint64_t kDustRelayTxFeeRate = 3000;
+
+//! default discard fee
+static constexpr const uint64_t kDefaultDiscardFee = 10000;
+
+//! WITNESS_SCALE_FACTOR
+static constexpr const uint32_t kWitnessScaleFactor = 4;
 
 // -----------------------------------------------------------------------------
 // CoinSelectionOption
@@ -72,7 +78,8 @@ static constexpr const uint64_t kDustRelayTxFee = 10000;
 CoinSelectionOption::CoinSelectionOption()
     : effective_fee_baserate_(kDefaultLongTermFeeRate),
       long_term_fee_baserate_(kDefaultLongTermFeeRate),
-      knapsack_minimum_change_(-1) {
+      knapsack_minimum_change_(-1),
+      dust_fee_rate_(kDustRelayTxFeeRate) {
   // do nothing
 }
 
@@ -98,19 +105,23 @@ int64_t CoinSelectionOption::GetKnapsackMinimumChange() const {
   return knapsack_minimum_change_;
 }
 
-int64_t CoinSelectionOption::GetExcessFeeRange() const {
-  if (excess_fee_range_ < 0) {
-    if (effective_fee_baserate_ != 0) {
-      FeeCalculator effective_fee(effective_fee_baserate_);
-      FeeCalculator discard_fee(kDustRelayTxFee);
-      Amount cost_of_change = Amount::CreateBySatoshiAmount(0);
-      cost_of_change = discard_fee.GetFee(change_spend_size_) +
-                       effective_fee.GetFee(change_output_size_);
-      return cost_of_change.GetSatoshiValue();
-    }
-    return 0;
+Amount CoinSelectionOption::GetDustFeeAmount(const Address& address) const {
+  FeeCalculator dust_fee(
+      (dust_fee_rate_ <= 0) ? kDustRelayTxFeeRate : dust_fee_rate_);
+  Script locking_script = address.GetLockingScript();
+  TxOut txout(Amount(), locking_script);
+  TxOutReference txout_ref(txout);
+  uint32_t size = txout_ref.GetSerializeSize();
+
+  // Reference: bitcoin/src/policy/policy.cpp : GetDustThreshold()
+  if (locking_script.IsWitnessProgram()) {
+    // sum the sizes of the parts of a transaction input
+    // with 75% segwit discount applied to the script size.
+    size += (32 + 4 + 1 + (107 / kWitnessScaleFactor) + 4);
+  } else {
+    size += (32 + 4 + 1 + 107 + 4);  // the 148 mentioned above
   }
-  return excess_fee_range_;
+  return dust_fee.GetFee(size);
 }
 
 void CoinSelectionOption::SetUseBnB(bool use_bnb) { use_bnb_ = use_bnb; }
@@ -135,12 +146,17 @@ void CoinSelectionOption::SetKnapsackMinimumChange(int64_t min_change) {
   knapsack_minimum_change_ = min_change;
 }
 
-void CoinSelectionOption::SetExcessFeeRange(int64_t satoshi) {
-  excess_fee_range_ = satoshi;
+void CoinSelectionOption::SetDustFeeRate(double baserate) {
+  dust_fee_rate_ = static_cast<uint64_t>(floor(baserate * 1000));
 }
 
 void CoinSelectionOption::InitializeTxSizeInfo() {
-  change_output_size_ = 22 + 1 + 8;  // p2wpkh
+  // wpkh想定
+  Script wpkh_script("0014ffffffffffffffffffffffffffffffffffffffff");
+  TxOut txout(Amount(), wpkh_script);
+  TxOutReference txout_ref(txout);
+  uint32_t size = txout_ref.GetSerializeSize();
+  change_output_size_ = AbstractTransaction::GetVsizeFromSize(size, 0);
   uint32_t witness_size = 0;
   uint32_t total_size = TxIn::EstimateTxInSize(
       AddressType::kP2wpkhAddress, Script(), &witness_size);
@@ -155,6 +171,30 @@ ConfidentialAssetId CoinSelectionOption::GetFeeAsset() const {
 
 void CoinSelectionOption::SetFeeAsset(const ConfidentialAssetId& asset) {
   fee_asset_ = asset;
+}
+
+Amount CoinSelectionOption::GetConfidentialDustFeeAmount(
+    const Address& address) const {
+  FeeCalculator dust_fee(
+      (dust_fee_rate_ <= 0) ? kDustRelayTxFeeRate : dust_fee_rate_);
+  Script locking_script = address.GetLockingScript();
+  ConfidentialTxOut ctxout(
+      locking_script, ConfidentialAssetId(), ConfidentialValue());
+  ConfidentialTxOutReference txout(ctxout);
+  uint32_t witness_size = 0;
+  uint32_t size = txout.GetSerializeSize(true, &witness_size);
+  size = AbstractTransaction::GetVsizeFromSize(
+      (size - witness_size), witness_size);
+
+  // Reference: bitcoin/src/policy/policy.cpp : GetDustThreshold()
+  if (locking_script.IsWitnessProgram()) {
+    // sum the sizes of the parts of a transaction input
+    // with 75% segwit discount applied to the script size.
+    size += (32 + 4 + 1 + (107 / kWitnessScaleFactor) + 4);
+  } else {
+    size += (32 + 4 + 1 + 107 + 4);  // the 148 mentioned above
+  }
+  return dust_fee.GetFee(size);
 }
 
 void CoinSelectionOption::InitializeConfidentialTxSizeInfo() {
@@ -209,7 +249,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
   // Copy the list to change the calculation area.
   std::vector<Utxo> work_utxos = utxos;
   FeeCalculator effective_fee(option_params.GetEffectiveFeeBaserate());
-  FeeCalculator discard_fee(kDustRelayTxFee);
+  FeeCalculator discard_fee(kDefaultDiscardFee);
   Amount cost_of_change = Amount::CreateBySatoshiAmount(0);
   bool use_fee = false;
   if (option_params.GetLongTermFeeBaserate() != 0) {
