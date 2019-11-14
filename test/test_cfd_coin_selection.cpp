@@ -717,9 +717,9 @@ TEST(CoinSelection, SelectCoins_no_targetvalue) {
   std::vector<Utxo> ret;
   std::vector<Utxo> tmp;
   GetBitcoinUtxoList(&tmp);
-  EXPECT_NO_THROW(ret = exp_selection.SelectCoins(
+  EXPECT_THROW(ret = exp_selection.SelectCoins(
       map_target_amount, tmp, exp_filter, option,
-      tx_fee, &map_select_value, &fee, &map_searched_bnb));
+      tx_fee, &map_select_value, &fee, &map_searched_bnb), CfdException);
 
   EXPECT_EQ(ret.size(), 0);
   EXPECT_EQ(map_select_value.size(), 0);
@@ -746,15 +746,15 @@ TEST(CoinSelection, SelectCoins_KnapsackSolver)
       tx_fee, &map_select_value, &fee, &map_searched_bnb));
 
   EXPECT_EQ(ret.size(), 1);
-  EXPECT_EQ(map_select_value.size(), 1);
-  EXPECT_EQ(fee.GetSatoshiValue(), 820);
-  EXPECT_EQ(map_searched_bnb.size(), 1);
   if (ret.size() == 1) {
     EXPECT_EQ(ret[0].amount, static_cast<int64_t>(39062500));
   }
+  EXPECT_EQ(map_select_value.size(), 1);
   if (map_select_value.size() == 1) {
     EXPECT_EQ(map_select_value[""].GetSatoshiValue(), 39062500);
   }
+  EXPECT_EQ(fee.GetSatoshiValue(), 820);
+  EXPECT_EQ(map_searched_bnb.size(), 1);
   if (map_searched_bnb.size() == 1) {
     EXPECT_FALSE(map_searched_bnb[""]);
   }
@@ -1262,17 +1262,17 @@ TEST(CoinSelection, SelectCoins_KnapsackSolver_with_multiple_asset)
       tx_fee, &map_select_value, &fee, &map_searched_bnb));
 
   EXPECT_EQ(ret.size(), 2);
-  EXPECT_EQ(map_select_value.size(), 2);
-  EXPECT_EQ(fee.GetSatoshiValue(), 820);
-  EXPECT_EQ(map_searched_bnb.size(), 2);
   if (ret.size() == 2) {
-    EXPECT_EQ(ret[0].amount, static_cast<int64_t>(39062500));
-    EXPECT_EQ(ret[1].amount, static_cast<int64_t>(26918400));
+    EXPECT_EQ(ret[0].amount, static_cast<int64_t>(26918400));
+    EXPECT_EQ(ret[1].amount, static_cast<int64_t>(78125000));
   }
+  EXPECT_EQ(map_select_value.size(), 2);
   if (map_select_value.size() == 2) {
-    EXPECT_EQ(map_select_value[exp_dummy_asset_a.GetHex()].GetSatoshiValue(), 39062500);
+    EXPECT_EQ(map_select_value[exp_dummy_asset_a.GetHex()].GetSatoshiValue(), 78125000);
     EXPECT_EQ(map_select_value[exp_dummy_asset_b.GetHex()].GetSatoshiValue(), 26918400);
   }
+  EXPECT_EQ(fee.GetSatoshiValue(), 1640);
+  EXPECT_EQ(map_searched_bnb.size(), 2);
   if (map_searched_bnb.size() == 2) {
     EXPECT_FALSE(map_searched_bnb[exp_dummy_asset_a.GetHex()]);
     EXPECT_FALSE(map_searched_bnb[exp_dummy_asset_b.GetHex()]);
@@ -1284,7 +1284,7 @@ TEST(CoinSelection, SelectCoins_CoinSelectBnB_with_multiple_asset)
   CoinSelection coin_select(true);
   // Same condition with "SelectCoinsMinConf_SelectCoinsBnB"
   AmountMap map_target_amount;
-  map_target_amount[exp_dummy_asset_a.GetHex()] = Amount::CreateBySatoshiAmount(99998500);
+  map_target_amount[exp_dummy_asset_a.GetHex()] = Amount::CreateBySatoshiAmount(99997900);
   map_target_amount[exp_dummy_asset_b.GetHex()] = Amount::CreateBySatoshiAmount(346495050);
   AmountMap map_select_value;
   Amount fee;
@@ -1316,17 +1316,17 @@ TEST(CoinSelection, SelectCoins_CoinSelectBnB_with_multiple_asset)
 
   EXPECT_EQ(ret.size(), 4);
   if (ret.size() == 4) {
-    EXPECT_EQ(ret[0].amount, static_cast<int64_t>(85062500));
-    EXPECT_EQ(ret[1].amount, static_cast<int64_t>(14938590));
-    EXPECT_EQ(ret[2].amount, static_cast<int64_t>(346430050));
-    EXPECT_EQ(ret[3].amount, static_cast<int64_t>(750000));
+    EXPECT_EQ(ret[0].amount, static_cast<int64_t>(346430050));
+    EXPECT_EQ(ret[1].amount, static_cast<int64_t>(750000));
+    EXPECT_EQ(ret[2].amount, static_cast<int64_t>(85062500));
+    EXPECT_EQ(ret[3].amount, static_cast<int64_t>(14938590));
   }
   EXPECT_EQ(map_select_value.size(), 2);
   if (map_select_value.size() == 2) {
     EXPECT_EQ(map_select_value[exp_dummy_asset_a.GetHex()].GetSatoshiValue(), 100001090);
     EXPECT_EQ(map_select_value[exp_dummy_asset_b.GetHex()].GetSatoshiValue(), 347180050);
   }
-  EXPECT_EQ(fee.GetSatoshiValue(), 360);
+  EXPECT_EQ(fee.GetSatoshiValue(), 720);
   EXPECT_EQ(map_searched_bnb.size(), 2);
   if (map_searched_bnb.size() == 2) {
     EXPECT_TRUE(map_searched_bnb[exp_dummy_asset_a.GetHex()]);
@@ -1383,7 +1383,7 @@ TEST(CoinSelection, SelectCoins_with_multiple_asset_fee_only_target)
     EXPECT_EQ(map_select_value[exp_dummy_asset_b.GetHex()].GetSatoshiValue(), 347180050);
     EXPECT_EQ(map_select_value[exp_dummy_asset_c.GetHex()].GetSatoshiValue(), 37654200);
   }
-  EXPECT_EQ(fee.GetSatoshiValue(), 180);
+  EXPECT_EQ(fee.GetSatoshiValue(), 720);
   EXPECT_EQ(map_searched_bnb.size(), 3);
   if (map_searched_bnb.size() == 3) {
     EXPECT_FALSE(map_searched_bnb[exp_dummy_asset_a.GetHex()]);

@@ -34,6 +34,7 @@ using cfd::core::Txid;
 using cfd::ConfidentialTransactionController;
 using cfd::core::ConfidentialAssetId;
 #endif  // CFD_DISABLE_ELEMENTS
+//! Asset Amountマップへのエイリアス (key: asset(str), value: amount)
 using AmountMap = std::map<std::string, Amount>;
 
 /**
