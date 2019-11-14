@@ -738,8 +738,11 @@ ConfidentialTransactionController ElementsTransactionApi::FundRawTransaction(
 #else
   if (target_values.begin() != target_values.end()) {
     auto itr = target_values.begin();
+    Amount utxo_amount;
     selected_coins = coin_select.SelectCoinsMinConf(
-        itr->second, utxo_list, utxo_filter, option, fee, nullptr, nullptr);
+        itr->second, utxo_list, utxo_filter, option, fee, &utxo_amount,
+        nullptr, nullptr);
+    amount_map.emplace(itr->first, utxo_amount);
   }
 #endif
 

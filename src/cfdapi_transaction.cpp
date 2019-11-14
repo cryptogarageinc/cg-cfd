@@ -309,9 +309,8 @@ TransactionController TransactionApi::FundRawTransaction(
   Amount fee;
   if (option.GetEffectiveFeeBaserate() != 0) {
     fee = EstimateFee(
-        tx_hex, selected_txin_utxos, nullptr, nullptr,
-        option.GetEffectiveFeeBaserate());
-    if (estimate_fee) *estimate_fee = fee;
+        tx_hex, selected_txin_utxos, nullptr, nullptr, effective_fee_rate);
+    info(CFD_LOG_SOURCE, "fee={}", fee.GetSatoshiValue());
   }
 
   // 探索対象額を設定。未設定時はTxOutの合計額を設定。
@@ -319,45 +318,84 @@ TransactionController TransactionApi::FundRawTransaction(
   if (target_amount.GetSatoshiValue() == 0) {
     target_amount = tx_amount;
   }
+  if (target_amount > txin_amount) {
+    target_amount -= txin_amount;
+  } else {
+    target_amount = Amount::CreateBySatoshiAmount(0);
+  }
+
+  std::vector<uint8_t> txid_bytes(cfd::core::kByteData256Length);
+  Amount dest_amount = tx_amount;
+  if (target_value > dest_amount) {
+    // txout設定額よりも大きな額を収集要求した
+    dest_amount = target_value;
+  }
 
   // execute coinselection
   CoinApi coin_api;
   CoinSelection coin_select;
   std::vector<Utxo> utxo_list = coin_api.ConvertToUtxo(utxos);
-  Amount utxo_amount;
-  std::vector<Utxo> selected_coins = coin_select.SelectCoinsMinConf(
-      target_amount, utxo_list, utxo_filter, option, fee, nullptr, nullptr);
+  Amount utxo_amount = txin_amount;
+  std::vector<Utxo> selected_coins;
+  if (target_amount > 0) {
+    info(CFD_LOG_SOURCE, "target_amount={}", target_amount.GetSatoshiValue());
+    selected_coins = coin_select.SelectCoinsMinConf(
+        target_amount, utxo_list, utxo_filter, option, fee, &utxo_amount,
+        nullptr, nullptr);
+    // 収集したcoinとtxoutの額が一致するかどうか確認
+    utxo_amount += txin_amount;
+    info(CFD_LOG_SOURCE, "utxo_amount={}", utxo_amount.GetSatoshiValue());
+    if (utxo_amount < dest_amount) {
+      warn(CFD_LOG_SOURCE, "Failed to FundRawTransaction. low BTC.");
+      throw CfdException(CfdError::kCfdIllegalArgumentError, "low BTC.");
+    }
+  }
 
-  // 収集したcoinとtxoutの額が一致するかどうか確認
-  std::vector<uint8_t> txid_bytes(cfd::core::kByteData256Length);
-  Amount dest_amount = tx_amount;
   Amount diff_amount = utxo_amount;
-  if (target_value > dest_amount) {
-    // txout設定額よりも大きな額を収集要求した
-    dest_amount = target_value;
-  }
-  if (utxo_amount < dest_amount) {
-    warn(CFD_LOG_SOURCE, "Failed to FundRawTransaction. low BTC.");
-    throw CfdException(CfdError::kCfdIllegalArgumentError, "low BTC.");
-  }
-
   diff_amount -= dest_amount;
   int64_t diff_satoshi = diff_amount.GetSatoshiValue();
 
   if (option.GetEffectiveFeeBaserate() > 0) {
+    // dummyのtx作成
+    TransactionController txc_dummy(tx_hex);
     Amount need_amount = dest_amount + fee;
+    if (utxo_amount > need_amount) {
+      // 必要額以上ある場合、TxOutが増えるのでfee再計算
+      std::vector<UtxoData> new_selected_utxos = selected_txin_utxos;
+      Txid txid;
+      for (const Utxo& coin : selected_coins) {
+        memcpy(txid_bytes.data(), coin.txid, txid_bytes.size());
+        txid = Txid(ByteData256(txid_bytes));
+        for (const UtxoData& utxo : utxos) {
+          if (txid.Equals(utxo.txid) && (coin.vout == utxo.vout)) {
+            new_selected_utxos.push_back(utxo);
+            break;
+          }
+        }
+      }
+      // ダミーへの追加のため額は無視
+      txc_dummy.AddTxOut(addr_factory.GetAddress(reserve_txout_address), fee);
+      fee = EstimateFee(
+          txc_dummy.GetHex(), new_selected_utxos, nullptr, nullptr,
+          effective_fee_rate);
+      info(CFD_LOG_SOURCE, "new_fee={}", fee.GetSatoshiValue());
+      need_amount = dest_amount + fee;
+    }
+
     if (utxo_amount < need_amount) {
       warn(CFD_LOG_SOURCE, "Failed to FundRawTransaction. low fee.");
       throw CfdException(CfdError::kCfdIllegalArgumentError, "low fee.");
     }
+    diff_amount -= fee;  // fee分を除外
+    diff_satoshi = diff_amount.GetSatoshiValue();
 
     // optionで、超過額の設定がある場合、余剰分をfeeに設定。
     if (option.GetExcessFeeRange() > diff_satoshi) {
       // feeに残高をすべて設定
       diff_satoshi = 0;
-    } else if (diff_satoshi > 0) {
-      // TxOut追加ルートへ。
+      fee = utxo_amount - dest_amount;
     }
+    info(CFD_LOG_SOURCE, "diff_amount={}", diff_satoshi);
   }
 
   if (diff_satoshi != 0) {
@@ -371,8 +409,10 @@ TransactionController TransactionApi::FundRawTransaction(
 
   // SelectしたUTXOをTxInに設定
   for (auto& utxo : selected_coins) {
+    memcpy(txid_bytes.data(), utxo.txid, txid_bytes.size());
     txc.AddTxIn(Txid(ByteData256(txid_bytes)), utxo.vout);
   }
+
   return txc;
 }
 
