@@ -66,15 +66,6 @@ static constexpr const uint64_t kMinChange = 1000000;  // MIN_CHANGE
 //! LongTerm fee rate default (20.0)
 static constexpr const uint64_t kDefaultLongTermFeeRate = 20000;
 
-std::vector<Utxo*> ConvertToPtrList(std::vector<Utxo>& utxos) {
-  std::vector<Utxo*> result;
-  result.reserve(utxos.size());
-  for (auto& utxo : utxos) {
-    result.push_back(&utxo);
-  }
-  return result;
-}
-
 // -----------------------------------------------------------------------------
 // CoinSelectionOption
 // -----------------------------------------------------------------------------
@@ -184,8 +175,8 @@ CoinSelection::CoinSelection(bool use_bnb) : use_bnb_(use_bnb) {
 std::vector<Utxo> CoinSelection::SelectCoins(
     const Amount& target_value, const std::vector<Utxo>& utxos,
     const UtxoFilter& filter, const CoinSelectionOption& option_params,
-    const Amount& tx_fee_value, Amount* select_value,
-    Amount* utxo_fee_value, bool* searched_bnb) {
+    const Amount& tx_fee_value, Amount* select_value, Amount* utxo_fee_value,
+    bool* searched_bnb) {
 #ifndef CFD_DISABLE_ELEMENTS
   bool first = true;
   uint8_t src[33];
@@ -209,7 +200,11 @@ std::vector<Utxo> CoinSelection::SelectCoins(
 
   // convert utxo list
   std::vector<Utxo> work_utxos = utxos;
-  std::vector<Utxo*> p_utxos = ConvertToPtrList(work_utxos);
+  std::vector<Utxo*> p_utxos;
+  p_utxos.reserve(utxos.size());
+  for (auto& utxo : work_utxos) {
+    p_utxos.push_back(&utxo);
+  }
 
   // initialize output parameter
   Amount utxo_fee_out = Amount();
@@ -235,25 +230,19 @@ std::vector<Utxo> CoinSelection::SelectCoins(
     const Amount& tx_fee_value, AmountMap* map_select_value,
     Amount* utxo_fee_value, std::map<std::string, bool>* map_searched_bnb) {
   if (map_target_value.size() == 0) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to SelectCoins. Target value is empty.");
+    warn(CFD_LOG_SOURCE, "Failed to SelectCoins. Target value is empty.");
     throw CfdException(
         CfdError::kCfdIllegalStateError,
         "Failed to SelectCoins. Target value is empty");
   }
   if (option_params.GetFeeAsset().IsEmpty()) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to SelectCoins. Fee asset is empty.");
+    warn(CFD_LOG_SOURCE, "Failed to SelectCoins. Fee asset is empty.");
     throw CfdException(
         CfdError::kCfdIllegalStateError,
         "Failed to SelectCoins. Fee asset is empty.");
   }
   if (!map_select_value) {
-    warn(
-        CFD_LOG_SOURCE,
-        "Failed to SelectCoins. map_select_value is empty.");
+    warn(CFD_LOG_SOURCE, "Failed to SelectCoins. map_select_value is empty.");
     throw CfdException(
         CfdError::kCfdIllegalStateError,
         "Failed to SelectCoins. map_select_value is empty.");
@@ -275,12 +264,10 @@ std::vector<Utxo> CoinSelection::SelectCoins(
     ConfidentialAssetId target_asset(target.first);
 
     if (target_asset.IsEmpty()) {
-      warn(
-        CFD_LOG_SOURCE,
-        "Failed to SelectCoins. Target asset is empty.");
+      warn(CFD_LOG_SOURCE, "Failed to SelectCoins. Target asset is empty.");
       throw CfdException(
-        CfdError::kCfdIllegalStateError,
-        "Failed to SelectCoins. Target asset is empty.");
+          CfdError::kCfdIllegalStateError,
+          "Failed to SelectCoins. Target asset is empty.");
     }
 
     // convert utxo list to ptr
@@ -315,17 +302,19 @@ std::vector<Utxo> CoinSelection::SelectCoins(
   Amount work_utxo_fee = Amount();
   std::map<std::string, bool> work_searched_bnb;
   auto coin_selection_function = [this, filter, option_params, &result,
-      &tx_fee_out, &work_selected_values, &work_utxo_fee, &work_searched_bnb] (
-        const Amount& target_value, const std::vector<Utxo*> utxos,
-        const Amount& tx_fee, const std::string asset_id,
-        const bool consider_fee) {
+                                  &tx_fee_out, &work_selected_values,
+                                  &work_utxo_fee, &work_searched_bnb](
+                                     const Amount& target_value,
+                                     const std::vector<Utxo*> utxos,
+                                     const Amount& tx_fee,
+                                     const std::string asset_id,
+                                     const bool consider_fee) {
     Amount select_value_out = Amount();
     Amount utxo_fee_out = Amount();
     bool use_bnb_out = false;
     std::vector<Utxo> ret_utxos = SelectCoinsMinConf(
-        target_value, utxos, filter, option_params,
-        tx_fee, consider_fee, &select_value_out, &utxo_fee_out,
-        &use_bnb_out);
+        target_value, utxos, filter, option_params, tx_fee, consider_fee,
+        &select_value_out, &utxo_fee_out, &use_bnb_out);
     std::copy(ret_utxos.begin(), ret_utxos.end(), std::back_inserter(result));
     tx_fee_out += utxo_fee_out;
     work_selected_values[asset_id] = select_value_out;
@@ -342,12 +331,16 @@ std::vector<Utxo> CoinSelection::SelectCoins(
 
     // fee以外の asset については、tx_fee=0, feeを考慮せずに計算
     const Amount& target_value = target.second;
-    coin_selection_function(target_value, asset_utxos[target.first], Amount(), target.first, false);
+    coin_selection_function(
+        target_value, asset_utxos[target.first], Amount(), target.first,
+        false);
   }
 
   // do coin selection with fee asset
   const Amount& target_value = work_target_values[fee_asset.GetHex()];
-  coin_selection_function(target_value, asset_utxos[fee_asset.GetHex()], tx_fee_out, fee_asset.GetHex(), true);
+  coin_selection_function(
+      target_value, asset_utxos[fee_asset.GetHex()], tx_fee_out,
+      fee_asset.GetHex(), true);
 
   if (map_select_value) {
     *map_select_value = work_selected_values;

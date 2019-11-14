@@ -79,7 +79,7 @@ struct Utxo {
  *   utxoのamount上限などの指定に利用することを想定
  */
 struct UtxoFilter {
-  uint32_t reserved;                 //!< 予約領域
+  uint32_t reserved;  //!< 予約領域
 };
 
 /**
@@ -325,8 +325,8 @@ class CFD_EXPORT CoinSelection {
   std::vector<Utxo> SelectCoinsMinConf(
       const Amount& target_value, const std::vector<Utxo*>& utxos,
       const UtxoFilter& filter, const CoinSelectionOption& option_params,
-      const Amount& tx_fee_value, const bool consider_fee = true, 
-      Amount* select_value = nullptr, Amount* utxo_fee_value = nullptr, 
+      const Amount& tx_fee_value, const bool consider_fee = true,
+      Amount* select_value = nullptr, Amount* utxo_fee_value = nullptr,
       bool* searched_bnb = nullptr);
 
   /**
