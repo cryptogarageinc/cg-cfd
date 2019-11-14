@@ -236,11 +236,13 @@ class CFD_EXPORT TransactionApi {
       const std::string& tx_hex, const std::vector<UtxoData>& utxos,
       const Amount& target_value,
       const std::vector<UtxoData>& selected_txin_utxos,
-      const std::string& reserve_txout_address, double effective_fee_rate,
-      Amount* estimate_fee, const UtxoFilter* filter,
-      const CoinSelectionOption* option_params,
-      std::vector<std::string>* append_txout_addresses, NetType net_type,
-      const std::vector<AddressFormatData>* prefix_list) const;
+      const std::string& reserve_txout_address,
+      double effective_fee_rate = 20.0,
+      Amount* estimate_fee = nullptr, const UtxoFilter* filter = nullptr,
+      const CoinSelectionOption* option_params = nullptr,
+      std::vector<std::string>* append_txout_addresses = nullptr,
+      NetType net_type = NetType::kMainnet,
+      const std::vector<AddressFormatData>* prefix_list = nullptr) const;
 };
 
 }  // namespace api
