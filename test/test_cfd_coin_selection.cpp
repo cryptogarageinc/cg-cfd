@@ -825,24 +825,6 @@ TEST(CoinSelection, SelectCoins_Error_empty_utxo) {
       tx_fee, &map_select_value, &fee, &map_searched_bnb), CfdException);
 }
 
-TEST(CoinSelection, SelectCoins_Error_not_contain_asset_in_utxo) {
-  AmountMap map_target_amount;
-  map_target_amount[""] = Amount::CreateBySatoshiAmount(100000000);
-  map_target_amount[exp_dummy_asset_a.GetHex()] = 
-    Amount::CreateBySatoshiAmount(20);
-  AmountMap map_select_value;
-  Amount fee;
-  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
-  std::map<std::string, bool> map_searched_bnb;
-  CoinSelectionOption option = GetBitcoinOption();
-  option.SetEffectiveFeeBaserate(0.0);
-  std::vector<Utxo> ret;
-  std::vector<Utxo> tmp;
-  EXPECT_THROW(ret = exp_selection.SelectCoins(
-      map_target_amount, tmp, exp_filter, option,
-      tx_fee, &map_select_value, &fee, &map_searched_bnb), CfdException);
-}
-
 // CoinSelection With Asset -----------------------------------------------------------------
 #ifndef CFD_DISABLE_ELEMENTS
 static CoinSelectionOption GetElementsOption() {
@@ -1240,6 +1222,25 @@ TEST(CoinSelection, SelectCoinsMinConf_Error_SelectCoinsBnB_without_asset_filter
   EXPECT_THROW((coin_select.SelectCoinsMinConf(target_value, p_utxos,
       empty_filter, option_params, tx_fee, &select_value, &fee_value, &use_bnb)), CfdException);
 }
+
+TEST(CoinSelection, SelectCoins_Error_not_contain_asset_in_utxo) {
+  AmountMap map_target_amount;
+  map_target_amount[""] = Amount::CreateBySatoshiAmount(100000000);
+  map_target_amount[exp_dummy_asset_a.GetHex()] = 
+    Amount::CreateBySatoshiAmount(20);
+  AmountMap map_select_value;
+  Amount fee;
+  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
+  std::map<std::string, bool> map_searched_bnb;
+  CoinSelectionOption option = GetBitcoinOption();
+  option.SetEffectiveFeeBaserate(0.0);
+  std::vector<Utxo> ret;
+  std::vector<Utxo> tmp;
+  EXPECT_THROW(ret = exp_selection.SelectCoins(
+      map_target_amount, tmp, exp_filter, option,
+      tx_fee, &map_select_value, &fee, &map_searched_bnb), CfdException);
+}
+
 
 // SelectCoins with multiple asset -----------------------------------------------------------------
 TEST(CoinSelection, SelectCoins_KnapsackSolver_with_multiple_asset)
