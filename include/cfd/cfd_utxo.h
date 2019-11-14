@@ -76,11 +76,9 @@ struct Utxo {
 
 /**
  * @brief UTXOのフィルタリング条件を指定する。
+ *   utxoのamount上限などの指定に利用することを想定
  */
 struct UtxoFilter {
-#ifndef CFD_DISABLE_ELEMENTS
-  ConfidentialAssetId target_asset;  //!< 利用するasset
-#endif                               // CFD_DISABLE_ELEMENTS
   uint32_t reserved;                 //!< 予約領域
 };
 
@@ -210,6 +208,28 @@ class CFD_EXPORT CoinSelection {
 
   /**
    * @brief 最小のCoinを選択する。
+   * @param[in] target_value    収集額
+   * @param[in] utxos           検索対象UTXO一覧
+   * @param[in] filter          UTXO収集フィルタ情報
+   * @param[in] option_params   オプション情報
+   * @param[in] tx_fee_value    transaction fee information
+   * @param[out] select_value   UTXO収集成功時、合計収集額
+   * @param[out] utxo_fee_value UTXO収集成功時、utxo分のfee金額
+   * @param[out] searched_bnb   BnBで検索したかのフラグ
+   * @return UTXO一覧。空の場合はエラー終了。
+   */
+  std::vector<Utxo> SelectCoins(
+      const Amount& target_value, const std::vector<Utxo>& utxos,
+      const UtxoFilter& filter, const CoinSelectionOption& option_params,
+      const Amount& tx_fee_value, Amount* select_value = nullptr,
+      Amount* utxo_fee_value = nullptr, bool* searched_bnb = nullptr);
+
+#ifndef CFD_DISABLE_ELEMENTS
+  /**
+   * @brief 最小のCoinを選択する。(マルチアセット版)
+   * @details utxosに対して、map_target_valueのkeyで指定された asset id で
+   *   CoinSelectionを行う。また、option_paramで fee asset が指定されている場合
+   *   対象のassetに対してのCoinSelectionも実施する。
    * @param[in] map_target_value  Asset毎の収集額map
    *  bitcoinの場合はkeyに空文字を設定
    * @param[in,out] utxos         検索対象UTXO一覧
@@ -229,24 +249,7 @@ class CFD_EXPORT CoinSelection {
       const Amount& tx_fee_value, AmountMap* map_select_value = nullptr,
       Amount* utxo_fee_value = nullptr,
       std::map<std::string, bool>* map_searched_bnb = nullptr);
-
-  /**
-   * @brief 最小のCoinを選択する。
-   * @param[in] target_value     収集額
-   * @param[in,out] utxos        検索対象UTXO一覧
-   * @param[in] filter           UTXO収集フィルタ情報
-   * @param[in] option_params    オプション情報
-   * @param[in] tx_fee_value     transaction fee information
-   * @param[out] select_value    UTXO収集成功時、合計収集額
-   * @param[out] utxo_fee_value  UTXO収集成功時、utxo分のfee金額
-   * @param[out] searched_bnb    BnBで検索できたかどうか
-   * @return UTXO一覧。空の場合はエラー終了。
-   */
-  std::vector<Utxo> SelectCoinsMinConf(
-      const Amount& target_value, const std::vector<Utxo*>& utxos,
-      const UtxoFilter& filter, const CoinSelectionOption& option_params,
-      const Amount& tx_fee_value, Amount* select_value = nullptr,
-      Amount* utxo_fee_value = nullptr, bool* searched_bnb = nullptr);
+#endif  // CFD_DISABLE_ELEMENTS
 
   /**
    * @brief UTXO構造体への変換を行う。
@@ -303,6 +306,29 @@ class CFD_EXPORT CoinSelection {
 #endif  // CFD_DISABLE_ELEMENTS
 
  protected:
+  /**
+   * @brief 最小のCoinを選択する。
+   * @details utxosで指定されるutxoについては、複数のassetが入力されることは
+   *   想定していない。そのため、複数assetが混在したutxoが入力された場合
+   *   返却されるutxoには複数のassetが混在する可能性がある。
+   * @param[in] target_value     収集額
+   * @param[in,out] utxos        検索対象UTXO一覧
+   * @param[in] filter           UTXO収集フィルタ情報
+   * @param[in] option_params    オプション情報
+   * @param[in] tx_fee_value     transaction fee information
+   * @param[in] consider_fee     feeを考慮したCoinSelectionの実施フラグ (default: true)
+   * @param[out] select_value    UTXO収集成功時、合計収集額
+   * @param[out] utxo_fee_value  UTXO収集成功時、utxo分のfee金額
+   * @param[out] searched_bnb    BnBで検索できたかどうか
+   * @return UTXO一覧。空の場合はエラー終了。
+   */
+  std::vector<Utxo> SelectCoinsMinConf(
+      const Amount& target_value, const std::vector<Utxo*>& utxos,
+      const UtxoFilter& filter, const CoinSelectionOption& option_params,
+      const Amount& tx_fee_value, const bool consider_fee = true, 
+      Amount* select_value = nullptr, Amount* utxo_fee_value = nullptr, 
+      bool* searched_bnb = nullptr);
+
   /**
    * @brief CoinSelection(BnB)を実施する。
    * @param[in] target_value     収集額
