@@ -8,7 +8,9 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
+#include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "cfd/cfd_utxo.h"
@@ -172,15 +174,15 @@ CoinSelection::CoinSelection(bool use_bnb) : use_bnb_(use_bnb) {
 
 std::vector<Utxo> CoinSelection::SelectCoins(
     const AmountMap& map_target_value, const std::vector<Utxo>& utxos,
-    UtxoFilter& filter, const CoinSelectionOption& option_params,
-    const Amount& tx_fee_value, AmountMap* map_select_value, Amount* utxo_fee_value,
-    std::map<std::string, bool>* map_searched_bnb) {
+    const UtxoFilter& filter, const CoinSelectionOption& option_params,
+    const Amount& tx_fee_value, AmountMap* map_select_value,
+    Amount* utxo_fee_value, std::map<std::string, bool>* map_searched_bnb) {
   if (map_target_value.size() == 0) {
-      warn(
+    warn(
         CFD_LOG_SOURCE,
         "Failed to SelectCoins. Target value is not configured."
         "map_target_value is empty.");
-      throw CfdException(
+    throw CfdException(
         CfdError::kCfdIllegalStateError,
         "Failed to SelectCoins. Target value is not configured");
   }
@@ -193,7 +195,8 @@ std::vector<Utxo> CoinSelection::SelectCoins(
   ConfidentialAssetId fee_asset = option_params.GetFeeAsset();
   auto iter = work_target_values.find(fee_asset.GetHex());
   if (iter == std::end(work_target_values)) {
-    work_target_values.insert(std::make_pair(fee_asset.GetHex(), Amount::CreateBySatoshiAmount(0)));
+    work_target_values.insert(
+        std::make_pair(fee_asset.GetHex(), Amount::CreateBySatoshiAmount(0)));
   }
 #endif
 
@@ -207,7 +210,8 @@ std::vector<Utxo> CoinSelection::SelectCoins(
     }
 #ifndef CFD_DISABLE_ELEMENTS
     for (auto& utxo : work_utxos) {
-      std::vector<uint8_t> asset_byte(std::begin(utxo.asset), std::end(utxo.asset));
+      std::vector<uint8_t> asset_byte(
+          std::begin(utxo.asset), std::end(utxo.asset));
       ConfidentialAssetId target_asset(target.first);
       if (target_asset.GetHex() == ConfidentialAssetId(asset_byte).GetHex()) {
         exists = true;
@@ -216,13 +220,13 @@ std::vector<Utxo> CoinSelection::SelectCoins(
     }
     if (!exists) {
       warn(
-        CFD_LOG_SOURCE,
-        "Failed to SelectCoins. Target asset is not found in utxo list."
-        "target_asset=[{}]",
-        target.first);
+          CFD_LOG_SOURCE,
+          "Failed to SelectCoins. Target asset is not found in utxo list."
+          "target_asset=[{}]",
+          target.first);
       throw CfdException(
-        CfdError::kCfdIllegalStateError,
-        "Failed to SelectCoins. Target asset is not found in utxo list.");
+          CfdError::kCfdIllegalStateError,
+          "Failed to SelectCoins. Target asset is not found in utxo list.");
     }
 #endif
   }
@@ -235,6 +239,8 @@ std::vector<Utxo> CoinSelection::SelectCoins(
   }
 
   // do coin selection exclude fee asset
+  UtxoFilter work_filter = filter;
+
   std::vector<Utxo> result;
   result.reserve(utxos.size());
   Amount work_tx_fee = tx_fee_value;
@@ -249,7 +255,7 @@ std::vector<Utxo> CoinSelection::SelectCoins(
     }
 
     if (!target.first.empty()) {
-      filter.target_asset = ConfidentialAssetId(target.first);
+      work_filter.target_asset = ConfidentialAssetId(target.first);
     }
 #endif
 
@@ -257,11 +263,11 @@ std::vector<Utxo> CoinSelection::SelectCoins(
     Amount utxo_fee = Amount();
     bool use_bnb = false;
     const Amount& target_value = target.second;
-    
+
     // fee以外の asset については、tx_fee は 0 で計算
     std::vector<Utxo> ret_utxos = SelectCoinsMinConf(
-      target_value, p_utxos, filter, option_params,
-      Amount(), &select_value, &utxo_fee, &use_bnb);
+        target_value, p_utxos, work_filter, option_params, Amount(),
+        &select_value, &utxo_fee, &use_bnb);
     std::copy(ret_utxos.begin(), ret_utxos.end(), std::back_inserter(result));
     work_tx_fee += utxo_fee;
     work_selected_values[target.first] = select_value;
@@ -270,7 +276,7 @@ std::vector<Utxo> CoinSelection::SelectCoins(
   }
 
 #ifndef CFD_DISABLE_ELEMENTS
-  filter.target_asset = fee_asset;
+  work_filter.target_asset = fee_asset;
 
   Amount select_value = Amount();
   Amount utxo_fee = Amount();
@@ -278,8 +284,8 @@ std::vector<Utxo> CoinSelection::SelectCoins(
   const Amount& target_value = work_target_values[fee_asset.GetHex()];
   // fee の asset については、tx_fee と utxo_fee を加味して計算
   std::vector<Utxo> ret_utxos = SelectCoinsMinConf(
-    target_value, p_utxos, filter, option_params,
-    work_tx_fee, &select_value, &utxo_fee, &use_bnb);
+      target_value, p_utxos, work_filter, option_params, work_tx_fee,
+      &select_value, &utxo_fee, &use_bnb);
   std::copy(ret_utxos.begin(), ret_utxos.end(), std::back_inserter(result));
   work_selected_values[fee_asset.GetHex()] = select_value;
   work_utxo_fee += utxo_fee;
@@ -305,8 +311,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
     bool* searched_bnb) {
 #ifndef CFD_DISABLE_ELEMENTS
   ConfidentialAssetId target_asset = filter.target_asset;
-  if (target_asset.IsEmpty()
-      || option_params.GetFeeAsset().IsEmpty()) {
+  if (target_asset.IsEmpty() || option_params.GetFeeAsset().IsEmpty()) {
     bool first = true;
     uint8_t src[33];
     for (auto& utxo : utxos) {
@@ -314,14 +319,15 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
       if (first) {
         memcpy(src, utxo->asset, sizeof(src));
         first = false;
-      }
-      else if (memcmp(utxo->asset, src, sizeof(src)) != 0) {
-        warn(CFD_LOG_SOURCE,
-             "Failed to SelectCoinsMinConf. Cannot specify asset."
-             "Utxo list contain multiple assets but not set target or fee asset.");
+      } else if (memcmp(utxo->asset, src, sizeof(src)) != 0) {
+        warn(
+            CFD_LOG_SOURCE,
+            "Failed to SelectCoinsMinConf. Cannot specify asset."
+            "Utxo list contain multiple assets but not set target or fee "
+            "asset.");
         throw CfdException(
-          CfdError::kCfdIllegalStateError,
-          "Failed to SelectCoinsMinConf. Cannot specify asset.");
+            CfdError::kCfdIllegalStateError,
+            "Failed to SelectCoinsMinConf. Cannot specify asset.");
       }
     }
   }
@@ -337,8 +343,7 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
         CFD_LOG_SOURCE, "select_value=null. filter.asset={}",
         filter.target_asset.GetHex());
 #else
-    cfd::core::logger::info(
-        CFD_LOG_SOURCE, "select_value=null");
+    cfd::core::logger::info(CFD_LOG_SOURCE, "select_value=null");
 #endif
   }
   if (searched_bnb) *searched_bnb = false;
@@ -370,12 +375,14 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
     // NOLINT Filter by the min conf specs and add to utxo_pool and calculate effective value
     for (auto& utxo : work_utxos) {
       if (!utxo) continue;
-      // if (!group.EligibleForSpending(eligibility_filter)) continue;
+        // if (!group.EligibleForSpending(eligibility_filter)) continue;
 
 #ifndef CFD_DISABLE_ELEMENTS
       // skip if utxo asset is not target asset
-      if (!target_asset.IsEmpty() && 
-          memcmp(utxo->asset, target_asset.GetData().GetBytes().data(), sizeof(utxo->asset)) != 0) {
+      if (!target_asset.IsEmpty() &&
+          memcmp(
+              utxo->asset, target_asset.GetData().GetBytes().data(),
+              sizeof(utxo->asset)) != 0) {
         continue;
       }
 #endif
@@ -401,7 +408,8 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
         info(
             CFD_LOG_SOURCE, "utxo({},{}) size={}/{} amount={}/{}/{}",
             Txid(txid_byte).GetHex(), utxo->vout, utxo->uscript_size_max,
-            utxo->witness_size_max, utxo->amount, utxo->fee, utxo->long_term_fee);
+            utxo->witness_size_max, utxo->amount, utxo->fee,
+            utxo->long_term_fee);
 #endif
         if (utxo->long_term_fee > utxo->fee) {
           utxo->long_term_fee = utxo->fee;  // TODO(k-matsuzawa): 後で見直し
@@ -432,13 +440,16 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
       if (!utxo) continue;
 #ifndef CFD_DISABLE_ELEMENTS
       // skip if utxo asset is not target asset
-      if (!target_asset.IsEmpty() && 
-          memcmp(utxo->asset, target_asset.GetData().GetBytes().data(), sizeof(utxo->asset)) != 0) {
+      if (!target_asset.IsEmpty() &&
+          memcmp(
+              utxo->asset, target_asset.GetData().GetBytes().data(),
+              sizeof(utxo->asset)) != 0) {
         continue;
       }
 #endif
 
-      utxo->fee = (use_fee) ? effective_fee.GetFee(*utxo).GetSatoshiValue() : 0;
+      utxo->fee =
+          (use_fee) ? effective_fee.GetFee(*utxo).GetSatoshiValue() : 0;
       if (utxo->amount > utxo->fee) {
         utxo->effective_value = utxo->amount - utxo->fee;
         utxo_pool.push_back(utxo);

@@ -9,9 +9,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 #include "cfd/cfd_common.h"
 #include "cfd/cfd_elements_transaction.h"
@@ -211,20 +211,24 @@ class CFD_EXPORT CoinSelection {
   /**
    * @brief 最小のCoinを選択する。
    * @param[in] map_target_value  Asset毎の収集額map
+   *  bitcoinの場合はkeyに空文字を設定
    * @param[in,out] utxos         検索対象UTXO一覧
    * @param[in] filter            UTXO収集フィルタ情報
    * @param[in] option_params     オプション情報
    * @param[in] tx_fee_value      transaction fee information
    * @param[out] map_select_value UTXO収集成功時、Asset毎の合計収集額map
+   *   map_target_valueで指定されたAsset毎の収集額が格納される
    * @param[out] utxo_fee_value   UTXO収集成功時、utxo分のfee金額
    * @param[out] map_searched_bnb asset毎にBnBで検索したかのフラグ
+   *   map_target_valueで指定されたAsset毎に結果が格納される
    * @return UTXO一覧。空の場合はエラー終了。
    */
   std::vector<Utxo> SelectCoins(
       const AmountMap& map_target_value, const std::vector<Utxo>& utxos,
-      UtxoFilter& filter, const CoinSelectionOption& option_params,
+      const UtxoFilter& filter, const CoinSelectionOption& option_params,
       const Amount& tx_fee_value, AmountMap* map_select_value = nullptr,
-      Amount* utxo_fee_value = nullptr, std::map<std::string, bool>* map_searched_bnb = nullptr);
+      Amount* utxo_fee_value = nullptr,
+      std::map<std::string, bool>* map_searched_bnb = nullptr);
 
   /**
    * @brief 最小のCoinを選択する。
