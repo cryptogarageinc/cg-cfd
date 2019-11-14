@@ -26,17 +26,14 @@ using cfd::core::Script;
 using cfd::core::StringUtil;
 using cfd::core::Txid;
 using cfd::core::CfdException;
-
 #ifndef CFD_DISABLE_ELEMENTS
 using cfd::core::ConfidentialAssetId;
-
-static ConfidentialAssetId exp_dummy_asset_a("aa00000000000000000000000000000000000000000000000000000000000000");
-static ConfidentialAssetId exp_dummy_asset_b("bb00000000000000000000000000000000000000000000000000000000000000");
-static ConfidentialAssetId exp_dummy_asset_c("cc00000000000000000000000000000000000000000000000000000000000000");
 #endif  // CFD_DISABLE_ELEMENTS
 
 static CoinSelection exp_selection(false);
 static UtxoFilter exp_filter;
+
+// SelectCoins(Single Asset) =====================================================
 
 static CoinSelectionOption GetBitcoinOption() {
   CoinSelectionOption option;
@@ -113,7 +110,7 @@ static std::vector<Utxo> GetBitcoinUtxoList() {
 }
 
 // KnapsackSolver-----------------------------------------------------------------
-TEST(CoinSelection, KnapsackSolver_targetvalue_0)
+TEST(CoinSelection, SelectCoins_Simple_KnapsackSolver_targetvalue_0)
 {
   Amount target_amount = Amount::CreateBySatoshiAmount(0);
   Amount select_value;
@@ -133,31 +130,7 @@ TEST(CoinSelection, KnapsackSolver_targetvalue_0)
   EXPECT_FALSE(use_bnb);
 }
 
-TEST(CoinSelection, KnapsackSolver_utxos_empty)
-{
-  Amount target_amount = Amount::CreateBySatoshiAmount(100000000);
-  Amount select_value;
-  Amount fee;
-  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
-  bool use_bnb = false;
-  EXPECT_THROW(std::vector<Utxo> ret = exp_selection.SelectCoins(
-      target_amount, std::vector<Utxo>(), exp_filter, GetBitcoinOption(),
-      tx_fee, &select_value, &fee, &use_bnb), CfdException);
-}
-
-TEST(CoinSelection, KnapsackSolver_outparameter_nullptr)
-{
-  Amount target_amount = Amount::CreateBySatoshiAmount(100000000);
-  Amount select_value;
-  Amount fee;
-  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
-  bool use_bnb = false;
-  EXPECT_THROW(std::vector<Utxo> ret = exp_selection.SelectCoins(
-      target_amount, GetBitcoinUtxoList(), exp_filter, GetBitcoinOption(),
-      tx_fee, nullptr, &fee, &use_bnb), CfdException);
-}
-
-TEST(CoinSelection, KnapsackSolver_match_utxo)
+TEST(CoinSelection, SelectCoins_Simple_KnapsackSolver_match_utxo)
 {
   // 39062500 - 820 - 1500
   Amount target_amount = Amount::CreateBySatoshiAmount(39060180);
@@ -179,7 +152,7 @@ TEST(CoinSelection, KnapsackSolver_match_utxo)
   EXPECT_FALSE(use_bnb);
 }
 
-TEST(CoinSelection, KnapsackSolver_match_utxo2)
+TEST(CoinSelection, SelectCoins_Simple_KnapsackSolver_match_utxo2)
 {
   // 117187500 - 1640 - 1500
   Amount target_amount = Amount::CreateBySatoshiAmount(117184360);
@@ -202,19 +175,7 @@ TEST(CoinSelection, KnapsackSolver_match_utxo2)
   EXPECT_FALSE(use_bnb);
 }
 
-TEST(CoinSelection, KnapsackSolver_insufficient_funds)
-{
-  Amount target_amount = Amount::CreateBySatoshiAmount(9500000000);
-  Amount select_value;
-  Amount fee;
-  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
-  bool use_bnb = false;
-  EXPECT_THROW(std::vector<Utxo> ret = exp_selection.SelectCoins(
-      target_amount, GetBitcoinUtxoList(), exp_filter, GetBitcoinOption(),
-      tx_fee, &select_value, &fee, &use_bnb), CfdException);
-}
-
-TEST(CoinSelection, KnapsackSolver_lowest_larger)
+TEST(CoinSelection, SelectCoins_Simple_KnapsackSolver_lowest_larger)
 {
   Amount target_amount = Amount::CreateBySatoshiAmount(120000000);
   Amount select_value;
@@ -235,7 +196,7 @@ TEST(CoinSelection, KnapsackSolver_lowest_larger)
   EXPECT_FALSE(use_bnb);
 }
 
-TEST(CoinSelection, KnapsackSolver_ApproximateBestSubset)
+TEST(CoinSelection, SelectCoins_Simple_KnapsackSolver_ApproximateBestSubset)
 {
   Amount target_amount = Amount::CreateBySatoshiAmount(220000000);
   Amount select_value;
@@ -257,7 +218,7 @@ TEST(CoinSelection, KnapsackSolver_ApproximateBestSubset)
   EXPECT_FALSE(use_bnb);
 }
 
-TEST(CoinSelection, KnapsackSolver_ApproximateBestSubset2)
+TEST(CoinSelection, SelectCoins_Simple_KnapsackSolver_ApproximateBestSubset2)
 {
   Amount target_amount = Amount::CreateBySatoshiAmount(460000000);
   Amount select_value;
@@ -279,7 +240,7 @@ TEST(CoinSelection, KnapsackSolver_ApproximateBestSubset2)
   EXPECT_FALSE(use_bnb);
 }
 
-TEST(CoinSelection, KnapsackSolver_ApproximateBestSubset2_lower)
+TEST(CoinSelection, SelectCoins_Simple_KnapsackSolver_ApproximateBestSubset2_lower)
 {
   // Amount target_amount = Amount::CreateBySatoshiAmount(460000000);
   Amount target_amount = Amount::CreateBySatoshiAmount(468700000);
@@ -301,7 +262,7 @@ TEST(CoinSelection, KnapsackSolver_ApproximateBestSubset2_lower)
   EXPECT_FALSE(use_bnb);
 }
 
-TEST(CoinSelection, KnapsackSolver_MinimumFee)
+TEST(CoinSelection, SelectCoins_Simple_KnapsackSolver_MinimumFee)
 {
   Amount target_amount = Amount::CreateBySatoshiAmount(468700000);
   Amount select_value;
@@ -414,7 +375,7 @@ static const std::vector<TestUtxoCoinVector> kExtCoinSelectTestVector = {
   }
 };
 
-TEST(CoinSelection, SelectCoins_SelectCoinsBnB)
+TEST(CoinSelection, SelectCoins_Simple_SelectCoinsBnB)
 {
   CoinSelection coin_select(true);
 
@@ -456,7 +417,7 @@ TEST(CoinSelection, SelectCoins_SelectCoinsBnB)
   EXPECT_TRUE(use_bnb);
 }
 
-TEST(CoinSelection, SelectCoins_SelectCoinsBnB_single)
+TEST(CoinSelection, SelectCoins_Simple_SelectCoinsBnB_single)
 {
   CoinSelection coin_select(true);
 
@@ -497,7 +458,7 @@ TEST(CoinSelection, SelectCoins_SelectCoinsBnB_single)
   EXPECT_TRUE(use_bnb);
 }
 
-TEST(CoinSelection, SelectCoins_SelectCoinsBnB_empty)
+TEST(CoinSelection, SelectCoins_Simple_SelectCoinsBnB_empty)
 {
   // BnB fail. (use knapsack)
   CoinSelection coin_select(true);
@@ -541,8 +502,45 @@ TEST(CoinSelection, SelectCoins_SelectCoinsBnB_empty)
   EXPECT_FALSE(use_bnb);
 }
 
+// SelectCoins ErrorCase -----------------------------------------------------------------
 
-TEST(CoinSelection, SelectCoins_SelectCoinsBnB_low_amount)
+TEST(CoinSelection, SelectCoins_Simple_Error_utxos_empty)
+{
+  Amount target_amount = Amount::CreateBySatoshiAmount(100000000);
+  Amount select_value;
+  Amount fee;
+  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
+  bool use_bnb = false;
+  EXPECT_THROW(std::vector<Utxo> ret = exp_selection.SelectCoins(
+      target_amount, std::vector<Utxo>(), exp_filter, GetBitcoinOption(),
+      tx_fee, &select_value, &fee, &use_bnb), CfdException);
+}
+
+TEST(CoinSelection, SelectCoins_Simple_Error_outparameter_nullptr)
+{
+  Amount target_amount = Amount::CreateBySatoshiAmount(100000000);
+  Amount select_value;
+  Amount fee;
+  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
+  bool use_bnb = false;
+  EXPECT_THROW(std::vector<Utxo> ret = exp_selection.SelectCoins(
+      target_amount, GetBitcoinUtxoList(), exp_filter, GetBitcoinOption(),
+      tx_fee, nullptr, &fee, &use_bnb), CfdException);
+}
+
+TEST(CoinSelection, SelectCoins_Simple_Error_KnapsackSolver_insufficient_funds)
+{
+  Amount target_amount = Amount::CreateBySatoshiAmount(9500000000);
+  Amount select_value;
+  Amount fee;
+  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
+  bool use_bnb = false;
+  EXPECT_THROW(std::vector<Utxo> ret = exp_selection.SelectCoins(
+      target_amount, GetBitcoinUtxoList(), exp_filter, GetBitcoinOption(),
+      tx_fee, &select_value, &fee, &use_bnb), CfdException);
+}
+
+TEST(CoinSelection, SelectCoins_Simple_Error_SelectCoinsBnB_insufficient_funds)
 {
   CoinSelection coin_select(true);
 
@@ -576,8 +574,7 @@ TEST(CoinSelection, SelectCoins_SelectCoinsBnB_low_amount)
       exp_filter, option_params, tx_fee, &select_value, &fee_value, &use_bnb)), CfdException);
 }
 
-
-TEST(CoinSelection, SelectCoins_SelectCoinsBnB_effective_value_zero)
+TEST(CoinSelection, SelectCoins_Simple_Error_SelectCoinsBnB_effective_value_zero)
 {
   CoinSelection coin_select(true);
 
@@ -611,10 +608,11 @@ TEST(CoinSelection, SelectCoins_SelectCoinsBnB_effective_value_zero)
       exp_filter, option_params, tx_fee, &select_value, &fee_value, &use_bnb)), CfdException);
 }
 
+// CoinSelection Utility -----------------------------------------------------------------
 TEST(CoinSelection, Constructor)
 {
-  CoinSelection coin_select1;
-  CoinSelection coin_select2(false);
+  EXPECT_NO_THROW(CoinSelection coin_select1);
+  EXPECT_NO_THROW(CoinSelection coin_select2(false));
 }
 
 TEST(CoinSelection, ConvertToUtxo)
@@ -676,108 +674,13 @@ TEST(CoinSelection, ConvertToUtxo)
 #endif                // CFD_DISABLE_ELEMENTS
 }
 
-// SelectCoins-----------------------------------------------------------------
-TEST(CoinSelection, SelectCoins_Simple_no_targetvalue) {
-  AmountMap map_target_amount;
-  AmountMap map_select_value;
-  Amount fee;
-  Amount tx_fee = Amount::CreateBySatoshiAmount(0);
-  std::map<std::string, bool> map_searched_bnb;
-  CoinSelectionOption option = GetBitcoinOption();
-  option.SetEffectiveFeeBaserate(0.0);
-  std::vector<Utxo> ret;
-  EXPECT_THROW(ret = exp_selection.SelectCoins(
-      map_target_amount, GetBitcoinUtxoList(), exp_filter, option,
-      tx_fee, &map_select_value, &fee, &map_searched_bnb), CfdException);
+// SelectCoins(With Asset) =====================================================
 
-  EXPECT_EQ(ret.size(), 0);
-  EXPECT_EQ(map_select_value.size(), 0);
-  EXPECT_EQ(tx_fee.GetSatoshiValue(), 0);
-  EXPECT_EQ(fee.GetSatoshiValue(), 0);
-  EXPECT_EQ(map_searched_bnb.size(), 0);
-}
-
-TEST(CoinSelection, SelectCoins_Simple_KnapsackSolver)
-{
-  // Same condition with "KnapsackSolver_match_utxo"
-  Amount target_amount = Amount::CreateBySatoshiAmount(39060180);
-  Amount select_value;
-  Amount fee;
-  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
-  bool searched_bnb = false;
-  CoinSelectionOption option = GetBitcoinOption();
-  std::vector<Utxo> ret;
-  EXPECT_NO_THROW(ret = exp_selection.SelectCoins(
-      target_amount, GetBitcoinUtxoList(), exp_filter, option,
-      tx_fee, &select_value, &fee, &searched_bnb));
-
-  EXPECT_EQ(ret.size(), 1);
-  if (ret.size() == 1) {
-    EXPECT_EQ(ret[0].amount, static_cast<int64_t>(39062500));
-  }
-  EXPECT_EQ(select_value.GetSatoshiValue(), 39062500);
-  EXPECT_EQ(fee.GetSatoshiValue(), 820);
-  EXPECT_FALSE(searched_bnb);
-}
-
-TEST(CoinSelection, SelectCoins_Simple_CoinSelectBnB)
-{
-  CoinSelection coin_select(true);
-  // Same condition with "SelectCoins_SelectCoinsBnB"
-  Amount target_amount = Amount::CreateBySatoshiAmount(99998500);
-  Amount select_value;
-  Amount fee;
-  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
-  bool searched_bnb = false;
-  CoinSelectionOption option = GetBitcoinOption();
-  option.SetEffectiveFeeBaserate(2);
-
-  std::vector<Utxo> utxos;
-  utxos.resize(kExtCoinSelectTestVector.size());
-  std::vector<Utxo>::iterator ite = utxos.begin();
-  for (const auto& test_data : kExtCoinSelectTestVector) {
-    Txid txid;
-    if (!test_data.txid.empty()) {
-      txid = Txid(test_data.txid);
-    }
-    CoinSelection::ConvertToUtxo(
-        txid, test_data.vout, test_data.descriptor,
-        Amount::CreateBySatoshiAmount(test_data.amount), "", nullptr,
-        &(*ite));
-    ++ite;
-  }
-
-  std::vector<Utxo> ret;
-  EXPECT_NO_THROW(ret = coin_select.SelectCoins(
-      target_amount, utxos, exp_filter, option,
-      tx_fee, &select_value, &fee, &searched_bnb));
-
-  EXPECT_EQ(ret.size(), 2);
-  if (ret.size() == 2) {
-    EXPECT_EQ(ret[0].amount, static_cast<int64_t>(85062500));
-    EXPECT_EQ(ret[1].amount, static_cast<int64_t>(14938590));
-  }
-  EXPECT_EQ(select_value.GetSatoshiValue(), 100001090);
-  EXPECT_EQ(fee.GetSatoshiValue(), 360);
-  EXPECT_TRUE(searched_bnb);
-}
-
-TEST(CoinSelection, SelectCoins_Simple_Error_empty_utxo) {
-  Amount target_amount = Amount::CreateBySatoshiAmount(100000000);
-  Amount select_value;
-  Amount fee;
-  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
-  bool searched_bnb = false;
-  CoinSelectionOption option = GetBitcoinOption();
-  option.SetEffectiveFeeBaserate(0.0);
-  std::vector<Utxo> ret;
-  EXPECT_THROW(ret = exp_selection.SelectCoins(
-      target_amount, std::vector<Utxo>(), exp_filter, option,
-      tx_fee, &select_value, &fee, &searched_bnb), CfdException);
-}
-
-// CoinSelection With Asset -----------------------------------------------------------------
 #ifndef CFD_DISABLE_ELEMENTS
+static ConfidentialAssetId exp_dummy_asset_a("aa00000000000000000000000000000000000000000000000000000000000000");
+static ConfidentialAssetId exp_dummy_asset_b("bb00000000000000000000000000000000000000000000000000000000000000");
+static ConfidentialAssetId exp_dummy_asset_c("cc00000000000000000000000000000000000000000000000000000000000000");
+
 static CoinSelectionOption GetElementsOption() {
   CoinSelectionOption option;
   option.InitializeConfidentialTxSizeInfo();
@@ -897,7 +800,7 @@ static std::vector<Utxo> GetElementsUtxoList() {
     utxos.push_back(utxo);
   }
   {
-    Txid txid("0000000000000000000000000000000000000000000000000000000000000c01");
+    Txid txid("0000000000000000000000000000000000000000000000000000000000000c02");
     struct Utxo utxo;
     memset(&utxo, 0, sizeof(utxo));
     memcpy(utxo.txid, txid.GetData().GetBytes().data(), 32);
@@ -909,7 +812,36 @@ static std::vector<Utxo> GetElementsUtxoList() {
   return utxos;
 }
 
-TEST(CoinSelection, SelectCoins_KnapsackSolver_match_utxo_with_filter)
+// KnapsackSolver-----------------------------------------------------------------
+TEST(CoinSelection, SelectCoins_KnapsackSolver_targetvalue_0_with_asset)
+{
+  CoinSelectionOption option = GetElementsOption();
+  option.SetEffectiveFeeBaserate(0.0);
+  option.SetFeeAsset(exp_dummy_asset_a);
+  AmountMap map_target_amount;
+  map_target_amount[exp_dummy_asset_a.GetHex()] = Amount::CreateBySatoshiAmount(0);
+  AmountMap map_select_value;
+  Amount fee;
+  Amount tx_fee = Amount::CreateBySatoshiAmount(0);
+  std::map<std::string, bool> map_searched_bnb;
+  std::vector<Utxo> ret;
+  EXPECT_NO_THROW(ret = exp_selection.SelectCoins(
+      map_target_amount, GetElementsUtxoList(), exp_filter, option,
+      tx_fee, &map_select_value, &fee, &map_searched_bnb));
+
+  EXPECT_EQ(ret.size(), 0);
+  EXPECT_EQ(map_select_value.size(), 1);
+  if (map_select_value.size() == 1) {
+    EXPECT_EQ(map_select_value[exp_dummy_asset_a.GetHex()].GetSatoshiValue(), 0);
+  }
+  EXPECT_EQ(fee.GetSatoshiValue(), 0);
+  EXPECT_EQ(map_searched_bnb.size(), 1);
+  if (map_searched_bnb.size() == 1) {
+    EXPECT_FALSE(map_searched_bnb[exp_dummy_asset_a.GetHex()]);
+  }
+}
+
+TEST(CoinSelection, SelectCoins_KnapsackSolver_match_utxo_with_asset)
 {
   CoinSelectionOption option = GetElementsOption();
   option.SetFeeAsset(exp_dummy_asset_a);
@@ -940,6 +872,38 @@ TEST(CoinSelection, SelectCoins_KnapsackSolver_match_utxo_with_filter)
   }
 }
 
+TEST(CoinSelection, SelectCoins_KnapsackSolver_ApproximateBestSubset_with_asset)
+{
+  CoinSelectionOption option = GetElementsOption();
+  option.SetFeeAsset(exp_dummy_asset_a);
+  AmountMap map_target_amount;
+  map_target_amount[exp_dummy_asset_a.GetHex()] = Amount::CreateBySatoshiAmount(220000000);
+  AmountMap map_select_value;
+  Amount fee;
+  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
+  std::map<std::string, bool> map_searched_bnb;
+  std::vector<Utxo> ret;
+  EXPECT_NO_THROW(ret = exp_selection.SelectCoins(
+      map_target_amount, GetElementsUtxoList(), exp_filter, option,
+      tx_fee, &map_select_value, &fee, &map_searched_bnb));
+
+  EXPECT_EQ(ret.size(), 2);
+  if (ret.size() == 1) {
+    EXPECT_EQ(ret[0].amount, static_cast<int64_t>(156250000));
+    EXPECT_EQ(ret[1].amount, static_cast<int64_t>(78125000));
+  }
+  EXPECT_EQ(map_select_value.size(), 1);
+  if (map_select_value.size() == 1) {
+    EXPECT_EQ(map_select_value[exp_dummy_asset_a.GetHex()].GetSatoshiValue(), 234375000);
+  }
+  EXPECT_EQ(fee.GetSatoshiValue(), 1640);
+  EXPECT_EQ(map_searched_bnb.size(), 1);
+  if (map_searched_bnb.size() == 1) {
+    EXPECT_FALSE(map_searched_bnb[exp_dummy_asset_a.GetHex()]);
+  }
+}
+
+// SelectCoinsBnB-----------------------------------------------------------------
 struct TestElementsUtxoCoinVector {
   std::string txid;
   uint32_t vout;
@@ -1035,7 +999,7 @@ static const std::vector<TestElementsUtxoCoinVector> kExtCoinSelectElementsTestV
   }
 };
 
-TEST(CoinSelection, SelectCoins_Simple_SelectCoinsBnB_with_asset_filter)
+TEST(CoinSelection, SelectCoins_SelectCoinsBnB_with_asset)
 {
   CoinSelection coin_select(true);
   AmountMap map_target_amount;
@@ -1061,7 +1025,7 @@ TEST(CoinSelection, SelectCoins_Simple_SelectCoinsBnB_with_asset_filter)
   }
 
   CoinSelectionOption option_params;
-  option_params.InitializeTxSizeInfo();
+  option_params.InitializeConfidentialTxSizeInfo();
   option_params.SetEffectiveFeeBaserate(2);
   option_params.SetFeeAsset(exp_dummy_asset_a);
 
@@ -1084,11 +1048,11 @@ TEST(CoinSelection, SelectCoins_Simple_SelectCoinsBnB_with_asset_filter)
   }
 }
 
-TEST(CoinSelection, SelectCoins_Error_SelectCoinsBnB_without_fee_asset)
+TEST(CoinSelection, SelectCoins_SelectCoinsBnB_single_with_asset)
 {
   CoinSelection coin_select(true);
   AmountMap map_target_amount;
-  map_target_amount[exp_dummy_asset_a.GetHex()] = Amount::CreateBySatoshiAmount(99998500);
+  map_target_amount[exp_dummy_asset_a.GetHex()] = Amount::CreateBySatoshiAmount(155060800);
   AmountMap map_select_value;
   Amount fee;
   Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
@@ -1110,37 +1074,79 @@ TEST(CoinSelection, SelectCoins_Error_SelectCoinsBnB_without_fee_asset)
   }
 
   CoinSelectionOption option_params;
-  option_params.InitializeTxSizeInfo();
+  option_params.InitializeConfidentialTxSizeInfo();
   option_params.SetEffectiveFeeBaserate(2);
+  option_params.SetFeeAsset(exp_dummy_asset_a);
 
   std::vector<Utxo> select_utxos;
-  EXPECT_THROW((select_utxos = coin_select.SelectCoins(map_target_amount, utxos,
-      exp_filter, option_params, tx_fee, &map_select_value, &fee, &map_searched_bnb)), CfdException);
-  EXPECT_EQ(select_utxos.size(), 0);
-  EXPECT_EQ(map_select_value.size(), 0);
-  EXPECT_EQ(fee.GetSatoshiValue(), 0);
-  EXPECT_EQ(map_searched_bnb.size(), 0);
+  EXPECT_NO_THROW((select_utxos = coin_select.SelectCoins(map_target_amount, utxos,
+      exp_filter, option_params, tx_fee, &map_select_value, &fee, &map_searched_bnb)));
+  EXPECT_EQ(select_utxos.size(), 1);
+  if (select_utxos.size() == 1) {
+    EXPECT_EQ(select_utxos[0].amount, static_cast<int64_t>(155062500));
+  }
+  EXPECT_EQ(map_select_value.size(), 1);
+  if (map_select_value.size() == 1) {
+    EXPECT_EQ(map_select_value[exp_dummy_asset_a.GetHex()].GetSatoshiValue(), 155062500);
+  }
+  EXPECT_EQ(fee.GetSatoshiValue(), 180);
+  EXPECT_EQ(map_searched_bnb.size(), 1);
+  if (map_searched_bnb.size() == 1) {
+    EXPECT_TRUE(map_searched_bnb[exp_dummy_asset_a.GetHex()]);
+  }
 }
 
-TEST(CoinSelection, SelectCoins_Error_not_contain_asset_in_utxo) {
+TEST(CoinSelection, SelectCoins_SelectCoinsBnB_empty_with_asset)
+{
+  CoinSelection coin_select(true);
   AmountMap map_target_amount;
-  map_target_amount[""] = Amount::CreateBySatoshiAmount(100000000);
-  map_target_amount[exp_dummy_asset_a.GetHex()] = 
-    Amount::CreateBySatoshiAmount(20);
+  map_target_amount[exp_dummy_asset_a.GetHex()] = Amount::CreateBySatoshiAmount(114040000);
   AmountMap map_select_value;
   Amount fee;
   Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
   std::map<std::string, bool> map_searched_bnb;
-  CoinSelectionOption option = GetBitcoinOption();
-  option.SetEffectiveFeeBaserate(0.0);
-  std::vector<Utxo> ret;
-  std::vector<Utxo> tmp;
-  EXPECT_THROW(ret = exp_selection.SelectCoins(
-      map_target_amount, tmp, exp_filter, option,
-      tx_fee, &map_select_value, &fee, &map_searched_bnb), CfdException);
+
+  std::vector<Utxo> utxos;
+  utxos.resize(kExtCoinSelectElementsTestVector.size());
+  std::vector<Utxo>::iterator ite = utxos.begin();
+  for (const auto& test_data : kExtCoinSelectElementsTestVector) {
+    Txid txid;
+    if (!test_data.txid.empty()) {
+      txid = Txid(test_data.txid);
+    }
+    CoinSelection::ConvertToUtxo(
+        txid, test_data.vout, test_data.descriptor,
+        Amount::CreateBySatoshiAmount(test_data.amount), test_data.asset,
+        nullptr, &(*ite));
+    ++ite;
+  }
+
+  CoinSelectionOption option_params;
+  option_params.InitializeConfidentialTxSizeInfo();
+  option_params.SetEffectiveFeeBaserate(1);
+  option_params.SetFeeAsset(exp_dummy_asset_a);
+
+  std::vector<Utxo> select_utxos;
+  EXPECT_NO_THROW((select_utxos = coin_select.SelectCoins(map_target_amount, utxos,
+      exp_filter, option_params, tx_fee, &map_select_value, &fee, &map_searched_bnb)));
+  EXPECT_EQ(select_utxos.size(), 3);
+  if (select_utxos.size() == 3) {
+    EXPECT_EQ(select_utxos[0].amount, static_cast<int64_t>(61062500));
+    EXPECT_EQ(select_utxos[1].amount, static_cast<int64_t>(39062500));
+    EXPECT_EQ(select_utxos[2].amount, static_cast<int64_t>(14938590));
+  }
+  EXPECT_EQ(map_select_value.size(), 1);
+  if (map_select_value.size() == 1) {
+    EXPECT_EQ(map_select_value[exp_dummy_asset_a.GetHex()].GetSatoshiValue(), 115063590);
+  }
+  EXPECT_EQ(fee.GetSatoshiValue(), 270);
+  EXPECT_EQ(map_searched_bnb.size(), 1);
+  if (map_searched_bnb.size() == 1) {
+    EXPECT_FALSE(map_searched_bnb[exp_dummy_asset_a.GetHex()]);
+  }
 }
 
-// SelectCoins with multiple asset -----------------------------------------------------------------
+// multiple asset target -----------------------------------------------------------------
 TEST(CoinSelection, SelectCoins_KnapsackSolver_with_multiple_asset)
 {
   // Same condition with "KnapsackSolver_match_utxo" and the other
@@ -1289,6 +1295,7 @@ TEST(CoinSelection, SelectCoins_with_multiple_asset_fee_only_target)
   }
 }
 
+// SelectCoins ErrorCase -----------------------------------------------------------------
 TEST(CoinSelection, SelectCoins_Error_empty_target_value_map) {
   AmountMap map_target_amount;
   AmountMap map_select_value;
@@ -1308,21 +1315,6 @@ TEST(CoinSelection, SelectCoins_Error_empty_target_value_map) {
   EXPECT_EQ(map_searched_bnb.size(), 0);
 }
 
-TEST(CoinSelection, SelectCoins_Error_empty_utxo_with_multiple_asset) {
-  AmountMap map_target_amount;
-  map_target_amount[exp_dummy_asset_a.GetHex()] = Amount::CreateBySatoshiAmount(100000000);
-  AmountMap map_select_value;
-  Amount fee;
-  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
-  std::map<std::string, bool> map_searched_bnb;
-  CoinSelectionOption option = GetElementsOption();
-  option.SetFeeAsset(exp_dummy_asset_a);
-  std::vector<Utxo> ret;
-  EXPECT_THROW(ret = exp_selection.SelectCoins(
-      map_target_amount, std::vector<Utxo>(), exp_filter, option,
-      tx_fee, &map_select_value, &fee, &map_searched_bnb), CfdException);
-}
-
 TEST(CoinSelection, SelectCoins_Error_target_asset_not_contains_utxos) {
   AmountMap map_target_amount;
   map_target_amount[exp_dummy_asset_a.GetHex()] = Amount::CreateBySatoshiAmount(100000000);
@@ -1338,6 +1330,37 @@ TEST(CoinSelection, SelectCoins_Error_target_asset_not_contains_utxos) {
   std::vector<Utxo> tmp;
   EXPECT_THROW(ret = exp_selection.SelectCoins(
       map_target_amount, tmp, exp_filter, option,
+      tx_fee, &map_select_value, &fee, &map_searched_bnb), CfdException);
+}
+
+TEST(CoinSelection, SelectCoins_Error_target_asset_empty_string)
+{
+  AmountMap map_target_amount;
+  map_target_amount[""] = Amount::CreateBySatoshiAmount(39060180);
+  AmountMap map_select_value;
+  Amount fee;
+  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
+  std::map<std::string, bool> map_searched_bnb;
+  CoinSelectionOption option = GetElementsOption();
+  option.SetFeeAsset(exp_dummy_asset_a);
+  std::vector<Utxo> ret;
+  EXPECT_THROW(ret = exp_selection.SelectCoins(
+      map_target_amount, GetElementsUtxoList(), exp_filter, option,
+      tx_fee, &map_select_value, &fee, &map_searched_bnb), CfdException);
+}
+
+TEST(CoinSelection, SelectCoins_Error_empty_utxo) {
+  AmountMap map_target_amount;
+  map_target_amount[exp_dummy_asset_a.GetHex()] = Amount::CreateBySatoshiAmount(100000000);
+  AmountMap map_select_value;
+  Amount fee;
+  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
+  std::map<std::string, bool> map_searched_bnb;
+  CoinSelectionOption option = GetElementsOption();
+  option.SetFeeAsset(exp_dummy_asset_a);
+  std::vector<Utxo> ret;
+  EXPECT_THROW(ret = exp_selection.SelectCoins(
+      map_target_amount, std::vector<Utxo>(), exp_filter, option,
       tx_fee, &map_select_value, &fee, &map_searched_bnb), CfdException);
 }
 
@@ -1371,23 +1394,7 @@ TEST(CoinSelection, SelectCoins_Error_no_outparameter)
       tx_fee, nullptr, &fee, &map_searched_bnb), CfdException);
 }
 
-TEST(CoinSelection, SelectCoins_Error_target_asset_empty_string)
-{
-  AmountMap map_target_amount;
-  map_target_amount[""] = Amount::CreateBySatoshiAmount(39060180);
-  AmountMap map_select_value;
-  Amount fee;
-  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
-  std::map<std::string, bool> map_searched_bnb;
-  CoinSelectionOption option = GetElementsOption();
-  option.SetFeeAsset(exp_dummy_asset_a);
-  std::vector<Utxo> ret;
-  EXPECT_THROW(ret = exp_selection.SelectCoins(
-      map_target_amount, GetElementsUtxoList(), exp_filter, option,
-      tx_fee, &map_select_value, &fee, &map_searched_bnb), CfdException);
-}
-
-TEST(CoinSelection, SelectCoins_Error_not_use_map_to_multiple_asset_utxo)
+TEST(CoinSelection, SelectCoins_Error_CoinSelections_Simple_to_multiple_asset_utxo)
 {
   Amount target_amount = Amount::CreateBySatoshiAmount(39060180);
   Amount select_value;
