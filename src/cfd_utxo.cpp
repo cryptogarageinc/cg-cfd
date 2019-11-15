@@ -366,7 +366,10 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
   if (select_value) {
     *select_value = Amount::CreateBySatoshiAmount(0);
   } else {
-    cfd::core::logger::info(CFD_LOG_SOURCE, "select_value=null");
+    cfd::core::logger::info(
+        CFD_LOG_SOURCE, "select_value=null, filter={}",
+        static_cast<const void*>(&filter));
+    // for unused parameter
   }
   if (searched_bnb) *searched_bnb = false;
 
