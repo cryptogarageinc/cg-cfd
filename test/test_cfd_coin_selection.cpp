@@ -830,9 +830,15 @@ TEST(CoinSelection, SelectCoins_KnapsackSolver_targetvalue_0_with_asset)
       tx_fee, &map_select_value, &fee, &map_searched_bnb));
 
   EXPECT_EQ(ret.size(), 0);
-  EXPECT_EQ(map_select_value.size(), 0);
+  EXPECT_EQ(map_select_value.size(), 1);
+  if (map_select_value.size() == 1) {
+    EXPECT_EQ(map_select_value[exp_dummy_asset_a.GetHex()].GetSatoshiValue(), 0);
+  }
   EXPECT_EQ(fee.GetSatoshiValue(), 0);
-  EXPECT_EQ(map_searched_bnb.size(), 0);
+  EXPECT_EQ(map_searched_bnb.size(), 1);
+  if (map_searched_bnb.size() == 1) {
+    EXPECT_FALSE(map_searched_bnb[exp_dummy_asset_a.GetHex()]);
+  }
 }
 
 TEST(CoinSelection, SelectCoins_KnapsackSolver_match_utxo_with_asset)
