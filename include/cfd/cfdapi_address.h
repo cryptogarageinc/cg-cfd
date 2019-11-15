@@ -14,6 +14,7 @@
 
 #include "cfd/cfd_common.h"
 #include "cfdcore/cfdcore_address.h"
+#include "cfdcore/cfdcore_descriptor.h"
 #include "cfdcore/cfdcore_key.h"
 
 namespace cfd {
@@ -22,9 +23,33 @@ namespace api {
 using cfd::core::Address;
 using cfd::core::AddressFormatData;
 using cfd::core::AddressType;
+using cfd::core::DescriptorKeyType;
+using cfd::core::DescriptorScriptType;
 using cfd::core::NetType;
 using cfd::core::Pubkey;
 using cfd::core::Script;
+
+/**
+ * @brief DescriptorのScript系情報構造体
+ */
+struct DescriptorScriptData {
+  DescriptorScriptType type;   //!< script type
+  Script locking_script;       //!< locking script
+  uint32_t depth;              //!< depth
+  Address address;             //!< address
+  AddressType address_type;    //!< address type
+  Script redeem_script;        //!< redeem script
+  DescriptorKeyType key_type;  //!< key type
+  std::string key;             //!< key string
+};
+
+/**
+ * @brief DescriptorのKey系情報構造体
+ */
+struct DescriptorKeyData {
+  DescriptorKeyType type;  //!< key type
+  std::string key;         //!< key string
+};
 
 /**
  * @brief Address関連の関数群クラス
@@ -52,7 +77,7 @@ class CFD_EXPORT AddressApi {
       NetType net_type, AddressType address_type, const Pubkey* pubkey,
       const Script* script, Script* locking_script = nullptr,
       Script* redeem_script = nullptr,
-      std::vector<AddressFormatData>* prefix_list = nullptr);
+      const std::vector<AddressFormatData>* prefix_list = nullptr) const;
 
   /**
    * @brief Multisig Addressを作成する
@@ -69,7 +94,7 @@ class CFD_EXPORT AddressApi {
       NetType net_type, AddressType address_type, uint32_t req_sig_num,
       const std::vector<Pubkey>& pubkeys, Script* redeem_script = nullptr,
       Script* witness_script = nullptr,
-      std::vector<AddressFormatData>* prefix_list = nullptr);
+      const std::vector<AddressFormatData>* prefix_list = nullptr) const;
 
   /**
    * @brief Multisig ScriptからPubkey Address一覧を作成する
@@ -83,7 +108,24 @@ class CFD_EXPORT AddressApi {
   std::vector<Address> GetAddressesFromMultisig(
       NetType net_type, AddressType address_type, const Script& redeem_script,
       std::vector<Pubkey>* pubkey_list = nullptr,
-      std::vector<AddressFormatData>* prefix_list = nullptr);
+      const std::vector<AddressFormatData>* prefix_list = nullptr) const;
+
+  /**
+   * @brief Output descriptorから情報を抽出する
+   * @param[in] descriptor              output descriptor
+   * @param[in] net_type                network type
+   * @param[in] bip32_derivation_path   bip32 derivation path
+   * @param[out] script_list            descriptor script list
+   * @param[out] multisig_key_list      descriptor multisig key list
+   * @param[in] prefix_list             address prefix list
+   * @return descriptor script data (top level or high security)
+   */
+  DescriptorScriptData ParseOutputDescriptor(
+      const std::string& descriptor, NetType net_type,
+      const std::string& bip32_derivation_path = "",
+      std::vector<DescriptorScriptData>* script_list = nullptr,
+      std::vector<DescriptorKeyData>* multisig_key_list = nullptr,
+      const std::vector<AddressFormatData>* prefix_list = nullptr) const;
 };
 
 }  // namespace api
