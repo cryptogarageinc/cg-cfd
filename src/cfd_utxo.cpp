@@ -259,8 +259,9 @@ std::vector<Utxo> CoinSelection::SelectCoins(
 
   // add fee asset to target asset list
   AmountMap work_target_values = map_target_value;
-  ConfidentialAssetId fee_asset = option_params.GetFeeAsset();
+  ConfidentialAssetId fee_asset;
   if (calculate_fee) {
+    fee_asset = option_params.GetFeeAsset();
     auto iter = work_target_values.find(fee_asset.GetHex());
     if (iter == std::end(work_target_values)) {
       work_target_values.insert(std::make_pair(fee_asset.GetHex(), Amount()));
