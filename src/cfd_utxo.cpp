@@ -378,6 +378,11 @@ std::vector<Utxo> CoinSelection::SelectCoinsMinConf(
   static constexpr const uint64_t kDustRelayTxFee = 10000;
   if (select_value != nullptr) {
     *select_value = Amount::CreateBySatoshiAmount(0);
+  } else {
+    cfd::core::logger::info(
+        CFD_LOG_SOURCE, "select_value=null, filter={}",
+        static_cast<const void*>(&filter));
+    // for unused parameter
   }
   if (searched_bnb != nullptr) *searched_bnb = false;
 
