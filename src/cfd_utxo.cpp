@@ -273,7 +273,6 @@ std::vector<Utxo> CoinSelection::SelectCoins(
   for (auto& target : work_target_values) {
     // asset valid check...
     ConfidentialAssetId target_asset(target.first);
-
     if (target_asset.IsEmpty()) {
       warn(CFD_LOG_SOURCE, "Failed to SelectCoins. Target asset is empty.");
       throw CfdException(
@@ -287,7 +286,7 @@ std::vector<Utxo> CoinSelection::SelectCoins(
     for (auto& utxo : work_utxos) {
       std::vector<uint8_t> asset_byte(
           std::begin(utxo.asset), std::end(utxo.asset));
-      if (target_asset.GetHex() == ConfidentialAssetId(asset_byte).GetHex()) {
+      if (target.first == ConfidentialAssetId(asset_byte).GetHex()) {
         p_utxos.push_back(&utxo);
       }
     }
