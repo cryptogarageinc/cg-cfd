@@ -221,7 +221,7 @@ class CFD_EXPORT CoinSelection {
   std::vector<Utxo> SelectCoins(
       const Amount& target_value, const std::vector<Utxo>& utxos,
       const UtxoFilter& filter, const CoinSelectionOption& option_params,
-      const Amount& tx_fee_value, Amount* select_value = nullptr,
+      const Amount& tx_fee_value, Amount* select_value,
       Amount* utxo_fee_value = nullptr, bool* searched_bnb = nullptr);
 
 #ifndef CFD_DISABLE_ELEMENTS
@@ -246,7 +246,7 @@ class CFD_EXPORT CoinSelection {
   std::vector<Utxo> SelectCoins(
       const AmountMap& map_target_value, const std::vector<Utxo>& utxos,
       const UtxoFilter& filter, const CoinSelectionOption& option_params,
-      const Amount& tx_fee_value, AmountMap* map_select_value = nullptr,
+      const Amount& tx_fee_value, AmountMap* map_select_value,
       Amount* utxo_fee_value = nullptr,
       std::map<std::string, bool>* map_searched_bnb = nullptr);
 #endif  // CFD_DISABLE_ELEMENTS
@@ -325,8 +325,8 @@ class CFD_EXPORT CoinSelection {
   std::vector<Utxo> SelectCoinsMinConf(
       const Amount& target_value, const std::vector<Utxo*>& utxos,
       const UtxoFilter& filter, const CoinSelectionOption& option_params,
-      const Amount& tx_fee_value, const bool consider_fee = true,
-      Amount* select_value = nullptr, Amount* utxo_fee_value = nullptr,
+      const Amount& tx_fee_value, const bool consider_fee,
+      Amount* select_value, Amount* utxo_fee_value = nullptr,
       bool* searched_bnb = nullptr);
 
   /**

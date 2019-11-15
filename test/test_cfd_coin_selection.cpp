@@ -830,15 +830,9 @@ TEST(CoinSelection, SelectCoins_KnapsackSolver_targetvalue_0_with_asset)
       tx_fee, &map_select_value, &fee, &map_searched_bnb));
 
   EXPECT_EQ(ret.size(), 0);
-  EXPECT_EQ(map_select_value.size(), 1);
-  if (map_select_value.size() == 1) {
-    EXPECT_EQ(map_select_value[exp_dummy_asset_a.GetHex()].GetSatoshiValue(), 0);
-  }
+  EXPECT_EQ(map_select_value.size(), 0);
   EXPECT_EQ(fee.GetSatoshiValue(), 0);
-  EXPECT_EQ(map_searched_bnb.size(), 1);
-  if (map_searched_bnb.size() == 1) {
-    EXPECT_FALSE(map_searched_bnb[exp_dummy_asset_a.GetHex()]);
-  }
+  EXPECT_EQ(map_searched_bnb.size(), 0);
 }
 
 TEST(CoinSelection, SelectCoins_KnapsackSolver_match_utxo_with_asset)
@@ -1291,6 +1285,66 @@ TEST(CoinSelection, SelectCoins_with_multiple_asset_fee_only_target)
   if (map_searched_bnb.size() == 3) {
     EXPECT_FALSE(map_searched_bnb[exp_dummy_asset_a.GetHex()]);
     EXPECT_FALSE(map_searched_bnb[exp_dummy_asset_b.GetHex()]);
+    EXPECT_FALSE(map_searched_bnb[exp_dummy_asset_c.GetHex()]);
+  }
+}
+
+TEST(CoinSelection, SelectCoins_with_multiple_asset_not_consider_fee)
+{
+  CoinSelection coin_select(true);
+  // Same condition with "SelectCoins_SelectCoinsBnB"
+  AmountMap map_target_amount;
+  map_target_amount[exp_dummy_asset_a.GetHex()] = Amount::CreateBySatoshiAmount(115800000);
+  map_target_amount[exp_dummy_asset_b.GetHex()] = Amount::CreateBySatoshiAmount(19226350);
+  map_target_amount[exp_dummy_asset_c.GetHex()] = Amount::CreateBySatoshiAmount(99060000);
+  AmountMap map_select_value;
+  Amount fee;
+  Amount tx_fee = Amount::CreateBySatoshiAmount(1500);
+  std::map<std::string, bool> map_searched_bnb;
+  CoinSelectionOption option = GetElementsOption();
+  option.SetEffectiveFeeBaserate(0);
+  // not set fee asset
+
+  std::vector<Utxo> utxos;
+  utxos.resize(kExtCoinSelectElementsTestVector.size());
+  std::vector<Utxo>::iterator ite = utxos.begin();
+  for (const auto& test_data : kExtCoinSelectElementsTestVector) {
+    Txid txid;
+    if (!test_data.txid.empty()) {
+      txid = Txid(test_data.txid);
+    }
+    CoinSelection::ConvertToUtxo(
+        txid, test_data.vout, test_data.descriptor,
+        Amount::CreateBySatoshiAmount(test_data.amount), test_data.asset, nullptr,
+        &(*ite));
+    ++ite;
+  }
+
+  std::vector<Utxo> ret;
+  EXPECT_NO_THROW(ret = coin_select.SelectCoins(
+      map_target_amount, utxos, exp_filter, option,
+      tx_fee, &map_select_value, &fee, &map_searched_bnb));
+
+  EXPECT_EQ(ret.size(), 6);
+  if (ret.size() == 6) {
+    EXPECT_EQ(ret[0].amount, static_cast<int64_t>(61062500));
+    EXPECT_EQ(ret[1].amount, static_cast<int64_t>(39062500));
+    EXPECT_EQ(ret[2].amount, static_cast<int64_t>(15675000));
+    EXPECT_EQ(ret[3].amount, static_cast<int64_t>(18476350));
+    EXPECT_EQ(ret[4].amount, static_cast<int64_t>(750000));
+    EXPECT_EQ(ret[5].amount, static_cast<int64_t>(127030000));
+  }
+  EXPECT_EQ(map_select_value.size(), 3);
+  if (map_select_value.size() == 3) {
+    EXPECT_EQ(map_select_value[exp_dummy_asset_a.GetHex()].GetSatoshiValue(), 115800000);
+    EXPECT_EQ(map_select_value[exp_dummy_asset_b.GetHex()].GetSatoshiValue(), 19226350);
+    EXPECT_EQ(map_select_value[exp_dummy_asset_c.GetHex()].GetSatoshiValue(), 127030000);
+  }
+  EXPECT_EQ(fee.GetSatoshiValue(), 0);
+  EXPECT_EQ(map_searched_bnb.size(), 3);
+  if (map_searched_bnb.size() == 3) {
+    EXPECT_TRUE(map_searched_bnb[exp_dummy_asset_a.GetHex()]);
+    EXPECT_TRUE(map_searched_bnb[exp_dummy_asset_b.GetHex()]);
     EXPECT_FALSE(map_searched_bnb[exp_dummy_asset_c.GetHex()]);
   }
 }
