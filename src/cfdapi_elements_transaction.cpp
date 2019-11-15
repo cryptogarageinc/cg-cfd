@@ -732,20 +732,9 @@ ConfidentialTransactionController ElementsTransactionApi::FundRawTransaction(
   std::vector<Utxo> utxo_list = coin_api.ConvertToUtxo(utxos);
   std::map<std::string, Amount> amount_map;
   std::vector<Utxo> selected_coins;
-#if 0
   selected_coins = coin_select.SelectCoins(
-      target_values, utxo_list, utxo_filter, option, fee, &amount_map,
-      nullptr, nullptr);
-#else
-  if (target_values.begin() != target_values.end()) {
-    auto itr = target_values.begin();
-    Amount utxo_amount;
-    selected_coins = coin_select.SelectCoinsMinConf(
-        itr->second, utxo_list, utxo_filter, option, fee, &utxo_amount,
-        nullptr, nullptr);
-    amount_map.emplace(itr->first, utxo_amount);
-  }
-#endif
+      target_values, utxo_list, utxo_filter, option, fee, &amount_map, nullptr,
+      nullptr);
 
   // 収集したcoinとtxoutの額が一致するかどうか確認
   std::map<std::string, Amount> diff_amount_map = amount_map;
@@ -888,15 +877,11 @@ ConfidentialTransactionController ElementsTransactionApi::FundRawTransaction(
     if (new_fee > fee_amount) {
       // re-select coin (fee asset only)
       std::map<std::string, Amount> new_amount_map;
-      UtxoFilter fee_filter;
-      fee_filter.target_asset = fee_asset;
-#if 0
+      std::map<std::string, Amount> new_target_values;
+      new_target_values.emplace(fee_asset_str, target_values[fee_asset_str]);
       lbtc_selected_coins = coin_select.SelectCoins(
-          target_values, utxo_list, fee_filter, option, new_fee,
+          new_target_values, utxo_list, utxo_filter, option, new_fee,
           &new_amount_map, nullptr, nullptr);
-#else
-
-#endif
       for (auto itr = new_amount_map.begin(); itr != new_amount_map.end();
            ++itr) {
         if (itr->first == fee_asset_str) {
