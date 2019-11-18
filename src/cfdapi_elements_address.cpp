@@ -31,7 +31,7 @@ using cfd::core::ScriptUtil;
 Address ElementsAddressApi::CreateAddress(
     NetType net_type, AddressType address_type, const Pubkey* pubkey,
     const Script* script, Script* locking_script, Script* redeem_script,
-    std::vector<AddressFormatData>* prefix_list) {
+    const std::vector<AddressFormatData>* prefix_list) const {
   std::vector<AddressFormatData> addr_prefixes;
   if (prefix_list == nullptr) {
     addr_prefixes = cfd::core::GetElementsAddressFormatList();
@@ -48,7 +48,8 @@ Address ElementsAddressApi::CreateAddress(
 Address ElementsAddressApi::CreateMultisig(
     NetType net_type, AddressType address_type, uint32_t req_sig_num,
     const std::vector<Pubkey>& pubkeys, Script* redeem_script,
-    Script* witness_script, std::vector<AddressFormatData>* prefix_list) {
+    Script* witness_script,
+    const std::vector<AddressFormatData>* prefix_list) const {
   std::vector<AddressFormatData> addr_prefixes;
   if (prefix_list == nullptr) {
     addr_prefixes = cfd::core::GetElementsAddressFormatList();
@@ -65,7 +66,7 @@ Address ElementsAddressApi::CreateMultisig(
 std::vector<Address> ElementsAddressApi::GetAddressesFromMultisig(
     NetType net_type, AddressType address_type, const Script& redeem_script,
     std::vector<Pubkey>* pubkey_list,
-    std::vector<AddressFormatData>* prefix_list) {
+    const std::vector<AddressFormatData>* prefix_list) const {
   std::vector<AddressFormatData> addr_prefixes;
   if (prefix_list == nullptr) {
     addr_prefixes = cfd::core::GetElementsAddressFormatList();
@@ -79,7 +80,7 @@ std::vector<Address> ElementsAddressApi::GetAddressesFromMultisig(
 }
 
 ElementsConfidentialAddress ElementsAddressApi::GetConfidentialAddress(
-    const Address& address, const ConfidentialKey confidential_key) {
+    const Address& address, const ConfidentialKey confidential_key) const {
   ConfidentialKey conf_key(confidential_key);
   ElementsConfidentialAddress conf_addr(address, conf_key);
 
@@ -89,7 +90,7 @@ ElementsConfidentialAddress ElementsAddressApi::GetConfidentialAddress(
 Address ElementsAddressApi::CreatePegInAddress(
     NetType net_type, AddressType address_type, const Script& fedpegscript,
     const Pubkey& pubkey, Script* claim_script, Script* tweak_fedpegscript,
-    std::vector<AddressFormatData>* prefix_list) {
+    const std::vector<AddressFormatData>* prefix_list) const {
   std::vector<AddressFormatData> addr_prefixes;
   if (prefix_list == nullptr) {
     addr_prefixes = cfd::core::GetElementsAddressFormatList();
@@ -118,6 +119,25 @@ Address ElementsAddressApi::CreatePegInAddress(
   }
 
   return p2ch;
+}
+
+DescriptorScriptData ElementsAddressApi::ParseOutputDescriptor(
+    const std::string& descriptor, NetType net_type,
+    const std::string& bip32_derivation_path,
+    std::vector<DescriptorScriptData>* script_list,
+    std::vector<DescriptorKeyData>* multisig_key_list,
+    const std::vector<AddressFormatData>* prefix_list) const {
+  std::vector<AddressFormatData> addr_prefixes;
+  if (prefix_list == nullptr) {
+    addr_prefixes = cfd::core::GetElementsAddressFormatList();
+  } else {
+    addr_prefixes = *prefix_list;
+  }
+
+  AddressApi address_api;
+  return address_api.ParseOutputDescriptor(
+      descriptor, net_type, bip32_derivation_path, script_list,
+      multisig_key_list, &addr_prefixes);
 }
 
 }  // namespace api

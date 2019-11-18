@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "cfd/cfd_common.h"
+#include "cfd/cfdapi_address.h"
 #include "cfdcore/cfdcore_elements_address.h"
 
 namespace cfd {
@@ -23,6 +24,8 @@ using cfd::core::Address;
 using cfd::core::AddressFormatData;
 using cfd::core::AddressType;
 using cfd::core::ConfidentialKey;
+using cfd::core::DescriptorKeyType;
+using cfd::core::DescriptorScriptType;
 using cfd::core::ElementsConfidentialAddress;
 using cfd::core::NetType;
 using cfd::core::Pubkey;
@@ -53,7 +56,7 @@ class CFD_EXPORT ElementsAddressApi {
       NetType net_type, AddressType address_type, const Pubkey* pubkey,
       const Script* script, Script* locking_script = nullptr,
       Script* redeem_script = nullptr,
-      std::vector<AddressFormatData>* prefix_list = nullptr);
+      const std::vector<AddressFormatData>* prefix_list = nullptr) const;
 
   /**
    * @brief Multisig Addressを作成する
@@ -70,7 +73,7 @@ class CFD_EXPORT ElementsAddressApi {
       NetType net_type, AddressType address_type, uint32_t req_sig_num,
       const std::vector<Pubkey>& pubkeys, Script* redeem_script = nullptr,
       Script* witness_script = nullptr,
-      std::vector<AddressFormatData>* prefix_list = nullptr);
+      const std::vector<AddressFormatData>* prefix_list = nullptr) const;
 
   /**
    * @brief Multisig ScriptからPubkey Address一覧を作成する
@@ -84,7 +87,7 @@ class CFD_EXPORT ElementsAddressApi {
   std::vector<Address> GetAddressesFromMultisig(
       NetType net_type, AddressType address_type, const Script& redeem_script,
       std::vector<Pubkey>* pubkey_list = nullptr,
-      std::vector<AddressFormatData>* prefix_list = nullptr);
+      const std::vector<AddressFormatData>* prefix_list = nullptr) const;
 
   /**
    * @brief AddressからConfidentialAddressを取得する.
@@ -93,7 +96,7 @@ class CFD_EXPORT ElementsAddressApi {
    * @return ElementsConfidentialAddress
    */
   ElementsConfidentialAddress GetConfidentialAddress(
-      const Address& address, const ConfidentialKey confidential_key);
+      const Address& address, const ConfidentialKey confidential_key) const;
 
   /**
    * @brief bitcoin blockchainからのpeginに利用できるAddressを生成する
@@ -111,7 +114,24 @@ class CFD_EXPORT ElementsAddressApi {
       NetType net_type, AddressType address_type, const Script& fedpegscript,
       const Pubkey& pubkey, Script* claim_script = nullptr,
       Script* tweak_fedpegscript = nullptr,
-      std::vector<AddressFormatData>* prefix_list = nullptr);
+      const std::vector<AddressFormatData>* prefix_list = nullptr) const;
+
+  /**
+   * @brief Output descriptorから情報を抽出する
+   * @param[in] descriptor              output descriptor
+   * @param[in] net_type                network type
+   * @param[in] bip32_derivation_path   bip32 derivation path
+   * @param[out] script_list            descriptor script list
+   * @param[out] multisig_key_list      descriptor multisig key list
+   * @param[in] prefix_list             address prefix list
+   * @return descriptor script data (top level or high security)
+   */
+  DescriptorScriptData ParseOutputDescriptor(
+      const std::string& descriptor, NetType net_type,
+      const std::string& bip32_derivation_path = "",
+      std::vector<DescriptorScriptData>* script_list = nullptr,
+      std::vector<DescriptorKeyData>* multisig_key_list = nullptr,
+      const std::vector<AddressFormatData>* prefix_list = nullptr) const;
 };
 
 }  // namespace api
