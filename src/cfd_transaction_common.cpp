@@ -157,7 +157,7 @@ uint32_t AbstractTransactionController::GetLockTimeDisabledSequence() {
   return kSequenceDisableLockTime;
 }
 
-uint32_t AbstractTransactionController::GetDefaultSequence() {
+uint32_t AbstractTransactionController::GetDefaultSequence() const {
   if (tx_address_->GetLockTime() == 0) {
     return kSequenceDisableLockTime;
   } else {

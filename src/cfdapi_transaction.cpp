@@ -260,5 +260,166 @@ Amount TransactionApi::EstimateFee(
   return fee;
 }
 
+TransactionController TransactionApi::FundRawTransaction(
+    const std::string& tx_hex, const std::vector<UtxoData>& utxos,
+    const Amount& target_value,
+    const std::vector<UtxoData>& selected_txin_utxos,
+    const std::string& reserve_txout_address, double effective_fee_rate,
+    Amount* estimate_fee, const UtxoFilter* filter,
+    const CoinSelectionOption* option_params,
+    std::vector<std::string>* append_txout_addresses, NetType net_type,
+    const std::vector<AddressFormatData>* prefix_list) const {
+  // set option
+  CoinSelectionOption option;
+  UtxoFilter utxo_filter;
+  if (filter) utxo_filter = *filter;
+  if (option_params) {
+    option = *option_params;
+  } else {
+    option.InitializeTxSizeInfo();
+    option.SetEffectiveFeeBaserate(effective_fee_rate);
+    option.SetLongTermFeeBaserate(effective_fee_rate);
+  }
+
+  AddressFactory addr_factory(net_type);
+  if (prefix_list) {
+    addr_factory = AddressFactory(net_type, *prefix_list);
+  }
+
+  // txから設定済みTxIn/TxOutの額を収集
+  // (selected_txin_utxos指定分はtxid一致なら設定済みUTXO扱い)
+  TransactionController txc(tx_hex);
+  const Transaction& tx = txc.GetTransaction();
+  Amount txin_amount;
+  Amount tx_amount;
+  for (const auto& txout : tx.GetTxOutList()) {
+    tx_amount += txout.GetValue();
+  }
+  const auto& txin_list = tx.GetTxInList();
+  for (const auto& utxo : selected_txin_utxos) {
+    for (const auto& txin : txin_list) {
+      if ((txin.GetTxid().Equals(utxo.txid)) &&
+          (utxo.vout == txin.GetVout())) {
+        txin_amount += utxo.amount;
+        break;
+      }
+    }
+  }
+
+  Amount fee;
+  if (option.GetEffectiveFeeBaserate() != 0) {
+    fee = EstimateFee(
+        tx_hex, selected_txin_utxos, nullptr, nullptr, effective_fee_rate);
+    info(CFD_LOG_SOURCE, "fee={}", fee.GetSatoshiValue());
+  }
+
+  // 探索対象額を設定。未設定時はTxOutの合計額を設定。
+  Amount target_amount = target_value;
+  if (target_amount.GetSatoshiValue() == 0) {
+    target_amount = tx_amount;
+  }
+  if (target_amount > txin_amount) {
+    target_amount -= txin_amount;
+  } else {
+    target_amount = Amount::CreateBySatoshiAmount(0);
+  }
+
+  std::vector<uint8_t> txid_bytes(cfd::core::kByteData256Length);
+  Amount dest_amount = tx_amount;
+  if (target_value > dest_amount) {
+    // txout設定額よりも大きな額を収集要求した
+    dest_amount = target_value;
+  }
+
+  // execute coinselection
+  CoinApi coin_api;
+  CoinSelection coin_select;
+  std::vector<Utxo> utxo_list = coin_api.ConvertToUtxo(utxos);
+  Amount utxo_amount = txin_amount;
+  std::vector<Utxo> selected_coins;
+  if (target_amount > 0) {
+    info(CFD_LOG_SOURCE, "target_amount={}", target_amount.GetSatoshiValue());
+    selected_coins = coin_select.SelectCoins(
+        target_amount, utxo_list, utxo_filter, option, fee, &utxo_amount,
+        nullptr, nullptr);
+    utxo_amount += txin_amount;
+    info(CFD_LOG_SOURCE, "utxo_amount={}", utxo_amount.GetSatoshiValue());
+    if (utxo_amount < dest_amount) {
+      warn(CFD_LOG_SOURCE, "Failed to FundRawTransaction. low BTC.");
+      throw CfdException(CfdError::kCfdIllegalArgumentError, "low BTC.");
+    }
+  }
+
+  Amount diff_amount = utxo_amount;
+  diff_amount -= dest_amount;
+  int64_t diff_satoshi = diff_amount.GetSatoshiValue();
+  Address address = addr_factory.GetAddress(reserve_txout_address);
+  Amount dust_amount = option.GetDustFeeAmount(address);
+  info(CFD_LOG_SOURCE, "dust_amount={}", dust_amount.GetSatoshiValue());
+
+  if (option.GetEffectiveFeeBaserate() > 0) {
+    Amount need_amount = dest_amount + fee;
+    Amount check_amount = utxo_amount - dust_amount;
+    if (check_amount > need_amount) {
+      // 必要額以上ある場合、TxOutが増えるのでfee再計算
+      // dummyのtx作成
+      TransactionController txc_dummy(tx_hex);
+      std::vector<UtxoData> new_selected_utxos = selected_txin_utxos;
+      Txid txid;
+      for (const Utxo& coin : selected_coins) {
+        memcpy(txid_bytes.data(), coin.txid, txid_bytes.size());
+        txid = Txid(ByteData256(txid_bytes));
+        for (const UtxoData& utxo : utxos) {
+          if (txid.Equals(utxo.txid) && (coin.vout == utxo.vout)) {
+            new_selected_utxos.push_back(utxo);
+            break;
+          }
+        }
+      }
+      // ダミーへの追加のため額は無視
+      txc_dummy.AddTxOut(addr_factory.GetAddress(reserve_txout_address), fee);
+      fee = EstimateFee(
+          txc_dummy.GetHex(), new_selected_utxos, nullptr, nullptr,
+          effective_fee_rate);
+      info(CFD_LOG_SOURCE, "new_fee={}", fee.GetSatoshiValue());
+      need_amount = dest_amount + fee;
+    }
+
+    if (utxo_amount < need_amount) {
+      warn(CFD_LOG_SOURCE, "Failed to FundRawTransaction. low fee.");
+      throw CfdException(CfdError::kCfdIllegalArgumentError, "low fee.");
+    }
+    diff_amount -= fee;  // fee分を除外
+    diff_satoshi = diff_amount.GetSatoshiValue();
+
+    // optionで、超過額の設定がある場合、余剰分をfeeに設定。
+    if (dust_amount > diff_amount) {
+      // feeに残高をすべて設定
+      diff_satoshi = 0;
+      fee = utxo_amount - dest_amount;
+    }
+    info(CFD_LOG_SOURCE, "diff_amount={}", diff_satoshi);
+  }
+
+  // dustより小さい場合はTxOutには追加しない
+  // (fee計算ありの場合はチェック済だが、fee計算なしの場合は未チェックのため)
+  if ((diff_satoshi != 0) && (dust_amount < diff_amount)) {
+    txc.AddTxOut(addr_factory.GetAddress(reserve_txout_address), diff_amount);
+    info(CFD_LOG_SOURCE, "addTxOut. value={}", diff_amount.GetSatoshiValue());
+    if (append_txout_addresses) {
+      append_txout_addresses->push_back(reserve_txout_address);
+    }
+  }
+  if (estimate_fee) *estimate_fee = fee;
+
+  // SelectしたUTXOをTxInに設定
+  for (auto& utxo : selected_coins) {
+    memcpy(txid_bytes.data(), utxo.txid, txid_bytes.size());
+    txc.AddTxIn(Txid(ByteData256(txid_bytes)), utxo.vout);
+  }
+
+  return txc;
+}
+
 }  // namespace api
 }  // namespace cfd

@@ -155,7 +155,7 @@ class CFD_EXPORT AbstractTransactionController {
    * @retval 0xffffffff     locktime値無効
    * @retval 0xfffffffe     locktime値有効
    */
-  uint32_t GetDefaultSequence();
+  uint32_t GetDefaultSequence() const;
 
   /**
    * @brief ロックタイムからlocktime値無効のシーケンス番号を取得する。

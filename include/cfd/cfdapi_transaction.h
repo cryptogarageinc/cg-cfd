@@ -14,6 +14,7 @@
 
 #include "cfd/cfd_common.h"
 #include "cfd/cfd_transaction.h"
+#include "cfd/cfd_utxo.h"
 #include "cfd/cfdapi_coin.h"
 #include "cfdcore/cfdcore_bytedata.h"
 #include "cfdcore/cfdcore_script.h"
@@ -22,7 +23,7 @@
 namespace cfd {
 namespace api {
 
-using cfd::TransactionController;
+using cfd::core::AddressFormatData;
 using cfd::core::AddressType;
 using cfd::core::Amount;
 using cfd::core::ByteData;
@@ -214,6 +215,34 @@ class CFD_EXPORT TransactionApi {
       const std::string& tx_hex, const std::vector<UtxoData>& utxos,
       Amount* tx_fee = nullptr, Amount* utxo_fee = nullptr,
       double effective_fee_rate = 1) const;
+
+  /**
+   * @brief calculate fund transaction.
+   * @param[in] tx_hex                   tx hex string
+   * @param[in] utxos                    using utxo data
+   * @param[in] target_value             target value
+   * @param[in] selected_txin_utxos      selected txin utxo
+   * @param[in] reserve_txout_address    reserved address
+   * @param[in] effective_fee_rate       effective fee rate (minimum)
+   * @param[out] estimate_fee            estimate fee
+   * @param[in] filter                   utxo search filter
+   * @param[in] option_params            utxo search option
+   * @param[out] append_txout_addresses  used txout additional address
+   * @param[in] net_type                 network type
+   * @param[in] prefix_list              address prefix list
+   * @return tx controller
+   */
+  TransactionController FundRawTransaction(
+      const std::string& tx_hex, const std::vector<UtxoData>& utxos,
+      const Amount& target_value,
+      const std::vector<UtxoData>& selected_txin_utxos,
+      const std::string& reserve_txout_address,
+      double effective_fee_rate = 20.0, Amount* estimate_fee = nullptr,
+      const UtxoFilter* filter = nullptr,
+      const CoinSelectionOption* option_params = nullptr,
+      std::vector<std::string>* append_txout_addresses = nullptr,
+      NetType net_type = NetType::kMainnet,
+      const std::vector<AddressFormatData>* prefix_list = nullptr) const;
 };
 
 }  // namespace api
