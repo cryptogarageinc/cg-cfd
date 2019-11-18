@@ -40,6 +40,7 @@ using cfd::core::ConfidentialNonce;
 using cfd::core::ConfidentialTransaction;
 using cfd::core::ConfidentialTxInReference;
 using cfd::core::ConfidentialTxOutReference;
+using cfd::core::ConfidentialValue;
 using cfd::core::ElementsAddressType;
 using cfd::core::ElementsConfidentialAddress;
 using cfd::core::IssuanceBlindingKeyPair;
@@ -122,6 +123,14 @@ const ConfidentialTxInReference ConfidentialTransactionController::GetTxIn(
   return transaction_.GetTxIn(index);
 }
 
+const ConfidentialTxInReference ConfidentialTransactionController::RemoveTxIn(
+    const Txid& txid, uint32_t vout) {
+  uint32_t index = transaction_.GetTxInIndex(txid, vout);
+  ConfidentialTxInReference ref = transaction_.GetTxIn(index);
+  transaction_.RemoveTxIn(index);
+  return ref;
+}
+
 const ConfidentialTxOutReference ConfidentialTransactionController::AddTxOut(
     const Address& address, const Amount& value,
     const ConfidentialAssetId& asset) {
@@ -189,6 +198,27 @@ ConfidentialTransactionController::AddTxOutFee(
     const Amount& value, const ConfidentialAssetId& asset) {
   uint32_t index = transaction_.AddTxOutFee(value, asset);
   return transaction_.GetTxOut(index);
+}
+
+const ConfidentialTxOutReference
+ConfidentialTransactionController::UpdateTxOutFeeAmount(
+    uint32_t index, const Amount& value, const ConfidentialAssetId& asset) {
+  ConfidentialTxOutReference ref = transaction_.GetTxOut(index);
+  if (!ref.GetLockingScript().IsEmpty()) {
+    throw CfdException(
+        CfdError::kCfdIllegalArgumentError, "target is not fee txout.");
+  }
+  transaction_.SetTxOutCommitment(
+      index, asset, ConfidentialValue(value), ConfidentialNonce(), ByteData(),
+      ByteData());
+  return transaction_.GetTxOut(index);
+}
+
+const ConfidentialTxOutReference
+ConfidentialTransactionController::RemoveTxOut(uint32_t index) {
+  ConfidentialTxOutReference ref = transaction_.GetTxOut(index);
+  transaction_.RemoveTxOut(index);
+  return ref;
 }
 
 void ConfidentialTransactionController::SetUnlockingScript(

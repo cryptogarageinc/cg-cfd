@@ -10,6 +10,7 @@
 #define CFD_INCLUDE_CFD_CFDAPI_ELEMENTS_TRANSACTION_H_
 #ifndef CFD_DISABLE_ELEMENTS
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -29,8 +30,6 @@
 namespace cfd {
 namespace api {
 
-using cfd::ConfidentialTransactionController;
-using cfd::SignParameter;
 using cfd::core::Amount;
 using cfd::core::BlindFactor;
 using cfd::core::BlindParameter;
@@ -45,6 +44,7 @@ using cfd::core::ConfidentialValue;
 using cfd::core::HashType;
 using cfd::core::IssuanceBlindingKeyPair;
 using cfd::core::IssuanceParameter;
+using cfd::core::NetType;
 using cfd::core::Privkey;
 using cfd::core::Pubkey;
 using cfd::core::Script;
@@ -180,12 +180,12 @@ struct IssuanceOutput {
  * @brief Using utxo and option data in elements
  */
 struct ElementsUtxoAndOption {
-  UtxoData utxo;               //!< utxo
-  bool is_issuance;            //!< use issuance/reissuance
-  bool is_blind_issuance;      //!< use blind issuance/reissuance
-  bool is_pegin;               //!< use pegin
-  uint32_t pegin_btc_tx_size;  //!< btc pegin tx size
-  Script fedpeg_script;        //!< fedpeg script for pegin
+  UtxoData utxo;                   //!< utxo
+  bool is_issuance = false;        //!< use issuance/reissuance
+  bool is_blind_issuance = false;  //!< use blind issuance/reissuance
+  bool is_pegin = false;           //!< use pegin
+  uint32_t pegin_btc_tx_size = 0;  //!< btc pegin tx size
+  Script fedpeg_script;            //!< fedpeg script for pegin
 };
 
 /**
@@ -472,6 +472,55 @@ class CFD_EXPORT ElementsTransactionApi {
       const ConfidentialAssetId& fee_asset, Amount* tx_fee = nullptr,
       Amount* utxo_fee = nullptr, bool is_blind = true,
       double effective_fee_rate = 1) const;
+
+  /**
+   * @brief estimate a fee amount from transaction.
+   * @param[in] tx_hex              tx hex string
+   * @param[in] utxos               using utxo data
+   * @param[in] fee_asset           using fee asset
+   * @param[in] tx_fee              tx fee amount (ignore utxo)
+   * @param[in] utxo_fee            utxo fee amount
+   * @param[in] is_blind            using tx blinding
+   * @param[in] effective_fee_rate  effective fee rate (minimum)
+   * @return tx fee (contains utxo)
+   */
+  Amount EstimateFee(
+      const std::string& tx_hex,
+      const std::vector<ElementsUtxoAndOption>& utxos,
+      const ConfidentialAssetId& fee_asset, Amount* tx_fee = nullptr,
+      Amount* utxo_fee = nullptr, bool is_blind = true,
+      uint64_t effective_fee_rate = 1000) const;
+
+  /**
+   * @brief calculate fund transaction.
+   * @param[in] tx_hex                   tx hex string
+   * @param[in] utxos                    using utxo data
+   * @param[in] map_target_value         asset target value map
+   * @param[in] selected_txin_utxos      selected txin utxo
+   * @param[in] reserve_txout_address    reserved address
+   * @param[in] fee_asset                using fee asset
+   * @param[in] is_blind_estimate_fee    using tx blinding
+   * @param[in] effective_fee_rate       effective fee rate (minimum)
+   * @param[out] estimate_fee            estimate fee
+   * @param[in] filter                   utxo search filter
+   * @param[in] option_params            utxo search option
+   * @param[out] append_txout_addresses  used txout additional address
+   * @param[in] net_type                 network type
+   * @param[in] prefix_list              address prefix list
+   * @return tx controller
+   */
+  ConfidentialTransactionController FundRawTransaction(
+      const std::string& tx_hex, const std::vector<UtxoData>& utxos,
+      const std::map<std::string, Amount>& map_target_value,
+      const std::vector<ElementsUtxoAndOption>& selected_txin_utxos,
+      const std::map<std::string, std::string>& reserve_txout_address,
+      const ConfidentialAssetId& fee_asset, bool is_blind_estimate_fee = true,
+      double effective_fee_rate = 1, Amount* estimate_fee = nullptr,
+      const UtxoFilter* filter = nullptr,
+      const CoinSelectionOption* option_params = nullptr,
+      std::vector<std::string>* append_txout_addresses = nullptr,
+      NetType net_type = NetType::kLiquidV1,
+      const std::vector<AddressFormatData>* prefix_list = nullptr) const;
 
   // CreateDestroyAmountTransaction
   // see CreateRawTransaction and ConfidentialTxOut::CreateDestroyAmountTxOut

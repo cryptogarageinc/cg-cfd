@@ -17,6 +17,7 @@ CFD_SOURCES = \
   cfdapi_transaction_base.cpp \
   cfdapi_address.cpp \
   cfdapi_hdwallet.cpp \
+  cfdapi_coin.cpp \
   cfdapi_key.cpp \
   ${CFD_ELEMENTS_SOURCES}
 

@@ -65,6 +65,19 @@ class CFD_EXPORT CoinApi {
    * @brief constructor
    */
   CoinApi() {}
+
+  /**
+   * @brief convert to simple utxo list.
+   * @param[in] utxos   utxo data list
+   * @return UTXO list
+   */
+  std::vector<Utxo> ConvertToUtxo(const std::vector<UtxoData>& utxos) const;
+  /**
+   * @brief convert to simple utxo.
+   * @param[in] utxo_data   utxo data
+   * @param[out] utxo       utxo
+   */
+  void ConvertToUtxo(const UtxoData& utxo_data, Utxo* utxo) const;
 };
 
 }  // namespace api

@@ -123,6 +123,12 @@ class CFD_EXPORT CoinSelectionOption {
    * @return knapsack minimum change
    */
   int64_t GetKnapsackMinimumChange() const;
+  /**
+   * @brief DustとしてFeeに取り込まれる上限額を取得します.
+   * @param[in] address     txout address
+   * @return dust fee satoshi
+   */
+  Amount GetDustFeeAmount(const Address& address) const;
 
   /**
    * @brief BnB 使用フラグを設定します.
@@ -154,6 +160,11 @@ class CFD_EXPORT CoinSelectionOption {
    * @param[in] min_change    knapsack minimum change
    */
   void SetKnapsackMinimumChange(int64_t min_change);
+  /**
+   * @brief DustとしてFeeに取り込まれる額のrateを設定します.
+   * @param[in] baserate    fee baserate (for BTC/byte)
+   */
+  void SetDustFeeRate(double baserate);
 
   /**
    * @brief bitcoin相当でサイズ関連情報を初期化します。
@@ -171,6 +182,12 @@ class CFD_EXPORT CoinSelectionOption {
    * @param[in] asset   asset
    */
   void SetFeeAsset(const ConfidentialAssetId& asset);
+  /**
+   * @brief DustとしてFeeに取り込まれる上限額を取得します.
+   * @param[in] address     txout address
+   * @return dust fee satoshi
+   */
+  Amount GetConfidentialDustFeeAmount(const Address& address) const;
 
   /**
    * @brief ConfidentialTxベースでサイズ関連情報を初期化します。
@@ -185,6 +202,7 @@ class CFD_EXPORT CoinSelectionOption {
   uint64_t effective_fee_baserate_;  //!< fee baserate
   uint64_t long_term_fee_baserate_;  //!< longterm fee baserate
   int64_t knapsack_minimum_change_;  //!< knapsack min change
+  int64_t dust_fee_rate_;            //!< dust fee rate
 #ifndef CFD_DISABLE_ELEMENTS
   ConfidentialAssetId fee_asset_;  //!< feeとして利用するasset
 #endif                             // CFD_DISABLE_ELEMENTS
