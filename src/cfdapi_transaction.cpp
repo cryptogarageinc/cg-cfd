@@ -342,7 +342,6 @@ TransactionController TransactionApi::FundRawTransaction(
     selected_coins = coin_select.SelectCoins(
         target_amount, utxo_list, utxo_filter, option, fee, &utxo_amount,
         nullptr, nullptr);
-    // 収集したcoinとtxoutの額が一致するかどうか確認
     utxo_amount += txin_amount;
     info(CFD_LOG_SOURCE, "utxo_amount={}", utxo_amount.GetSatoshiValue());
     if (utxo_amount < dest_amount) {
